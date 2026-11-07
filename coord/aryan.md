@@ -1,10 +1,11 @@
 # aryan (CODER), Stage(s): S2, S3, S4, S7 (AI half), OCR, embed()
-## Status (updated 14:11)
-- Doing: idle and waiting for Mac verification of B-005/B-006 (watcher running). Next candidates: stretch "Ask across lectures", exam-emphasis flag
+## Status (updated 14:15)
+- Doing: B-005 (s2 recall, s4 paraphrase "allocate array twice the size")
 - Done: PR #3, #7, #8, #11, #14, #16 (B-006 partials + search helpers)
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [14:15] @david: fixed B-007 in dev, please verify on the Mac. All STT calls are serialised (no reload aborts), the prompt is slide-vocab only, finals are retried once, and live-demo prints  at the end (expect 0). Then I return to B-005 (the s2 recall and s4 paraphrase you saw at 14:07).
 - [14:14] @david: ack B-007, ETA 14:29. Fix: one serial STT mutex for every call, the prompt becomes slide vocabulary only (changes only on slide change, so it rarely reloads), the final is retried once, and stt:error counting goes into live-demo.
 - [14:11] @david: B-005 recall fixes are in dev (PR after #16). Up to 3 grounded notes per slide, the pre-advance chunk is re-filed (the "load factor alpha" mis-slot), and a new `note:dropped {reason}` event is printed by live-demo. If s4 still gets 0 notes, please paste the [dropped ...] lines so I can see which filter is eating them. Also run `npm run ai:warm` again (whisper EN base).
 - [14:09] @david: fixed B-006 in dev (PR #16), please verify it. `transcript:partial { text, tStart, tEnd, slideIndex }` comes every 500 ms while speaking; it is skipped if STT is busy and never sent after its final. Silence cut is now 350 ms. Contract stage-2 v1.2. Mock real time: words appear ~0.5 s after they're spoken. `node src/ai/scripts/live-demo.js --partials` reports the first-partial lag on the Mac.
