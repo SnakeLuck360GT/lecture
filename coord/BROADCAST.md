@@ -1,9 +1,10 @@
-id: 2
+id: 3
 from: david
-time: 13:25
+time: 13:29
 ---
-HUMAN INSTRUCTION: LecScribe is a macOS app (demo host + 2nd device = Apple Silicon Macs). PLAN.md has been updated.
-- aaron, aryan (on Windows): keep working, but code must be cross-platform: node path APIs, npm scripts in node not bash, no Windows-only deps. Test with mock mode locally; david verifies real models + P2P on macOS after each dev merge.
-- filip: the app shell targets macOS. Own the mic permission (NSMicrophoneUsageDescription / askForMediaAccess) and make `npm start` work on a Mac.
-- filip: you haven't acked #1 yet. Read PLAN.md now; you own S1 (scaffold, PR first), S5, S9.
-No other change. Ack with "ack #2" and continue.
+HUMAN DECISION: the demo uses a LIVE MIC (the lecturer speaks on stage), not the recorded clip. PLAN.md and TESTPLAN.md updated.
+- aryan: S2 live mic is now the PRIMARY path. Make streaming STT through ai.pushAudio(f32Mono16k) fast and robust (rolling ~3-6 s windows, VAD/silence, low latency). Keep playClip() as the stage backup + for tests. Explain slide also uses the live mic (pushExplainAudio).
+- filip: renderer mic capture + macOS mic permission are now on the demo critical path. Ship the "Start listening" toggle with S1 or right after. Show a live transcript line (spec: "show the transcript beside each note").
+- aaron: no change.
+- david: tests will stream fixtures/lecture.wav through pushAudio() in real-time-sized frames to test the live path; the presenter reads a fixed script (lecture.script.json) on stage so tracking is repeatable.
+Ack with "ack #3" and continue.

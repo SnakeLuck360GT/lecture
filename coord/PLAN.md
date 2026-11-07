@@ -72,7 +72,7 @@ tests/, fixtures/                david
 - **HUMAN DECISION: LecScribe is a macOS app.** The demo host and the 2nd device are Macs (Apple Silicon). Everything must run on macOS. aaron and aryan develop on Windows, so write cross-platform code (node `path`, no bash-only scripts, no Windows-only deps). david runs every dev merge on macOS and files platform bugs. filip handles the macOS mic permission (Electron: `NSMicrophoneUsageDescription` / `systemPreferences.askForMediaAccess('microphone')`). QVAC models must load on macOS arm64.
 - **Host = the lecturer/presenter laptop** (spec's assumption). It runs all models and the lecturer view (heatmap, Explain slide). Peers only receive.
 - Weeks keep **transcripts + summaries, no raw audio**.
-- Demo uses a **pre-recorded clip + matching deck** (`fixtures/`, made by david) instead of a live mic. The live mic is nice-to-have.
+- **HUMAN DECISION: the demo uses a LIVE MIC.** The presenter reads the fixed narration (`fixtures/lecture.script.json`) over `fixtures/deck.pdf`, so tracking and notes are repeatable. Streaming STT via `ai.pushAudio()` is the primary path. `playClip(fixtures/lecture.wav)` is the stage backup (and is used by tests).
 - Heatmap taps on stage come from **aaron's simulator script** or a 2nd device.
 - Share link = a Pears key as text (QR is a bonus).
 - AI notes are labelled "AI-generated" and link to their transcript chunk (spec risk table).
