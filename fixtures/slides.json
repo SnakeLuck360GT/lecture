@@ -1,0 +1,32 @@
+[
+  {
+    "index": 0,
+    "text": "Hash Tables\nCOMP26120 - Week 3\nHashing, collisions, load factor, resizing",
+    "image": "fixtures/slides/slide-1.png",
+    "imageOnly": false
+  },
+  {
+    "index": 1,
+    "text": "Hash functions\nMap a key to an array index\nh(k) = k mod m\nSpread keys uniformly across buckets",
+    "image": "fixtures/slides/slide-2.png",
+    "imageOnly": false
+  },
+  {
+    "index": 2,
+    "text": "Collisions\nTwo keys can map to the same index\nSeparate chaining: a list per bucket\nOpen addressing: probe for a free slot",
+    "image": "fixtures/slides/slide-3.png",
+    "imageOnly": false
+  },
+  {
+    "index": 3,
+    "text": "Load factor\nα = n / m  (items / buckets)\nKeep α below 0.75\nLookup is O(1) on average",
+    "image": "fixtures/slides/slide-4.png",
+    "imageOnly": true
+  },
+  {
+    "index": 4,
+    "text": "Resizing\nDouble the array when the load factor is too high\nRehash every key\nInsert is amortised O(1)",
+    "image": "fixtures/slides/slide-5.png",
+    "imageOnly": false
+  }
+]
