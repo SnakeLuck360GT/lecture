@@ -1,0 +1,68 @@
+{
+  "moduleId": "COMP26120",
+  "moduleName": "Algorithms and Data Structures",
+  "weekId": "week-3",
+  "deck": "fixtures/deck.pdf",
+  "audio": "fixtures/lecture.wav",
+  "sampleRate": 16000,
+  "durationSec": 92.14,
+  "voice": "macOS say -v Daniel -r 175",
+  "segments": [
+    {
+      "slideIndex": 0,
+      "tStart": 1.2,
+      "tEnd": 13.88,
+      "text": "Welcome back, everyone. This week we are looking at hash tables, which sit behind Python dictionaries and Java's HashMap. This will come up in the exam, so pay close attention to the load factor part.",
+      "notOnSlide": [
+        "Hash tables are what Python dictionaries and Java's HashMap use",
+        "The load factor will come up in the exam"
+      ]
+    },
+    {
+      "slideIndex": 1,
+      "tStart": 15.08,
+      "tEnd": 32.51,
+      "text": "Let's start with hash functions. A hash function turns a key into an index in the array, and the simplest one is k mod m. A good tip is to choose m to be a prime number. If m is a power of two, the modulus only looks at the lowest bits of the key, so similar keys pile up in the same buckets.",
+      "notOnSlide": [
+        "Choose the table size m to be prime",
+        "If m is a power of two, only the lowest bits of the key are used, so similar keys cluster"
+      ]
+    },
+    {
+      "slideIndex": 2,
+      "tStart": 33.71,
+      "tEnd": 53.35,
+      "text": "Now, collisions. Two different keys can land at the same index. With separate chaining, each bucket holds a linked list. With open addressing, we probe for the next free slot. Linear probing is cache friendly, but it suffers from primary clustering, where long runs of filled slots form and slow every lookup down.",
+      "notOnSlide": [
+        "Linear probing is cache friendly",
+        "Linear probing suffers from primary clustering: long runs of filled slots slow lookups"
+      ]
+    },
+    {
+      "slideIndex": 3,
+      "tStart": 54.55,
+      "tEnd": 71.7,
+      "text": "The load factor, alpha, is the number of items divided by the number of buckets. Java's HashMap resizes when alpha goes above zero point seven five. With open addressing, as alpha approaches one, the expected number of probes blows up, roughly one over one minus alpha.",
+      "notOnSlide": [
+        "Java's HashMap resizes when alpha exceeds 0.75",
+        "With open addressing, expected probes grow like 1 / (1 - alpha)"
+      ]
+    },
+    {
+      "slideIndex": 4,
+      "tStart": 72.9,
+      "tEnd": 90.94,
+      "text": "Finally, resizing. When the table gets too full, we allocate an array twice the size and reinsert every key, because each key's index depends on m. One resize costs order n, but spread over all the inserts it is amortised constant time. In Thursday's lab you will implement this yourselves.",
+      "notOnSlide": [
+        "Every key must be reinserted because its index depends on m",
+        "One resize costs O(n)",
+        "Thursday's lab implements resizing"
+      ]
+    }
+  ],
+  "explain": {
+    "slideIndex": 3,
+    "text": "Okay, quite a few of you are lost on the load factor, so let me put it another way. Think of the hash table as a car park. Alpha is how full the car park is. When it is nearly full, you drive around for ages looking for a free space, and that is exactly what probing feels like. So we build a bigger car park before it gets that full.",
+    "audio": "fixtures/explain.wav"
+  }
+}
