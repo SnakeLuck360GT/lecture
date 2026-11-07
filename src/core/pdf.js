@@ -9,11 +9,14 @@
  * @param {ArrayBuffer|Uint8Array} data
  * @param {{ pdfjs: any, renderImages?: boolean, scale?: number, quality?: number, onProgress?: (done:number,total:number)=>void }} opts
  */
-export async function loadPdf (data, { pdfjs, renderImages = typeof document !== 'undefined', scale = 1.5, quality = 0.85, onProgress } = {}) {
+export async function loadPdf (data, { pdfjs, renderImages = typeof document !== 'undefined', scale = 1.5, quality = 0.85, onProgress, standardFontDataUrl, cMapUrl } = {}) {
   if (!pdfjs) throw new Error('loadPdf: pass { pdfjs } (pdfjs-dist module)')
   // pdf.js rejects Node Buffers and detaches what it is given, so always pass a fresh Uint8Array copy.
   const bytes = new Uint8Array(data instanceof ArrayBuffer ? data : data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength))
-  const doc = await pdfjs.getDocument({ data: bytes, isEvalSupported: false }).promise
+  const opts = { data: bytes, isEvalSupported: false }
+  if (standardFontDataUrl) opts.standardFontDataUrl = standardFontDataUrl
+  if (cMapUrl) { opts.cMapUrl = cMapUrl; opts.cMapPacked = true }
+  const doc = await pdfjs.getDocument(opts).promise
   const slides = []
   try {
     for (let n = 1; n <= doc.numPages; n++) {

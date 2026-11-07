@@ -187,6 +187,11 @@ function createWindow () {
     }
   })
   attachRenderer(bus, win.webContents)
+  // Surface renderer warnings/errors in the terminal (level 2 = warning, 3 = error).
+  win.webContents.on('console-message', (_e, level, message, line, sourceId) => {
+    if (level >= 2) console.log(`[renderer:${level === 3 ? 'error' : 'warn'}] ${message} (${String(sourceId).replace(/^app:\/\/lecscribe\//, '')}:${line})`)
+  })
+  win.webContents.on('render-process-gone', (_e, d) => console.error('[main] renderer gone:', d.reason))
   win.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' } })
   win.loadURL(`${SCHEME}://${HOST}/ui/index.html`)
   if (process.env.LECSCRIBE_DEVTOOLS === '1') win.webContents.openDevTools({ mode: 'detach' })
@@ -201,7 +206,31 @@ app.whenReady().then(async () => {
   // Load models after the window is up, so the UI shows progress instead of a blank screen.
   await startAI()
   await startP2P()
+  if (process.env.LECSCRIBE_SMOKE) runSmoke(process.env.LECSCRIBE_SMOKE).catch((e) => { console.error('[smoke] FAILED', e); app.exit(1) })
 })
+
+/**
+ * Scripted smoke check (david / CI on macOS): LECSCRIBE_SMOKE=out.png npm run start:mock
+ * Loads fixtures/deck.pdf through the real UI, clicks Next, saves a screenshot, prints JSON, quits.
+ */
+async function runSmoke (pngPath) {
+  const wc = win.webContents
+  if (wc.isLoading()) await new Promise((r) => wc.once('did-finish-load', r))
+  const seen = []
+  bus.tap((name) => seen.push(name))
+  const loaded = new Promise((r) => bus.once('slides:loaded', r))
+  await wc.executeJavaScript("document.getElementById('btn-demo-deck').click()")
+  const slides = await Promise.race([loaded, new Promise((_, rej) => setTimeout(() => rej(new Error('slides:loaded timeout (30 s)')), 30000))])
+  await wc.executeJavaScript("document.getElementById('btn-next').click()")
+  await new Promise((r) => setTimeout(r, 800))
+  const ui = await wc.executeJavaScript('({ current: window.__lecscribe.state.current, n: window.__lecscribe.state.slides.length, img: !document.getElementById("slide-img").hidden, micPicker: !!document.querySelector("#mount-mic-picker.lec-mic-picker") })')
+  const img = await wc.capturePage()
+  const { writeFile } = await import('node:fs/promises')
+  await writeFile(resolvePath(pngPath), img.toPNG())
+  const result = { ok: slides.length > 0 && ui.current === 1 && ui.img, slides: slides.length, texts: slides.map((s) => s.text.slice(0, 40)), ui, events: [...new Set(seen)] }
+  console.log('[smoke] ' + JSON.stringify(result))
+  app.exit(result.ok ? 0 : 1)
+}
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })
 app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
