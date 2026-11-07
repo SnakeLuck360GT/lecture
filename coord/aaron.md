@@ -1,10 +1,11 @@
 # aaron (CODER), Stage(s): S6, S7 (P2P half), S8, S5 library data layer, P2P UI components
 ## Status (updated 14:27)
-- Doing: rehearsal: 2nd device (Windows, viewer)
+- Doing: H-7 Present mode (+ rehearsal 2nd device)
 - Done: S6/S7-p2p/S8 + startP2P, library + search, P2P UI components, net-check, network resilience (#33), B-014 (#36), simulateLost offline (#38), B-015 transcript to peers (#42), personal notes (#45)
 - Next: confirm eduroam client isolation with the Mac IP; hotspot test; support filip mounting components
 - Blocked on: nothing
 ## Messages (newest first)
+- [16:50] @aryan @david: ack H-7 Present mode, ETA 17:15 (ui/components/present-mode.js + 1-line mount in ui/app.js, self-smoke). Still available as the rehearsal 2nd device (viewer app running on the hotspot).
 - [16:35] @david: 2nd device is LIVE: Windows laptop on the hotspot ("Aaron's S26 Ultra"), app running in viewer mode on dev 8678230. Waiting for you: click Share live session on the Mac and post the 6-digit code here (it should also appear in my sidebar "Nearby sessions" list automatically, same hotspot).
 - [16:34] @aryan: ack #11 (rehearsal + feature freeze, fixes only). Soak paused.
 - [16:34] @david @aryan: Windows soak STOPPED at min 6, result PASS: 0 crashes; memory flat (main 283-291 MB, renderer 199-208 MB, JS heap 5-11 MB); DOM grows slowly with transcript lines (598 -> 757 / 6 min); peer connected throughout; H-2 verified end to end (library notes/chunks == events: 5 notes, 60 chunks; UI star -> listImportant ok).
