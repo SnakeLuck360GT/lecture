@@ -38,6 +38,19 @@ const APP_ICON = join(ROOT, 'build', 'icon.png')
   })
 }
 
+// H-3: log, never exit, on stray errors in main (a dead main process = a dead demo).
+let rendererReloads = []
+process.on('uncaughtException', (e) => console.error('[main] uncaughtException:', e?.stack || e))
+process.on('unhandledRejection', (e) => console.error('[main] unhandledRejection:', e?.stack || e))
+app.on('child-process-gone', (_e, d) => console.error(`[main] child process gone: type=${d.type} reason=${d.reason} exitCode=${d.exitCode}${d.name ? ` name=${d.name}` : ''}`))
+// H-3 soak test aid: memory of every Electron process once a minute (MB, working set).
+setInterval(() => {
+  try {
+    const m = app.getAppMetrics().map((p) => `${p.type}=${Math.round((p.memory?.workingSetSize || 0) / 1024)}`).join(' ')
+    console.log(`[app] mem MB ${m} main-heap=${Math.round(process.memoryUsage().heapUsed / 1048576)}`)
+  } catch {}
+}, 60000).unref()
+
 // B-012: smoke runs must never write into the real library (it would show up on stage).
 // Must run before app 'ready' and before the library starts.
 if (process.env.LECSCRIBE_SMOKE) {
@@ -266,7 +279,19 @@ function createWindow () {
   win.webContents.on('console-message', (_e, level, message, line, sourceId) => {
     if (level >= 2) console.log(`[renderer:${level === 3 ? 'error' : 'warn'}] ${message} (${String(sourceId).replace(/^app:\/\/lecscribe\//, '')}:${line})`)
   })
-  win.webContents.on('render-process-gone', (_e, d) => console.error('[main] renderer gone:', d.reason))
+  // H-3: a crashed/killed renderer comes back by itself (max 3 reloads a minute, then stay put so we
+  // never loop). The AI, room and library live in main, so the session keeps running meanwhile.
+  win.webContents.on('render-process-gone', (_e, d) => {
+    console.error(`[main] renderer gone: reason=${d.reason} exitCode=${d.exitCode}`)
+    if (d.reason === 'clean-exit' || !win || win.isDestroyed()) return
+    const now = Date.now()
+    rendererReloads = rendererReloads.filter((t) => now - t < 60000)
+    if (rendererReloads.length >= 3) { console.error('[main] renderer crashed 3x in a minute; not reloading again'); return }
+    rendererReloads.push(now)
+    setTimeout(() => { if (win && !win.isDestroyed()) { console.error('[main] reloading the window'); win.webContents.reload() } }, 500)
+  })
+  win.webContents.on('unresponsive', () => console.error('[main] renderer unresponsive'))
+  win.webContents.on('responsive', () => console.error('[main] renderer responsive again'))
   win.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' } })
   win.loadURL(`${SCHEME}://${HOST}/ui/index.html`)
   if (process.env.LECSCRIBE_DEVTOOLS === '1') win.webContents.openDevTools({ mode: 'detach' })
@@ -396,7 +421,12 @@ async function runSmoke (pngPath) {
   const vis = (sel) => `!!(document.querySelector('${sel}') && document.querySelector('${sel}').offsetParent)`
   const peer = await wc.executeJavaScript(`({ toolbar: ${vis('#toolbar')}, listen: ${vis('#btn-listen')}, explain: ${vis('#btn-explain')}, live: ${vis('#btn-room-pop')}, leave: ${vis('#btn-leave')}, search: ${vis('#search-input')} })`)
   await writeFile(out.replace(/.png$/i, '') + '-peer.png', (await wc.capturePage()).toPNG())
-  const result = { ok: slides.length > 0 && ui.current === 1 && ui.img, lost: lostLabel, explain, summary, savedView, ask, autoFollow, noHost, liveHome, peer, slides: slides.length, texts: slides.map((s) => s.text.slice(0, 40)), ui, events: [...new Set(seen)] }
+  // H-3: crash the renderer on purpose -> main reloads the window and the app boots again.
+  const reloaded = new Promise((r) => wc.once('did-finish-load', () => r(true)))
+  wc.forcefullyCrashRenderer()
+  const recovered = await Promise.race([reloaded, new Promise((r) => setTimeout(() => r(false), 15000))])
+  const crashRecovery = { reloaded: recovered, booted: recovered ? await new Promise((r) => setTimeout(r, 2500)).then(() => wc.executeJavaScript('!!window.__lecscribe && document.documentElement.classList.contains("ready")')) : false }
+  const result = { ok: slides.length > 0 && ui.current === 1 && ui.img, lost: lostLabel, explain, summary, savedView, ask, autoFollow, noHost, liveHome, peer, crashRecovery, slides: slides.length, texts: slides.map((s) => s.text.slice(0, 40)), ui, events: [...new Set(seen)] }
   console.log('[smoke] ' + JSON.stringify(result))
   app.exit(result.ok ? 0 : 1)
 }
