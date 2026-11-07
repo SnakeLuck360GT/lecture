@@ -223,3 +223,18 @@ test('B-014: startP2P.joinRoom does not wait for a slow AI shutdown (model still
   await p2p.close()
   await room.close()
 })
+
+test('simulateLost via the app facade works offline (no room) and with a room', async () => {
+  const { startP2P } = await import('./host.js')
+  const bus = mkBus()
+  const p2p = await startP2P({ bus, bootstrap })
+  const got = waitFor(bus, 'lost:counts', (c) => c[2] === 3)
+  assert.deepEqual(p2p.simulateLost(2, 3), { 2: 3 }) // no room: local only
+  await got
+  assert.deepEqual(p2p.lostCounts(), { 2: 3 })
+  assert.deepEqual(p2p.resetSimulatedLost(), {})
+  assert.throws(() => p2p.simulateLost(-1, 1), /bad slide index/)
+  await p2p.createRoom({ title: 'T' })
+  assert.deepEqual(p2p.simulateLost(1, 2), { 1: 2 }) // with a room: merges into the room counts
+  await p2p.close()
+})
