@@ -119,7 +119,8 @@ export async function createLibrary ({ dir, embed, embedQuery, embedDocs, passag
     const notes = await readJson(L(meta.id, 'notes.json'), [])
     const slides = await readJson(L(meta.id, 'slides.json'), [])
     const sum = await readText(L(meta.id, 'summary.txt'))
-    return { ...meta, slideCount: slides.length, noteCount: notes.length, hasSummary: !!sum.trim() }
+    const personal = await readJson(L(meta.id, 'personal.json'), [])
+    return { ...meta, slideCount: slides.length, noteCount: notes.length, personalCount: personal.length, hasSummary: !!sum.trim() }
   }
 
   async function allLectureMetas () {
@@ -243,7 +244,8 @@ export async function createLibrary ({ dir, embed, embedQuery, embedDocs, passag
         slides,
         notes: await readJson(L(id, 'notes.json'), []),
         transcript: await readJson(L(id, 'transcript.json'), []),
-        summary: await readText(L(id, 'summary.txt'))
+        summary: await readText(L(id, 'summary.txt')),
+        personalNotes: await readJson(L(id, 'personal.json'), []) // this device only; never exported
       }
     },
     async deleteLecture (id) {
@@ -317,6 +319,57 @@ export async function createLibrary ({ dir, embed, embedQuery, embedDocs, passag
       return summary(meta)
     },
 
+    // ---- personal notes: the student's own notes per slide. LOCAL ONLY: kept in personal.json, never
+    // emitted as note:added, never in the room feed, never in exportLecture / shareLecture / imports.
+    async listPersonalNotes (id, slideIndex) {
+      await mustMeta(id)
+      const all = await readJson(L(id, 'personal.json'), [])
+      const list = Number.isInteger(slideIndex) ? all.filter((n) => n.slideIndex === slideIndex) : all
+      return list.sort((a, b) => a.createdAt - b.createdAt)
+    },
+    async addPersonalNote (id, { slideIndex = null, text = '' } = {}) {
+      const note = { id: newId('pn'), kind: 'personal', slideIndex: Number.isInteger(slideIndex) ? slideIndex : null, text: String(text ?? ''), createdAt: Date.now(), updatedAt: Date.now() }
+      const meta = await queue(id, async () => {
+        const m = await mustMeta(id)
+        const all = await readJson(L(id, 'personal.json'), [])
+        all.push(note)
+        await writeJson(L(id, 'personal.json'), all)
+        if (note.text.trim()) await addItems(id, [personalItem(note)])
+        return writeMeta(m)
+      })
+      changed('lecture', { moduleId: meta.moduleId, lectureId: id, personal: true })
+      return note
+    },
+    async updatePersonalNote (id, noteId, { text } = {}) {
+      let updated = null
+      const meta = await queue(id, async () => {
+        const m = await mustMeta(id)
+        const all = await readJson(L(id, 'personal.json'), [])
+        const n = all.find((x) => x.id === noteId)
+        if (!n) throw new Error('personal note not found: ' + noteId)
+        if (text !== undefined) n.text = String(text)
+        n.updatedAt = Date.now()
+        await writeJson(L(id, 'personal.json'), all)
+        if (n.text.trim()) await addItems(id, [personalItem(n)])
+        else await removeItems(id, (it) => it.id === 'personal-' + n.id)
+        updated = n
+        return writeMeta(m)
+      })
+      changed('lecture', { moduleId: meta.moduleId, lectureId: id, personal: true })
+      return updated
+    },
+    async deletePersonalNote (id, noteId) {
+      const meta = await queue(id, async () => {
+        const m = await mustMeta(id)
+        const all = await readJson(L(id, 'personal.json'), [])
+        await writeJson(L(id, 'personal.json'), all.filter((x) => x.id !== noteId))
+        await removeItems(id, (it) => it.id === 'personal-' + noteId)
+        return writeMeta(m)
+      })
+      changed('lecture', { moduleId: meta.moduleId, lectureId: id, personal: true })
+      return true
+    },
+
     // ---- search (per lecture; never mixes stores)
     async search (id, query, k = 5) {
       await mustMeta(id)
@@ -342,12 +395,14 @@ export async function createLibrary ({ dir, embed, embedQuery, embedDocs, passag
         const notes = await readJson(L(id, 'notes.json'), [])
         const transcript = await readJson(L(id, 'transcript.json'), [])
         const sum = await readText(L(id, 'summary.txt'))
+        const personal = await readJson(L(id, 'personal.json'), [])
         await writeVectors(id, { items: [] })
         const items = [
           ...slides.filter((s) => s.text?.trim()).map((s) => ({ id: `slide-${s.index}`, kind: 'slide', refId: String(s.index), slideIndex: s.index, text: s.text })),
           ...notes.map((n) => ({ id: `note-${n.id}`, kind: 'note', refId: n.id, slideIndex: n.slideIndex ?? null, text: String(n.text || '') })),
           ...transcriptItems(transcript),
-          ...(sum.trim() ? [{ id: 'summary', kind: 'summary', refId: 'summary', slideIndex: null, text: sum }] : [])
+          ...(sum.trim() ? [{ id: 'summary', kind: 'summary', refId: 'summary', slideIndex: null, text: sum }] : []),
+          ...personal.filter((n) => String(n.text || '').trim()).map(personalItem)
         ]
         await addItems(id, items)
         return { items: items.length }
@@ -442,6 +497,7 @@ export async function createLibrary ({ dir, embed, embedQuery, embedDocs, passag
 }
 
 function toArray (v) { return Array.from(v, Number) }
+function personalItem (n) { return { id: `personal-${n.id}`, kind: 'personal', refId: n.id, slideIndex: n.slideIndex ?? null, text: String(n.text || '') } }
 function safeId (id) {
   const s = String(id || '')
   if (!/^[a-z]+-[0-9a-z]+$/i.test(s)) throw new Error(`bad id: ${s}`)
