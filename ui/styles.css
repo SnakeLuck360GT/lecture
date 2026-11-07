@@ -1,21 +1,80 @@
+/* =====================================================================================
+   LecScribe DESIGN TOKENS (owner: filip). Components (ui/components/*) use ONLY these
+   variables, inside their own `.lec-<name>` prefix. Spacing is an 8 px grid.
+   Dark mode is automatic (prefers-color-scheme). Do not hard-code colours in components.
+   ===================================================================================== */
 :root {
-  --paper: #f6f4ef;
-  --panel: #ffffff;
-  --ink: #1f2328;
-  --muted: #6b6f76;
-  --line: #e3dfd6;
+  /* surfaces */
+  --paper: #f5f5f7;          /* app background (behind panels) */
+  --panel: #ffffff;          /* cards, slide stage, popovers */
+  --sidebar: rgba(242, 242, 245, 0.86); /* vibrancy-style sidebar */
+  --hover: rgba(0, 0, 0, 0.045);
+  --selected: rgba(0, 0, 0, 0.07);
+  /* text */
+  --ink: #1d1d1f;            /* primary text */
+  --muted: #6e6e73;          /* secondary text, captions */
+  --faint: #a1a1a6;          /* placeholders, disabled */
+  /* lines */
+  --line: #e2e2e7;           /* hairline borders (1px) */
+  --line-strong: #d0d0d7;
+  /* the ONE accent + its text colour, plus semantic colours */
   --accent: #2f6f5e;
   --accent-ink: #ffffff;
-  --sticky: #fff1a8;
-  --sticky-edge: #e8d46a;
-  --lecturer: #dcecff;
-  --lecturer-edge: #8db8ea;
-  --saved: #2f6f5e;
-  --danger: #c2412d;
-  --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 14px rgba(0,0,0,.06);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  --accent-soft: rgba(47, 111, 94, 0.12);
+  --danger: #d1453b;         /* recording, errors, "I'm lost" heat */
+  --danger-soft: rgba(209, 69, 59, 0.12);
+  --warn: #b7791f;
+  --ok: #2f6f5e;
+  /* notes */
+  --sticky: #fff4b8;         /* AI-generated sticky */
+  --sticky-edge: #ecd774;
+  --lecturer: #e3eeff;       /* Lecturer explanation */
+  --lecturer-edge: #9dbfee;
+  --saved: var(--accent);
+  /* shape + type + motion */
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 24px; --space-6: 32px; --space-8: 48px;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --text-xs: 11px; --text-sm: 12px; --text: 13px; --text-md: 15px; --text-lg: 20px; --text-xl: 28px;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-pop: 0 8px 28px rgba(0, 0, 0, 0.14);
+  --ease: cubic-bezier(.2, .7, .2, 1);
+  --fast: 120ms;
+  --titlebar-h: 52px;        /* macOS hiddenInset traffic lights live in this band */
+  color-scheme: light dark;
+  font-family: var(--font);
+  font-size: var(--text);
   color: var(--ink);
 }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #1c1c1e;
+    --panel: #242426;
+    --sidebar: rgba(36, 36, 38, 0.82);
+    --hover: rgba(255, 255, 255, 0.06);
+    --selected: rgba(255, 255, 255, 0.1);
+    --ink: #f2f2f7;
+    --muted: #a1a1a8;
+    --faint: #6e6e73;
+    --line: #3a3a3d;
+    --line-strong: #4a4a4e;
+    --accent: #4fae93;
+    --accent-ink: #0d1f1a;
+    --accent-soft: rgba(79, 174, 147, 0.16);
+    --danger: #ff6b5e;
+    --danger-soft: rgba(255, 107, 94, 0.16);
+    --sticky: #4a4220;
+    --sticky-edge: #6b5f2a;
+    --lecturer: #22324a;
+    --lecturer-edge: #34507a;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-pop: 0 8px 28px rgba(0, 0, 0, 0.5);
+  }
+}
+/* ====================== end of tokens ====================== */
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; background: var(--paper); }
 body { display: grid; grid-template-rows: auto 1fr auto; overflow: hidden; }
