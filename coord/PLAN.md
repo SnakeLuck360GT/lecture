@@ -2,14 +2,30 @@
 
 Stages = the spec's build order (SPEC.md, "Build order"). Stretch goals come later, assigned by david.
 
+## HUMAN UI DIRECTION 13:57 (david): library + polished, minimalist product UI (supersedes S5 "week" wording)
+**Model:** Module (a folder, e.g. "COMP26120 Algorithms") → Lecture items (e.g. "Week 3 · Hash Tables", date, state: live | attended | missed | imported) → inside a lecture: slides, saved notes (stickies + lecturer explanations), transcript, summary, and **that lecture's own vector store** (embeddings isolated per lecture, never shared across lectures). Sharing = a lecture's notes via aaron's S8 link; importing into a missed lecture re-embeds locally.
+
+**Screens (filip):**
+1. **Library** (app opens here): left sidebar lists modules + "New module". Main area shows the selected module's lectures as a clean list/cards (title, date, state badge, note count). "New lecture" → name it → load a PDF → opens the live session. Missed lectures are greyed with "Paste share link". Imported ones are tagged "Shared by a coursemate".
+2. **Lecture view**: slides (large, with thumbnails strip) × notes column side by side; click a sticky to save; transcript drawer; Share button (link + QR); search box scoped to this lecture. The live session is this same view with the mic controls (incl. the B-004 mic picker + level meter) and the room/peer count.
+3. Join-a-room entry stays (small, in the sidebar footer).
+**Look:** minimalist, professional, "final product". Neutral palette with one accent, generous whitespace, system font (-apple-system / SF Pro), 8 px grid, subtle borders not heavy shadows, no emoji, consistent icon set (inline SVG), smooth but quick transitions, dark mode via prefers-color-scheme, proper empty states. Native macOS feel: hiddenInset title bar, draggable top region, vibrancy-style sidebar.
+
+**Data layer (aaron, NEW: `src/library/`):** contract `coord/contracts/stage-5-library.md` within 15 min.
+- persistence under Electron `app.getPath('userData')/library/` (JSON per module/lecture + one vector index file per lecture)
+- API: `listModules() / createModule({name, code?}) / renameModule / deleteModule`, `listLectures(moduleId) / createLecture(moduleId, {title, date?}) / getLecture(id) / deleteLecture(id)`, `saveSlides(lectureId, Slide[])`, `saveNote(lectureId, Note)` / `unsaveNote`, `appendTranscript(lectureId, chunks)`, `setSummary`, `search(lectureId, query, k)` (embeds with `ai.embed`, cosine over THAT lecture only), `exportLecture(id) → WeekBundle`, `importLecture(id, link)` (uses S8 `importWeek`, tags shared, re-embeds locally)
+- exposed to the renderer through main as `window.lec.library(method, ...args)` (small, announced addition to filip's main/preload; coordinate with @filip)
+- unit tests in `src/library/*.test.js` (temp dirs). Delete/rebuild one lecture never touches another.
+**aryan:** B-005 note quality first, then `search` quality (chunking transcript for the store) and the stretch "Ask across lectures" (queries each lecture store in turn).
+
 ## RE-TASK CANCELLED 13:45: filip opened PR #6 (S1 shell). @aaron: do NOT build a shell. Drop any shell work, and instead wire P2P into filip's shell after #6 merges (coordinate with @filip).
 
 ## Assignments (grouped by technology)
 | Coder | Area | Stages | Folders owned |
 |---|---|---|---|
-| **filip** | App shell + all UI + storage | **S1** slide viewer + PDF load (scaffold, PR FIRST) · **S5** module/week directory, notebook, per-week vector store · **S9** UI polish + demo rehearsal · plus the UI pieces of S4 (sticky notes, click to save) and S7 (heatmap strip, "I'm lost" button, Explain/Done buttons) | `ui/`, `src/core/`, root config, `package.json` |
+| **filip** | App shell + all UI (storage moved to aaron at 13:57) | **S1** slide viewer + PDF load (scaffold, PR FIRST) · **S5** module/week directory, notebook, per-week vector store · **S9** UI polish + demo rehearsal · plus the UI pieces of S4 (sticky notes, click to save) and S7 (heatmap strip, "I'm lost" button, Explain/Done buttons) | `ui/`, `src/core/`, root config, `package.json` |
 | **aryan** | On-device AI (QVAC) | **S2** speech-to-text on a recorded clip · **S3** slide embeddings + auto slide tracking · **S4** summariser agents (sticky-note generation) · AI half of **S7** (Explain slide: record → STT → LLM summary) · OCR for image-only slides (S1 step) · `embed()` used by S5/S8 | `src/ai/` |
-| **aaron** | Peer to peer (Pears) | **S6** Pears room: live notes + slides to a 2nd device, join by key/QR · P2P half of **S7** ("I'm lost" per-device logs, host merge → counts, tap simulator script) · **S8** share link: export/import a week's notes | `src/p2p/`, `scripts/sim-taps*` |
+| **aaron** | Peer to peer (Pears) + library data layer `src/library/` (from 13:57) | **S6** Pears room: live notes + slides to a 2nd device, join by key/QR · P2P half of **S7** ("I'm lost" per-device logs, host merge → counts, tap simulator script) · **S8** share link: export/import a week's notes | `src/p2p/`, `scripts/sim-taps*` |
 | **david** | Tests, fixtures, release | test runner, contract/integration/e2e tests, smoke checklist, demo fixtures | `tests/`, `fixtures/` |
 
 Why: filip finished setup first, so filip gets the scaffold. AI (25% of the score) and Pears (10%) are separate areas with no shared files. aaron's stages are later in the build order, but **aaron starts a P2P spike now** (peer discovery is a top risk, so test it early on venue Wi-Fi and a hotspot).
