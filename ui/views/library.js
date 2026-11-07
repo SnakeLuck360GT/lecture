@@ -147,7 +147,15 @@ export function createLibraryView (app) {
   function showNewLecture (on) {
     $('new-lecture-form').hidden = !on
     $('btn-new-lecture').hidden = on || !v.moduleId
-    if (on) { $('new-lecture-title').value = ''; $('new-lecture-missed').checked = false; $('new-lecture-title').focus() }
+    if (on) {
+      $('new-lecture-title').value = ''
+      // Viewer-only devices (Windows) can't record a lecture: only a missed one, filled from a share link.
+      const viewerOnly = app.hostAllowed === false
+      $('new-lecture-missed').checked = viewerOnly
+      $('new-lecture-missed').disabled = viewerOnly
+      $('new-lecture-missed').parentElement.title = viewerOnly ? 'This device can only follow or import lectures. Recording runs on the lecturer’s Mac.' : ''
+      $('new-lecture-title').focus()
+    }
   }
 
   async function createLecture () {

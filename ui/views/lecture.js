@@ -14,6 +14,7 @@ export function createLectureView (app) {
   const state = app.state
   let handles = [] // component handles for this screen
   let personal = null // aaron's personal-notes handle (setSlide)
+  let syncAutoFollow = () => {}
   let micPicker = null
   let pendingChunks = []
   let replayCache = () => {}
@@ -62,6 +63,7 @@ export function createLectureView (app) {
     renderStrip()
 
     await mountScreenComponents()
+    if (role !== 'peer') syncAutoFollow()
 
     if (role === 'peer') replayCache()
     else if (L?.slides?.length) {
@@ -357,7 +359,7 @@ export function createLectureView (app) {
   function renderNotes () {
     const box = $('notes')
     const mine = state.notes.filter((n) => n.slideIndex === state.current)
-    $('notes-sub').textContent = state.slides.length ? `· ${state.current + 1}` : ''
+    $('notes-sub').textContent = state.slides.length ? String(state.current + 1) : ''
     $('saved-count').textContent = String(state.notes.filter((n) => state.saved.has(n.id)).length)
     box.replaceChildren()
     if (state.notesView === 'saved') return renderSaved(box)
@@ -505,7 +507,7 @@ export function createLectureView (app) {
   function renderSummary () {
     const card = $('summary-card')
     const live = state.listening
-    const canWrite = state.role !== 'peer' && state.lines.length > 0 && !summary.busy
+    const canWrite = state.role !== 'peer' && app.hostAllowed !== false && state.lines.length > 0 && !summary.busy
     card.hidden = live || state.role === 'peer' || (!summary.text && !summary.busy && !canWrite)
     $('summary-text').textContent = summary.text
     const st = $('summary-state')
@@ -614,7 +616,7 @@ export function createLectureView (app) {
 
   /** Demo fallback (Shift+L): 3 "I'm lost" taps on the current slide, via the room if one is open, else locally. */
   async function simulateLost () {
-    if (state.role === 'peer' || !state.slides.length) return
+    if (state.role === 'peer' || app.hostAllowed === false || !state.slides.length) return
     const i = state.current
     try {
       await lec.p2p('simulateLost', i, 3) // room merges and emits lost:counts
@@ -626,7 +628,7 @@ export function createLectureView (app) {
 
   /** Demo fallback (Shift+E): explain the current slide from fixtures/explain.wav. */
   async function explainFromFile () {
-    if (state.role === 'peer' || !state.slides.length || explain.busy || explain.recording) return
+    if (state.role === 'peer' || app.hostAllowed === false || !state.slides.length || explain.busy || explain.recording) return
     explain.busy = true
     explain.slide = state.current
     setExplainStatus('Transcribing the explanation…', true)
@@ -798,6 +800,23 @@ export function createLectureView (app) {
   $('btn-summarise').addEventListener('click', () => writeSummary())
   $('tab-slide').addEventListener('click', () => setNotesView('slide'))
   $('tab-saved').addEventListener('click', () => setNotesView('saved'))
+
+  // Auto-follow (aryan PR #50): OFF = the tracker never moves the slide; manual only. The AI keeps the
+  // value for the whole session; the switch mirrors it.
+  const af = $('auto-follow')
+  af.addEventListener('change', async () => {
+    const want = af.checked
+    try {
+      const v = await lec.ai('setAutoFollow', want)
+      af.checked = v !== false
+      toast(af.checked ? 'Auto-follow on: slides turn when the lecturer moves on' : 'Auto-follow off: change slides by hand')
+    } catch (e) {
+      af.checked = !want
+      toast(`Could not change auto-follow: ${e.message || e}`, { error: true })
+    }
+  })
+  lec.on('ai:autofollow', (s) => { if (typeof s?.on === 'boolean') af.checked = s.on })
+  syncAutoFollow = () => lec.ai('getAutoFollow').then((v) => { af.checked = v !== false }).catch(() => {})
   $('btn-explain').addEventListener('click', () => (explain.recording ? stopExplain(true) : startExplain()))
   // aaron PR #33: show reconnecting while the swarm restarts after a network change
   lec.on('p2p:status', (s) => {
