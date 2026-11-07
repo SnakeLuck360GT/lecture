@@ -1,0 +1,246 @@
+// S6 Pears room (+ S7 lost-tap logs). Owner: aaron. Contract: coord/contracts/stage-6.md, stage-7-p2p.md
+//
+// HOST: one Hypercore "room feed" (json messages) + one Hyperdrive (slide images), both in one Corestore.
+//       Peers find the host through Hyperswarm on the feed's discoveryKey and replicate the whole store.
+// PEER: reads the feed live and re-emits the same bus events the host UI uses.
+//       Each peer also owns a "lost log" Hypercore. It sends that log's key to the host over the
+//       `lecscribe/lost-v1` extension, and the host merges all logs into per-slide counts.
+import Corestore from 'corestore'
+import Hyperdrive from 'hyperdrive'
+import { defaultStorage, parseKey, roomLink, makeSwarm, imageToBuffer, bufferToDataUrl, serialQueue } from './util.js'
+
+const LOST_EXT = 'lecscribe/lost-v1'
+const COUNTS_DEBOUNCE_MS = 200
+
+// ---------------------------------------------------------------- HOST
+export async function createRoom ({ bus, storage, title = '', moduleId = null, weekId = null, bootstrap, baseDir } = {}) {
+  if (!bus) throw new Error('createRoom: bus is required')
+  const store = new Corestore(storage || defaultStorage('host'))
+  const feed = store.get({ name: 'room-feed', valueEncoding: 'json' })
+  await feed.ready()
+  const drive = new Hyperdrive(store.namespace('slides'))
+  await drive.ready()
+
+  const key = feed.key.toString('hex')
+  const link = roomLink(feed.key)
+  const enqueue = serialQueue()
+  let closed = false
+  const append = (msg) => enqueue(() => closed ? null : feed.append(msg))
+
+  bus.emit('p2p:status', { role: 'host', state: 'starting', key, link })
+  if (feed.length === 0) {
+    await append({ type: 'room', v: 1, title, moduleId, weekId, driveKey: drive.key.toString('hex'), createdAt: Date.now() })
+  }
+
+  // ---- S7 merge: deviceId -> Map(slideIndex -> on)
+  const devices = new Map()
+  const openLogs = new Map()
+  let countsTimer = null
+  const lostCounts = () => {
+    const counts = {}
+    for (const slides of devices.values()) {
+      for (const [slide, on] of slides) if (on) counts[slide] = (counts[slide] || 0) + 1
+    }
+    return counts
+  }
+  const scheduleCounts = () => {
+    if (countsTimer || closed) return
+    countsTimer = setTimeout(() => {
+      countsTimer = null
+      if (closed) return
+      const counts = lostCounts()
+      bus.emit('lost:counts', counts)
+      append({ type: 'lost', counts }).catch(() => {})
+    }, COUNTS_DEBOUNCE_MS)
+  }
+  const applyTap = (deviceId, entry) => {
+    if (!entry || entry.type !== 'lost' || !Number.isInteger(entry.slideIndex)) return
+    if (!devices.has(deviceId)) devices.set(deviceId, new Map())
+    devices.get(deviceId).set(entry.slideIndex, entry.on !== false)
+    scheduleCounts()
+  }
+  const openLostLog = async (logKeyHex) => {
+    if (closed || openLogs.has(logKeyHex)) return
+    let logKey
+    try { logKey = parseKey(logKeyHex) } catch { return }
+    const log = store.get({ key: logKey, valueEncoding: 'json' })
+    openLogs.set(logKeyHex, log)
+    try {
+      await log.ready()
+      for await (const entry of log.createReadStream({ live: true })) applyTap(logKeyHex, entry)
+    } catch { /* closed */ }
+  }
+  feed.registerExtension(LOST_EXT, {
+    encoding: 'json',
+    onmessage: (msg) => { if (msg && typeof msg.logKey === 'string') openLostLog(msg.logKey) }
+  })
+
+  // ---- swarm
+  let peers = 0
+  const swarm = makeSwarm(store, {
+    bootstrap,
+    onConnection: (socket) => {
+      peers++
+      bus.emit('p2p:peers', { count: peers })
+      socket.once('close', () => { peers--; if (!closed) bus.emit('p2p:peers', { count: peers }) })
+    }
+  })
+  const discovery = swarm.join(feed.discoveryKey, { server: true, client: true })
+  const ready = discovery.flushed().then(() => {
+    if (!closed) bus.emit('p2p:status', { role: 'host', state: 'open', key, link })
+  }).catch((err) => {
+    if (!closed) bus.emit('p2p:status', { role: 'host', state: 'error', key, link, error: String(err?.message || err) })
+  })
+
+  // ---- bus -> feed
+  const onSlides = (slides) => enqueue(async () => {
+    if (closed || !Array.isArray(slides)) return
+    const out = []
+    for (const s of slides) {
+      let imagePath = null
+      const img = await imageToBuffer(s.image, baseDir)
+      if (img) {
+        imagePath = `/slides/${s.index}${img.ext}`
+        await drive.put(imagePath, img.buf)
+      }
+      out.push({ index: s.index, text: s.text || '', imagePath })
+    }
+    if (!closed) await feed.append({ type: 'slides', slides: out })
+  }).catch((err) => bus.emit('p2p:status', { role: 'host', state: 'error', key, link, error: 'slides: ' + err.message }))
+  const onSlide = (e) => { if (e && Number.isInteger(e.index)) append({ type: 'slide', index: e.index, source: e.source || 'manual', t: Date.now() }).catch(() => {}) }
+  const onNote = (note) => { if (note && note.id) append({ type: 'note', note }).catch(() => {}) }
+  bus.on('slides:loaded', onSlides)
+  bus.on('slide:changed', onSlide)
+  bus.on('note:added', onNote)
+
+  return {
+    key,
+    link,
+    ready, // resolves once the room is announced on the DHT
+    get peers () { return peers },
+    lostCounts,
+    simulateLost (slideIndex, n = 1) {
+      for (let i = 0; i < n; i++) applyTap(`sim-${slideIndex}-${devices.size}-${i}`, { type: 'lost', slideIndex, on: true })
+    },
+    async close () {
+      if (closed) return
+      bus.off('slides:loaded', onSlides)
+      bus.off('slide:changed', onSlide)
+      bus.off('note:added', onNote)
+      try { await append({ type: 'end' }) } catch {}
+      closed = true
+      clearTimeout(countsTimer)
+      await swarm.destroy().catch(() => {})
+      await store.close().catch(() => {})
+    },
+    _internals: { store, feed, drive, swarm }
+  }
+}
+
+// ---------------------------------------------------------------- PEER
+export async function joinRoom ({ bus, key, storage, bootstrap, imageTimeoutMs = 20000 } = {}) {
+  if (!bus) throw new Error('joinRoom: bus is required')
+  const roomKey = parseKey(key)
+  const keyHex = roomKey.toString('hex')
+  const store = new Corestore(storage || defaultStorage('peer'))
+  const feed = store.get({ key: roomKey, valueEncoding: 'json' })
+  await feed.ready()
+  const lostLog = store.get({ name: 'lost-log', valueEncoding: 'json' })
+  await lostLog.ready()
+  const logKey = lostLog.key.toString('hex')
+  let closed = false
+  let drive = null
+  const lostState = {}
+
+  bus.emit('p2p:status', { role: 'peer', state: 'connecting', key: keyHex })
+
+  const ext = feed.registerExtension(LOST_EXT, { encoding: 'json', onmessage: () => {} })
+  const announce = () => { try { ext.broadcast({ logKey }) } catch {} }
+  feed.on('peer-add', (peer) => { try { ext.send({ logKey }, peer) } catch {} })
+
+  let connected = false
+  const swarm = makeSwarm(store, {
+    bootstrap,
+    onConnection: () => {
+      if (!connected && !closed) { connected = true; bus.emit('p2p:status', { role: 'peer', state: 'connected', key: keyHex }) }
+    }
+  })
+  swarm.join(feed.discoveryKey, { server: false, client: true })
+
+  // ---- feed -> bus (strictly in order)
+  const reader = (async () => {
+    try {
+      for await (const msg of feed.createReadStream({ live: true })) {
+        if (closed) break
+        await handle(msg)
+      }
+    } catch (err) {
+      if (!closed) bus.emit('p2p:status', { role: 'peer', state: 'error', key: keyHex, error: String(err?.message || err) })
+    }
+  })()
+
+  // The host writes images to the drive BEFORE appending the 'slides' message, but our view of the
+  // drive may still be stale when the message arrives, so update and retry until the entry shows up.
+  async function fetchImage (path) {
+    const deadline = Date.now() + imageTimeoutMs
+    while (!closed && Date.now() < deadline) {
+      try {
+        await drive.update({ wait: true })
+        const buf = await drive.get(path, { timeout: Math.max(1, deadline - Date.now()) })
+        if (buf) return buf
+      } catch { /* not there yet */ }
+      await new Promise((resolve) => setTimeout(resolve, 150))
+    }
+    return null
+  }
+
+  async function handle (msg) {
+    if (!msg || typeof msg !== 'object') return
+    switch (msg.type) {
+      case 'room':
+        if (msg.driveKey) { drive = new Hyperdrive(store, parseKey(msg.driveKey)); await drive.ready() }
+        bus.emit('room:info', { title: msg.title, moduleId: msg.moduleId, weekId: msg.weekId, createdAt: msg.createdAt })
+        break
+      case 'slides': {
+        const slides = []
+        for (const s of msg.slides || []) {
+          let image = null
+          if (drive && s.imagePath) {
+            const buf = await fetchImage(s.imagePath)
+            if (buf) image = bufferToDataUrl(buf, s.imagePath)
+          }
+          slides.push({ index: s.index, text: s.text, image })
+        }
+        bus.emit('slides:loaded', slides)
+        break
+      }
+      case 'slide': bus.emit('slide:changed', { index: msg.index, source: 'remote' }); break
+      case 'note': bus.emit('note:added', msg.note); break
+      case 'lost': bus.emit('lost:counts', msg.counts || {}); break
+      case 'end': bus.emit('room:ended', {}); break
+    }
+  }
+
+  return {
+    key: keyHex,
+    logKey,
+    get connected () { return connected },
+    async lost (slideIndex, on = true) {
+      if (closed || !Number.isInteger(slideIndex)) return
+      await lostLog.append({ type: 'lost', slideIndex, on: !!on, t: Date.now() })
+      if (on) lostState[slideIndex] = true
+      else delete lostState[slideIndex]
+      bus.emit('lost:state', { ...lostState })
+      announce()
+    },
+    lostState: () => ({ ...lostState }),
+    async close () {
+      if (closed) return
+      closed = true
+      await swarm.destroy().catch(() => {})
+      await store.close().catch(() => {})
+      await reader
+    },
+    _internals: { store, feed, lostLog, swarm }
+  }
+}
