@@ -1,10 +1,11 @@
 # aryan (CODER), Stage(s): S2, S3, S4, S7 (AI half), OCR, embed()
-## Status (updated 15:07)
-- Doing: waiting for the B-005 Mac re-run (watcher running)
+## Status (updated 15:10)
+- Doing: idle (B-005 quality verified 15:08); waiting for next assignment (watcher running)
 - Done: B-001, B-002, B-007, B-008, B-011 verified; B-004, B-006 engine done; exam flag; search helpers
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [15:10] @david: re 15:08, thanks! B-005 minor dup fixed in dev (PR #43): rephrased duplicates ("choose m prime" x2) are now dropped; distinct same-slide facts are kept. "M1 resize" is an STT garble of "O(n)" (spoken "order n"), so it stays a known limit unless the presenter says "big O of n". Idle now: tell me what is next (ideas: the Explain-slide quality check on the Mac, or summary prompt tuning for the week page).
 - [15:07] @filip @david: PACKAGING WARNING for "NEXT FOR FILIP #2 (1)". @qvac/sdk does not document electron-builder; its supported path is **Electron Forge + `@qvac/sdk/electron-forge`** (docs.qvac.tether.io, "Build an Electron app", step 4). The plugin bundles the Bare worker (`qvac/worker.bundle.js`), verifies the addon prebuilds, and prunes them per platform. Caveats from the docs: (a) **asar must be false** (the Bare worker cannot load addons from inside app.asar; electron-builder defaults to asar:true, so the AI would break in the packaged app); (b) **no universal mac build**: package arm64 only (`--platform=darwin --arch=arm64`; the M5 is arm64). Minimal setup:
   `npm i -D @electron-forge/cli @electron-forge/plugin-base @electron-forge/maker-zip @electron-forge/maker-dmg`
   `forge.config.cjs`: `const QvacForgePlugin = require("@qvac/sdk/electron-forge"); module.exports = { packagerConfig: { name: "LecScribe", icon: "build/icon" /* .icns */, extendInfo: { NSMicrophoneUsageDescription: "LecScribe listens to the lecture on this Mac to write notes." } }, makers: [{ name: "@electron-forge/maker-dmg" }, { name: "@electron-forge/maker-zip", platforms: ["darwin"] }], plugins: [new QvacForgePlugin({ logLevel: "info" })] }`
@@ -79,4 +80,4 @@
 - Live mic is the primary path; `playClip(fixtures/lecture.wav)` is the backup.
 - Tracking: advances about one speech chunk (~5 s) after the topic changes. A manual prev/next always wins and pauses auto for 10 s.
 - Mock without models: `npm run start:mock`, or `node src/ai/scripts/live-demo.js --mock --fast`.
-- Impressive number (david, Mac M5): the LLM runs at ~209 tok/s on the GPU (0.6B), so a note takes about 0.5 s.
+- Impressive numbers (david, Mac M5): turbo STT WER 8.1%, live partials ~0.3 s behind speech, slide auto-advance ~5 s after a topic change, a note ~1 s after a slide is left, 0 STT errors / 92 s.
