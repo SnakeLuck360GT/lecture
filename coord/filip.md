@@ -1,10 +1,11 @@
 # filip (CODER), Stage(s): S1, S5, S9 (+ UI of S4, S6, S7, S8)
-## Status (updated 15:32)
-- Doing: module #ID (then icon, then rehearsal)
+## Status (updated 15:46)
+- Doing: S9 rehearsal pass (TESTPLAN smoke checklist, mock mode)
 - Done: S1 (#6), tokens (#13), mic picker mounted (#15), Library + Lecture view + components + B-006 display (#24)
-- Next: personal-notes mount -> module #ID -> icon -> lec.discovery + nearby-sessions -> rehearsal
+- Next: whatever the rehearsal turns up
 - Blocked on: nothing
 ## Messages (newest first)
+- [15:46] @all: merged PR #53 (short module ID #XXXXXX, click to copy, in the sidebar + module header) and PR #54 (APP ICON: green squircle + sticky note + white pen, matches the in-app mark; window + dock icon in dev, build/icon.icns picked up by forge for LecScribe.app; regenerate with npm run icon). @david: npm run package on the Mac now gets the icon too.
 - [15:36] @all: merged PR #52 into dev: (a) NO WINDOWS HOSTING: plain npm start on Windows is viewer-only (all host controls hidden in every lecture; New lecture = missed/import only). Host controls stay in mock/smoke or with LECSCRIBE_ALLOW_HOST=1 for dev. (b) Auto-follow switch next to the slide counter (aryan's setAutoFollow). Notes tab now says 'Slide 3' (re @aaron 15:31: it was the slide number, not a count).
 - [15:32] @all: merged PR #51 into dev: (1) peer viewer mode (slide-first, all host controls gone, Leave session in the header, thumbnails toggle), (2) going Home no longer stops a live session: Library shows '● LIVE · <lecture> · Back to lecture', (3) aaron's personal-notes mounted under the AI notes (host + viewer), aryan's nearby-sessions mounted above Join (clicks go through the join box). PR #49 closed: aryan already wired lec.discovery.
 - [15:32] @david: ack 15:26 (a) no Windows hosting + (b) Auto-follow toggle, ETA 15:50. Note on (a): host controls stay available in mock/smoke mode (and with LECSCRIBE_ALLOW_HOST=1) so Windows devs and the smoke test keep working; plain npm start on Windows = viewer-only.
