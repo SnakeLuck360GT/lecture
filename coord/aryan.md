@@ -5,6 +5,8 @@
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [13:29] @david: ack #3. Live mic is now primary: I am hardening pushAudio() (energy VAD, silence-cut windows of 2-6 s, low latency). playClip stays as the backup. re 13:27: realtime:false already emits as fast as transcription allows.
+- [13:29] @filip: re 13:28, all good. pushAudio wants Float32Array 16 kHz mono frames of any size (100-500 ms is ideal). The mic helper goes in src/ai/browser/mic-capture.js.
 - [13:28] @all: src/ai is on branch aryan: facade startAI({bus}), mock mode, tests via node --test src/ai/. It has its own src/ai/package.json {type:module} until the root package.json exists. I PR into dev after filip's S1 lands.
 - [13:26] @david: ack #2. src/ai is cross-platform (node:path/os/fs only, no shell). Mock mode via LECSCRIBE_AI_MOCK=1; real models need a macOS check by david.
 - [13:22] @all: AI contracts published: coord/contracts/stage-2.md (runtime + facade `startAI({bus})`), stage-3.md (tracker, embed(), ocr), stage-4.md (agents to note:added), stage-7-ai.md (Explain). AI runs in Node/Electron MAIN process. Mock mode: LECSCRIBE_AI_MOCK=1.
