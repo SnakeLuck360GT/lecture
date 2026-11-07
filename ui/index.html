@@ -24,6 +24,7 @@
         <button class="side-add" id="btn-new-module" type="button"><span data-icon="plus"></span>New module</button>
       </div>
       <div class="sidebar-footer">
+        <div id="mount-nearby"></div>
         <div class="section-label">Live session</div>
         <div id="mount-join-room"></div>
       </div>
@@ -43,6 +44,12 @@
         <button class="btn primary nodrag" id="btn-new-lecture" type="button" hidden><span data-icon="plus"></span>New lecture</button>
       </header>
       <div class="lib-body">
+        <div class="live-banner" id="live-banner" hidden role="status">
+          <span class="live-pulse"></span>
+          <span class="live-banner-kind" id="live-banner-kind">Live</span>
+          <span class="live-banner-title" id="live-banner-title"></span>
+          <button class="btn primary small" id="btn-back-live" type="button">Back to lecture</button>
+        </div>
         <section class="ask-results" id="ask-results" hidden aria-live="polite"></section>
         <form class="new-lecture" id="new-lecture-form" hidden>
           <input id="new-lecture-title" type="text" placeholder="Lecture title, e.g. Week 3 · Hash Tables" autocomplete="off" maxlength="100">
@@ -71,7 +78,9 @@
             <input id="search-input" type="search" placeholder="Search this lecture" autocomplete="off">
             <div class="search-results" id="search-results" hidden></div>
           </div>
-          <div class="pop-anchor">
+          <button class="icon-btn peer-only" id="btn-thumbs" type="button" title="Show slide thumbnails" aria-pressed="false"><span data-icon="slides"></span></button>
+          <button class="btn small peer-only" id="btn-leave" type="button">Leave session</button>
+          <div class="pop-anchor host-only">
             <button class="btn small" id="btn-share-pop" type="button" aria-expanded="false" aria-controls="pop-share"><span data-icon="link"></span>Share notes</button>
             <div class="popover" id="pop-share" hidden><div id="mount-share-lecture"></div></div>
           </div>
@@ -156,6 +165,7 @@
             </div>
           </div>
           <div class="notes" id="notes"></div>
+          <div class="personal-slot" id="mount-personal-notes"></div>
         </aside>
       </div>
 

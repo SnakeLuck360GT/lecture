@@ -243,6 +243,26 @@ label.btn { cursor: pointer; }
 .slide-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 28px; margin-top: calc(-1 * var(--space-1)); }
 .slide-meta { margin-left: auto; display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); color: var(--muted); font-variant-numeric: tabular-nums; }
 
+/* "Back to live lecture" banner on the Library (HUMAN UI REQUEST 2) */
+.live-banner { display: flex; align-items: center; gap: var(--space-3); max-width: 860px; margin-bottom: var(--space-5); padding: var(--space-3) var(--space-4); border: 1px solid var(--accent); border-radius: var(--radius-lg); background: var(--accent-soft); }
+.live-banner[hidden] { display: none; }
+.live-pulse { width: 9px; height: 9px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 0 4px var(--danger-soft); animation: pulse 1.4s infinite; flex: none; }
+.live-banner-kind { font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--danger); white-space: nowrap; }
+.live-banner-title { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Viewer (peer) mode: slide-first and minimal (HUMAN UI REQUEST 1). Host-only controls are hidden by
+   .role-peer .host-only; here the layout gives the slide the room. */
+.role-peer .toolbar { display: none !important; }
+.role-peer .lec-body { grid-template-columns: minmax(0, 1fr) 300px; }
+.role-peer .strip-wrap { display: none; }
+.role-peer.thumbs-on .strip-wrap { display: block; }
+.role-peer .stage { padding: var(--space-3) var(--space-4); }
+#btn-thumbs[aria-pressed="true"] { background: var(--selected); color: var(--ink); }
+
+/* personal notes (aaron's component) sit under the AI notes */
+.personal-slot { flex: none; border-top: 1px solid var(--line); padding: var(--space-3) var(--space-4) var(--space-4); max-height: 40%; overflow-y: auto; }
+.personal-slot:empty { display: none; }
+
 /* Ask across lectures (Library header search + grouped results) */
 .lib-header .ask { width: 300px; margin-left: auto; }
 .ask-results { display: flex; flex-direction: column; gap: var(--space-4); max-width: 860px; }

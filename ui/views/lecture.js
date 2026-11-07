@@ -13,6 +13,7 @@ export function createLectureView (app) {
   const lec = app.lec
   const state = app.state
   let handles = [] // component handles for this screen
+  let personal = null // aaron's personal-notes handle (setSlide)
   let micPicker = null
   let pendingChunks = []
   let replayCache = () => {}
@@ -77,7 +78,8 @@ export function createLectureView (app) {
     if (state.listening) await toggleListen()
     if (state.clipPlaying) await toggleClip()
     await flushTranscript()
-    if (state.role === 'peer') { try { await lec.p2p('leaveRoom') } catch {} }
+    if (state.role === 'peer' || state.roomOpen) { try { await lec.p2p('leaveRoom') } catch {} }
+    state.roomOpen = false
     destroyComponents()
     $('search-input').value = ''
     $('search-results').hidden = true
@@ -119,6 +121,11 @@ export function createLectureView (app) {
     destroyComponents()
     const host = state.role !== 'peer'
     const jobs = []
+    // aaron's "My notes" (local only, never shared): hosts and viewers alike.
+    if (state.lectureId) {
+      jobs.push(mountComponent('personal-notes', $('mount-personal-notes'), deps({ lectureId: state.lectureId, getSlideIndex: () => state.current }))
+        .then((h) => { personal = h; return h }))
+    }
     if (state.lectureId) {
       jobs.push(mountComponent('share-lecture', $('mount-share-lecture'), deps({ mode: 'share', lectureId: state.lectureId, onImported: () => {} })))
     }
@@ -143,6 +150,7 @@ export function createLectureView (app) {
   function destroyComponents () {
     for (const h of handles) h?.destroy?.()
     handles = []
+    personal = null
     try { micPicker?.destroy?.() } catch {}
     micPicker = null
     for (const id of ['mount-share-lecture', 'mount-room-panel', 'mount-heatmap', 'mount-lost-button', 'mount-mic-picker']) {
@@ -232,6 +240,7 @@ export function createLectureView (app) {
     renderNotes()
     markActiveThumb()
     refreshExplain()
+    try { personal?.setSlide?.(index) } catch {}
   }
 
   function renderSlide () {
@@ -793,6 +802,8 @@ export function createLectureView (app) {
   // aaron PR #33: show reconnecting while the swarm restarts after a network change
   lec.on('p2p:status', (s) => {
     if (s?.role !== 'host') return
+    if (s.state === 'open') state.roomOpen = true
+    else if (s.state === 'closed' || s.state === 'stopped' || s.state === 'left') state.roomOpen = false
     const btn = $('btn-room-pop')
     const reconnecting = (s.state === 'starting' || s.state === 'connecting') && !!s.reason
     btn.classList.toggle('reconnecting', reconnecting)
@@ -855,5 +866,22 @@ export function createLectureView (app) {
     if (e.key === 'L' && e.shiftKey && !e.metaKey && !e.ctrlKey) { e.preventDefault(); simulateLost() } // demo fallback
   })
 
-  return { open, close, go, openPdf, loadDemoDeck }
+  /** Re-read whether this device is hosting a room (Stop sharing emits no status event). */
+  async function refreshLive () {
+    if (!state.active || state.role === 'peer') return
+    try { const i = await lec.p2p('info'); state.roomOpen = i?.role === 'host' } catch { state.roomOpen = false }
+  }
+
+  /** A session is running: going Home must not stop it (HUMAN UI REQUEST 2). */
+  function isLive () {
+    return !!state.active && (state.listening || state.clipPlaying || state.role === 'peer' || !!state.roomOpen)
+  }
+
+  $('btn-thumbs').addEventListener('click', () => {
+    const on = $('screen-lecture').classList.toggle('thumbs-on')
+    $('btn-thumbs').setAttribute('aria-pressed', String(on))
+    if (on) markActiveThumb()
+  })
+
+  return { open, close, go, openPdf, loadDemoDeck, isLive, refreshLive }
 }
