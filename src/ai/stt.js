@@ -88,29 +88,90 @@ export function playClip ({ wavPath, onChunk, getSlideIndex, realtime = true, tr
   return { stop () { stopped = true }, done }
 }
 
-/** Live mic: accumulate pushed Float32 PCM and emit a chunk every chunkSec seconds. */
-export function createLiveStream ({ onChunk, getSlideIndex, transcribe = transcribeAudio, chunkSec = config.stt.chunkSec }) {
-  const need = Math.round(chunkSec * SR)
-  let buf = new Float32Array(0)
-  let t = 0
-  let queue = Promise.resolve()
+/**
+ * Live mic (PRIMARY demo path): energy-VAD segmenter over pushed Float32 16 kHz mono PCM.
+ * Cuts a segment at a pause (>= silenceMs) once it is >= minSec long, or hard-cuts at maxSec.
+ * Silent segments are dropped. Transcription runs in one serial queue; if it falls behind,
+ * queued segments are merged so latency stays bounded.
+ */
+export function createLiveStream ({
+  onChunk, getSlideIndex, transcribe = transcribeAudio,
+  minSec = config.stt.liveMinSec, maxSec = config.stt.liveMaxSec, silenceMs = config.stt.liveSilenceMs,
+  maxMergeSec = 10
+}) {
+  const FRAME = 480 // 30 ms
+  const frames = [] // current segment's frames (Float32Array each)
+  let frameBuf = new Float32Array(0)
+  let segStart = 0 // stream time (s) of the current segment start
+  let t = 0 // stream time (s) consumed so far
+  let speechFrames = 0
+  let silentRun = 0
+  let noise = 0.003 // adaptive noise floor (RMS)
+  const backlog = [] // segments waiting for transcription
+  let running = null
   let prev = ''
+
+  const isSpeech = (rms) => rms > Math.max(0.008, noise * 3)
+
+  const cut = () => {
+    if (!frames.length) return
+    const n = frames.length * FRAME
+    const audio = new Float32Array(n)
+    frames.forEach((f, i) => audio.set(f, i * FRAME))
+    const seg = { tStart: segStart, tEnd: segStart + n / SR, audio, speech: speechFrames }
+    frames.length = 0; speechFrames = 0; silentRun = 0; segStart = t
+    if (seg.speech * FRAME / SR < 0.4) return // basically silence
+    backlog.push(seg)
+    pump()
+  }
+
+  const pump = () => {
+    if (running || !backlog.length) return
+    // merge everything waiting into one segment (bounded latency when STT is slower than real time)
+    const segs = [backlog.shift()]
+    while (backlog.length && (backlog[0].tEnd - segs[0].tStart) <= maxMergeSec) segs.push(backlog.shift())
+    let audio = segs[0].audio
+    if (segs.length > 1) {
+      audio = new Float32Array(segs.reduce((a, s) => a + s.audio.length, 0))
+      let off = 0
+      for (const s of segs) { audio.set(s.audio, off); off += s.audio.length }
+    }
+    const tStart = segs[0].tStart; const tEnd = segs.at(-1).tEnd
+    running = (async () => {
+      try {
+        const text = await transcribe(audio, { ...(prev ? { prompt: prev.slice(-200) } : {}), tStart, tEnd })
+        if (text) { prev = text; onChunk(makeChunk({ tStart, tEnd, text, slideIndex: getSlideIndex() })) }
+      } catch (e) { console.error('[ai/stt] live segment failed', e) }
+      running = null
+      pump()
+    })()
+  }
+
   return {
     push (f32) {
-      const next = new Float32Array(buf.length + f32.length)
-      next.set(buf); next.set(f32, buf.length)
-      buf = next
-      while (buf.length >= need) {
-        const piece = buf.slice(0, need)
-        buf = buf.slice(need)
-        const tStart = t; t += chunkSec
-        queue = queue.then(async () => {
-          const text = await transcribe(piece, prev ? { prompt: prev.slice(-200) } : {})
-          if (text) { prev = text; onChunk(makeChunk({ tStart, tEnd: tStart + chunkSec, text, slideIndex: getSlideIndex() })) }
-        }).catch((e) => console.error('[ai/stt] live chunk failed', e))
+      if (!f32?.length) return
+      const merged = new Float32Array(frameBuf.length + f32.length)
+      merged.set(frameBuf); merged.set(f32, frameBuf.length)
+      let off = 0
+      for (; off + FRAME <= merged.length; off += FRAME) {
+        const f = merged.slice(off, off + FRAME)
+        let e = 0
+        for (let i = 0; i < FRAME; i++) e += f[i] * f[i]
+        const rms = Math.sqrt(e / FRAME)
+        const speech = isSpeech(rms)
+        if (!speech) noise = noise * 0.95 + rms * 0.05
+        if (!frames.length && !speech) { t += FRAME / SR; segStart = t; continue } // skip leading silence
+        frames.push(f)
+        t += FRAME / SR
+        if (speech) { speechFrames++; silentRun = 0 } else silentRun++
+        const len = frames.length * FRAME / SR
+        if ((len >= minSec && silentRun * 30 >= silenceMs) || len >= maxSec) cut()
       }
+      frameBuf = merged.slice(off)
     },
-    flushed: () => queue
+    /** Transcribe whatever is buffered now (call on "Stop listening"). */
+    async flush () { cut(); while (running || backlog.length) { pump(); await running } },
+    flushed: async () => { while (running || backlog.length) { pump(); await running } }
   }
 }
 

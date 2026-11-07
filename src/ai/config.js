@@ -15,11 +15,16 @@ export const config = {
   },
   stt: {
     chunkSec: Number(env.LECSCRIBE_CHUNK_SEC || 6),
+    liveMinSec: Number(env.LECSCRIBE_LIVE_MIN_SEC || 2),
+    liveMaxSec: Number(env.LECSCRIBE_LIVE_MAX_SEC || 6),
+    liveSilenceMs: Number(env.LECSCRIBE_LIVE_SILENCE_MS || 450),
     language: env.LECSCRIBE_STT_LANG || 'en'
   },
   tracker: {
-    threshold: Number(env.LECSCRIBE_TRACK_THRESHOLD || 0.55),
-    margin: Number(env.LECSCRIBE_TRACK_MARGIN || 0.04),
+    threshold: Number(env.LECSCRIBE_TRACK_THRESHOLD || 0.35),
+    mockThreshold: 0.2, // bag-of-words mock scores run lower than real embeddings
+    margin: Number(env.LECSCRIBE_TRACK_MARGIN || 0.05),
+    strongMargin: Number(env.LECSCRIBE_TRACK_STRONG || 0.12),
     lookahead: 2,
     nextBonus: 0.03,
     windowChunks: 2,

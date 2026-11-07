@@ -143,3 +143,35 @@ test('startAI mock e2e: clip → chunks → auto slide → notes', async () => {
   assert.equal((await ai.embed(['a', 'b'])).length, 2)
   await ai.close()
 })
+
+test('live stream: VAD cuts at pauses, drops silence, passes stream times', async () => {
+  const { createLiveStream } = await import('./stt.js')
+  const SR = 16000
+  const tone = (sec) => Float32Array.from({ length: sec * SR }, (_, i) => Math.sin(i / 5) * 0.2)
+  const sil = (sec) => new Float32Array(sec * SR)
+  const audio = [sil(1), tone(3), sil(1), tone(2.5), sil(2)]
+  const calls = []
+  const chunks = []
+  const live = createLiveStream({ onChunk: (c) => chunks.push(c), getSlideIndex: () => 7, transcribe: async (a, o) => { calls.push(o); return `seg ${calls.length}` } })
+  for (const part of audio) for (let i = 0; i < part.length; i += 1600) live.push(part.subarray(i, i + 1600))
+  await live.flush()
+  assert.equal(chunks.length, 2)
+  assert.ok(Math.abs(chunks[0].tStart - 1) < 0.1, 'leading silence skipped')
+  assert.ok(chunks.every((c) => c.slideIndex === 7))
+  assert.ok(calls.every((o) => typeof o.tStart === 'number' && o.tEnd > o.tStart))
+})
+
+test('agents move the chunk that triggered an auto-advance to the new slide', async () => {
+  const bus = new EventEmitter()
+  const seen = []
+  const sum = createSummariser({ bus, complete: async (m) => { seen.push(m[1].content); return '[]' } })
+  bus.emit('slides:loaded', SLIDES)
+  bus.emit('transcript:chunk', { id: 'c1', slideIndex: 0, text: 'intro words about sorting' })
+  bus.emit('transcript:chunk', { id: 'c2', slideIndex: 0, text: 'bubble sort swaps neighbours' })
+  bus.emit('slide:changed', { index: 1, source: 'auto', chunkId: 'c2' })
+  bus.emit('slide:changed', { index: 2, source: 'auto' })
+  await sum.idle()
+  assert.ok(!seen[0].includes('bubble'), 'slide 0 agent did not get the trigger chunk')
+  assert.ok(seen[1].includes('bubble'), 'slide 1 agent got it')
+  sum.dispose()
+})

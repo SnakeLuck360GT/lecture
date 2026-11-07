@@ -80,7 +80,14 @@ export function createSummariser ({ bus, complete, opts = {} }) {
     if (!ev || typeof ev.index !== 'number') return
     const left = current
     current = ev.index
-    if (left !== current) schedule(left)
+    if (left === current) return
+    // The chunk that triggered an auto-advance was spoken about the NEW slide: move it over.
+    if (ev.chunkId && agents.has(left)) {
+      const from = agent(left).pending
+      const k = from.findIndex((c) => c.id === ev.chunkId)
+      if (k >= 0) agent(current).pending.push(...from.splice(k).map((c) => ({ ...c, slideIndex: current })))
+    }
+    schedule(left)
   }
 
   bus.on('slides:loaded', onSlides)

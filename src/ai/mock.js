@@ -29,24 +29,50 @@ export async function mockTranscribe (audio) {
   return `mock transcript of ${sec.toFixed(1)} seconds of audio`
 }
 
+/** Sidecar transcript: `<wav>.transcript.json` ([{tStart,tEnd,text}]) or `<wav>.script.json` ({segments:[...]}). */
 export async function readSidecar (wavPath) {
-  try {
-    const arr = JSON.parse(await readFile(wavPath.replace(/\.wav$/i, '') + '.transcript.json', 'utf8'))
-    return Array.isArray(arr) ? arr : null
-  } catch { return null }
+  const base = wavPath.replace(/\.wav$/i, '')
+  for (const p of [base + '.transcript.json', base + '.script.json']) {
+    try {
+      const j = JSON.parse(await readFile(p, 'utf8'))
+      const arr = Array.isArray(j) ? j : j?.segments
+      if (Array.isArray(arr)) return arr
+    } catch {}
+  }
+  return null
 }
 
-/** For mock playClip: transcribe(samples) returns the sidecar segments whose midpoint falls in each window. */
+/** For mock playClip: each window gets the words of every segment it overlaps, split by time. */
 export function sidecarTranscriber (segments) {
   let t = 0
   return async (samples) => {
     const tStart = t
     const tEnd = t + samples.length / 16000
     t = tEnd
-    return segments
-      .filter((s) => { const mid = (s.tStart + s.tEnd) / 2; return mid >= tStart && mid < tEnd })
-      .map((s) => s.text).join(' ')
+    return wordsInRange(segments, tStart, tEnd)
   }
+}
+
+/** Mock live transcriber: returns script words in the stream-time range (falls back to mockTranscribe). */
+export async function liveScriptTranscriber (scriptPath) {
+  const segs = await readSidecar(scriptPath.replace(/\.script\.json$/i, '.wav')) ||
+    await readFile(scriptPath, 'utf8').then((t) => JSON.parse(t)?.segments).catch(() => null)
+  if (!Array.isArray(segs)) return mockTranscribe
+  return async (audio, { tStart, tEnd } = {}) =>
+    (typeof tStart === 'number' ? wordsInRange(segs, tStart, tEnd) : mockTranscribe(audio))
+}
+
+export function wordsInRange (segments, tStart, tEnd) {
+  const out = []
+  for (const s of segments) {
+    if (s.tEnd <= tStart || s.tStart >= tEnd) continue
+    const words = String(s.text).split(/\s+/)
+    const dur = Math.max(0.01, s.tEnd - s.tStart)
+    const a = Math.max(0, Math.round(((tStart - s.tStart) / dur) * words.length))
+    const b = Math.min(words.length, Math.round(((tEnd - s.tStart) / dur) * words.length))
+    if (b > a) out.push(words.slice(a, b).join(' '))
+  }
+  return out.join(' ')
 }
 
 export async function mockComplete (messages) {

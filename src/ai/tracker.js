@@ -15,7 +15,7 @@ export function decide ({ scores, current, threshold, margin }) {
     if (i > current && s > bestS) { best = i; bestS = s }
   }
   if (best === current) return null
-  if (bestS >= threshold && bestS - cur >= margin) return { index: best, confidence: clamp01(bestS) }
+  if (bestS >= threshold && bestS - cur >= margin) return { index: best, confidence: clamp01(bestS), margin: bestS - cur }
   return null
 }
 const clamp01 = (x) => Math.max(0, Math.min(1, x))
@@ -35,6 +35,7 @@ export function createTracker ({ bus, embedMany, embedOne, opts = {} }) {
   let holdUntil = 0
   const recent = [] // recent chunk texts
   let busy = Promise.resolve()
+  let pending = null // narrow-win candidate awaiting confirmation
 
   const onSlides = (slides) => {
     current = 0
@@ -49,7 +50,7 @@ export function createTracker ({ bus, embedMany, embedOne, opts = {} }) {
   const onChanged = (ev) => {
     if (!ev || typeof ev.index !== 'number') return
     current = ev.index
-    if (ev.source === 'manual') { holdUntil = Date.now() + o.manualHoldMs; recent.length = 0 }
+    if (ev.source === 'manual') { holdUntil = Date.now() + o.manualHoldMs; recent.length = 0; pending = null }
   }
 
   const onChunk = (chunk) => {
@@ -68,10 +69,15 @@ export function createTracker ({ bus, embedMany, embedOne, opts = {} }) {
       bus.emit('tracker:scores', { chunkId: chunk.id, scores })
       if (Date.now() < holdUntil) return
       const d = decide({ scores, current, threshold: o.threshold, margin: o.margin })
-      if (d) {
+      if (!d) { pending = null; return }
+      // Clear win -> advance now; narrow win -> needs the same candidate on two consecutive chunks.
+      const sure = d.margin >= o.strongMargin || (pending && pending.index === d.index)
+      if (!sure) { pending = d; return }
+      {
+        pending = null
         current = d.index
         recent.length = 0
-        bus.emit('slide:changed', { index: d.index, source: 'auto', confidence: d.confidence })
+        bus.emit('slide:changed', { index: d.index, source: 'auto', confidence: d.confidence, chunkId: chunk.id })
       }
     }).catch((e) => console.error('[ai/tracker] chunk scoring failed', e))
   }

@@ -14,7 +14,7 @@ import { createExplainer } from './explain.js'
 import { complete as realComplete } from './llm.js'
 import { ocr as realOcr } from './ocr.js'
 import { lecturePrompt } from './prompts.js'
-import { mockEmbed, mockTranscribe, mockComplete, readSidecar, sidecarTranscriber } from './mock.js'
+import { mockEmbed, mockTranscribe, mockComplete, readSidecar, sidecarTranscriber, liveScriptTranscriber } from './mock.js'
 
 export { cosine }
 
@@ -38,11 +38,14 @@ export async function startAI ({ bus, mock = config.mock, preload = !mock } = {}
   bus.on('slides:loaded', onSlides)
   bus.on('slide:changed', onChanged)
 
-  const tracker = createTracker({ bus, embedMany: (t) => embed(t), embedOne: (t) => embed(t) })
+  const trackOpts = mock && !process.env.LECSCRIBE_TRACK_THRESHOLD ? { threshold: config.tracker.mockThreshold } : {}
+  const tracker = createTracker({ bus, embedMany: (t) => embed(t), embedOne: (t) => embed(t), opts: trackOpts })
   const agents = createSummariser({ bus, complete })
   const explainer = createExplainer({ bus, getSlides: () => slides, transcribe, complete })
   const emitChunk = (c) => bus.emit('transcript:chunk', c)
-  const live = createLiveStream({ onChunk: emitChunk, getSlideIndex: () => current, transcribe })
+  // Mock live mic: map stream time onto a script fixture (LECSCRIBE_MOCK_SCRIPT, default fixtures/lecture.script.json).
+  const liveTx = mock ? await liveScriptTranscriber(process.env.LECSCRIBE_MOCK_SCRIPT || 'fixtures/lecture.script.json') : transcribe
+  const live = createLiveStream({ onChunk: emitChunk, getSlideIndex: () => current, transcribe: liveTx })
 
   if (preload) {
     // Load in sequence so the first is usable quickly; never throw from here.
@@ -79,6 +82,8 @@ export async function startAI ({ bus, mock = config.mock, preload = !mock } = {}
     stopClip () { clip?.stop(); clip = null },
     /** S2 live mic: Float32Array 16 kHz mono PCM from the renderer. */
     pushAudio (f32) { live.push(toF32(f32)) },
+    /** S2 live mic: transcribe whatever is buffered (call on "Stop listening"). Resolves when done. */
+    async flushAudio () { await live.flush(); await tracker.idle(); await agents.flush() },
     /** S7: audio for the active Explain recording. */
     pushExplainAudio (f32) { explainer.push(toF32(f32)) },
     /** S7 demo path: pre-recorded explanation clip. */
