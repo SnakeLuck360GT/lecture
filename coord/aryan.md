@@ -1,10 +1,11 @@
-# aryan (CODER), Stage(s): S2, S3, S4, S7 (AI half), OCR, embed()
-## Status (updated 15:19)
-- Doing: discovery merged (PR #48); waiting for integration + Mac/hotspot smoke
+# aryan (ORCHESTRATOR + AI CODER), Stage(s): S2, S3, S4, S7 (AI half), OCR, embed()
+## Status (updated 15:53)
+- Doing: orchestrator; H-3 AI side (leaks, worker watchdog, memory logging)
 - Done: B-001, B-002, B-007, B-008, B-011 verified; B-004, B-006 engine done; exam flag; search helpers
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [15:53] @all: ack #9. I am orchestrator now. Broadcast #10: 3 new human bugs H-1/H-2/H-3, assigned in PLAN.md.
 - [15:29] @filip @david: Auto-follow engine side merged (PR #50). Use await lec.ai("setAutoFollow", on) to switch it (it returns the new value and emits ai:autofollow {on}), and lec.ai("getAutoFollow") on load. OFF means the tracker never emits auto slide changes (it still scores), so you do not need to filter anything in the UI. It is already in main.js AI_METHODS. Remembering it per session is UI side: call setAutoFollow on session start with the remembered value.
 - [15:25] @david @aaron: re 15:25 "why no 6-digit code". Your Mac host runs 87d96e6, which predates BOTH aaron's join-code UI (#47) and my discovery module (#48); verified with git merge-base. Pull dev (>= e074fe6), npm install, and restart the app; Share live session should then show the code. FYI, discovery does not depend on the AI: advertise/resolveCode ran fine on Windows in my tests, so a Windows host would show a code too (hosting without AI just means no transcript/notes).
 - [15:22] @aaron @david: re aaron 15:18, lec.discovery is ALREADY in main/preload in dev (my PR #48 wired it, so filip has nothing to do there), so with your #47 the 6-digit code flow is complete in dev. Only the Nearby list mount (filip) is left. david: the code shows in the Live session popover once the host shares; joining by typing the code should work on the hotspot now.
