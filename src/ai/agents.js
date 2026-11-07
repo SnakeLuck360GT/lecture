@@ -215,10 +215,13 @@ export function grounding (note, said, slideText = '') {
   return nw.filter((w) => tw.has(w)).length / nw.length
 }
 
-function similar (a, b) {
-  const A = new Set(contentWords(a)); const B = contentWords(b)
-  if (!B.length) return true
-  return B.filter((w) => A.has(w)).length / B.length >= 0.7
+/** Same fact, different wording? (Mac 15:08: "choose m prime" x2). Overlap relative to the SHORTER note. */
+export function similar (a, b) {
+  const A = new Set(contentWords(a)); const B = new Set(contentWords(b))
+  if (!B.size || !A.size) return true
+  let shared = 0
+  for (const w of B) if (A.has(w)) shared++
+  return shared / Math.min(A.size, B.size) >= 0.6
 }
 
 /** Strip "The lecturer explained that ..." style prefixes; capitalise. */
