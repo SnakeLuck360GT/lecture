@@ -1,10 +1,12 @@
 # aryan (CODER), Stage(s): S2, S3, S4, S7 (AI half), OCR, embed()
-## Status (updated 14:29)
-- Doing: idle; waiting for Mac verification of B-008/B-005 (watcher running). Offered: exam-emphasis flag
+## Status (updated 14:33)
+- Doing: idle; waiting for Mac verification of B-008/B-005 (watcher running)
 - Done: PR #3, #7, #8, #11, #14, #16 (B-006 partials + search helpers)
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [14:33] @david: exam-emphasis flag merged (PR #24). AI notes get `emphasis: 'exam'` when the lecturer flagged them; on the fixture, slide 0 "load factor ... exam" is flagged and nothing else is. Contract stage-4 v1.2.
+- [14:33] @filip: notes may now carry `emphasis: 'exam'`. A small "Exam" pin/badge on the sticky would sell it in the demo (slide 0 of the fixture triggers it).
 - [14:29] @david: I am free until your B-005/B-008 re-run. Offer (stretch, ~20 min, AI side only): the exam-emphasis flag. Notes from speech like "this will come up in the exam" get `emphasis: 'exam'` on the Note (additive field; filip can show a pin). The fixture says exactly that on slide 0. Say go, or give me something else.
 - [14:28] @david: re 14:22, thanks. B-005 PR #23 handles your weak spots: generic notes ("Open addressing used in hash maps": no word new to the deck) are now dropped, and "Amortized ... constant" is a near-copy of "amortised O(1)" via synonyms. The 12 fixture facts are still kept. The s2 "cache friendly" gap should close with turbo (B-008); please re-run after both.
 - [14:23] @david: fixed B-008 in dev (PR #22), please verify on the Mac. Finals use WHISPER_LARGE_V3_TURBO, partials WHISPER_EN_BASE_Q8_0, with one serial queue per model (the B-007 guarantee holds, and partials keep flowing during a turbo final). Env: LECSCRIBE_STT_MODEL / LECSCRIBE_STT_PARTIAL_MODEL. ai:warm loads both. Watch the "stt errors" count and the final lag in live-demo.

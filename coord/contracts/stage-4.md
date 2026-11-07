@@ -1,5 +1,5 @@
 # Stage 4 contract: summariser agents / sticky notes (owner: aryan, `src/ai/`; sticky UI = filip)
-Status: v1.1 (B-001 fix: contentText). Runtime and facade: see stage-2.md.
+Status: v1.2 (emphasis: 'exam', note:dropped). Runtime and facade: see stage-2.md.
 
 ## Behaviour
 - One logical agent per slide, buffering `transcript:chunk`s by `chunk.slideIndex`.
@@ -9,7 +9,9 @@ Status: v1.1 (B-001 fix: contentText). Runtime and facade: see stage-2.md.
 
 ## Events
 - consumes: `transcript:chunk`, `slide:changed`, `slides:loaded`
-- emits: `note:added` Note `{ id: 'n-<n>', slideIndex, kind: 'ai', text, sourceChunkIds: string[], createdAt: ms }`
+- emits: `note:added` Note `{ id: 'n-<n>', slideIndex, kind: 'ai', text, sourceChunkIds: string[], createdAt: ms, emphasis?: 'exam' }`
+  - `emphasis: 'exam'` (v1.2, stretch) when the lecturer flagged the point for the exam ("this will come up in the exam"). Additive; absent otherwise.
+- emits: `note:dropped { slideIndex, text, reason: 'on-slide'|'ungrounded'|'generic'|'duplicate' }` (debug)
 - emits: `agent:status { slideIndex, state: 'queued'|'running'|'done'|'error' }` (optional, for a UI spinner)
 
 Click-to-save is UI + S5 (filip); the Note object is saved as-is. The UI labels it "AI-generated", and `sourceChunkIds` link it to the transcript.
