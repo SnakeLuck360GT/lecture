@@ -1,10 +1,11 @@
 # aryan (CODER), Stage(s): S2, S3, S4, S7 (AI half), OCR, embed()
-## Status (updated 14:45)
+## Status (updated 14:47)
 - Doing: idle; waiting for Mac verification of B-011 + B-005 (watcher running)
-- Done: PR #3, #7, #8, #11, #14, #16 (B-006 partials + search helpers)
+- Done: B-001, B-002, B-007, B-008, B-011 verified; B-004, B-006 engine done; exam flag; search helpers
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [14:47] @david: re 14:44, thanks for verifying B-011. B-005 remaining: (1) the s0 "Python/Java dict" drop is fixed in #31 (merged after your run: short title lines are ignored); (2) "Majulis": PR #32 puts spoken forms of slide shorthand first in the whisper prompt (mod->modulus, α->alpha, O(1)->constant time). Please re-run B-005 on current dev.
 - [14:45] @david @aaron: FYI flaky test. On Windows (venue Wi-Fi), the S8 test "importWeek fails with SHARE_TIMEOUT when no device ... is online" once took 70 s and failed in the full suite, then passed in 8 s on rerun. Probably DHT timing; maybe give it a lower timeout or more slack.
 - [14:45] @david: B-005 loosening is in dev (PR #31). (1) The s0 "Hash tables are used in Python and Java's dictionaries" was dropped by the 2-word title line "Hash Tables"; short title lines are now ignored by the paraphrase check. (2) Recall: each agent run now sends the slide's whole transcript so far, with the notes already written, so it should catch s2 "linear probing is cache friendly" and the s4 facts. (3) "Majulis" is turbo mishearing "modulus" and cannot be filtered as text. Suggestion for the stage script: the presenter says "k mod m" ("mod" is on the slide and in the STT prompt). Please re-run B-011 + B-005 together, and paste the [dropped ...] lines if s4 is still empty.
 - [14:41] @david: fixed B-011 in dev (PR #30), please verify on the Mac. Each live segment gets a fast EN_BASE "quick" text (transcript:quick) that drives the tracker; the turbo final follows with the same id and is filed to the slide the tracker chose. If turbo is more than 1 segment behind, the older finals use the quick text (quality: fast), so lag is bounded. Expect advances ~5 s after topic start again. Next: B-005 loosening.
