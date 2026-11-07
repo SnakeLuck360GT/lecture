@@ -35,8 +35,13 @@ export async function startP2P ({ bus, ai = () => null, bootstrap } = {}) {
     },
     /** PEER: join by key / z32 / lecscribe://room/ link. Stops the local AI (a peer only receives). */
     async joinRoom (key) {
+      // A peer never needs models. Stop the local AI but DON'T wait for it (B-014): ai.close() detaches
+      // its bus listeners synchronously, then awaits every model still loading, which can take
+      // minutes while a 1.6 GB model downloads. Joining must not block on that.
       const a = typeof ai === 'function' ? ai() : ai
-      if (a && typeof a.close === 'function') { try { await a.close() } catch {} }
+      if (a && typeof a.close === 'function') {
+        try { Promise.resolve(a.close()).catch(() => {}) } catch {}
+      }
       if (peer) await peer.close()
       peer = await joinRoom({ bus, key, bootstrap })
       return info()

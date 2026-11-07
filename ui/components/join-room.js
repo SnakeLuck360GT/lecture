@@ -27,6 +27,15 @@ export function mountJoinRoom (el, { onJoined, onLeft } = {}) {
   let conn = 'idle' // idle | connecting | connected
   let busy = false
   let error = ''
+  let slow = false // joined, but no connection to the lecturer after SLOW_MS
+  let slowTimer = null
+  const SLOW_MS = 20000
+  const CALL_TIMEOUT_MS = 15000
+  const armSlow = () => {
+    clearTimeout(slowTimer)
+    slow = false
+    slowTimer = setTimeout(() => { if (conn !== 'connected') { slow = true; render() } }, SLOW_MS)
+  }
 
   const root = h('div', { class: 'lec-join-room' })
   el.replaceChildren(root)
@@ -40,6 +49,7 @@ export function mountJoinRoom (el, { onJoined, onLeft } = {}) {
       setKids(root, 
         h('span', { class: 'lec-join-room__label' }, 'Following a live session'),
         h('div', { class: `lec-join-room__status ${ok ? 'is-ok' : 'is-wait'}` }, h('span', { class: 'lec-join-room__dot' }), ok ? 'Connected to the lecturer' : 'Looking for the lecturer…'),
+        !ok && slow ? h('span', { class: 'lec-muted' }, 'Can’t reach the lecturer’s laptop yet. Are you both on the same Wi-Fi or hotspot? Still trying…') : null,
         h('div', { class: 'lec-join-room__row' }, h('button', { class: 'lec-btn lec-btn--quiet', onclick: leave, disabled: busy }, 'Leave session')),
         error ? h('span', { class: 'lec-err' }, error) : null)
       return
@@ -55,26 +65,33 @@ export function mountJoinRoom (el, { onJoined, onLeft } = {}) {
     const link = input.value.trim()
     if (!link) { error = 'Paste the link your lecturer shared.'; render(); return }
     busy = true; error = ''; conn = 'connecting'; render()
+    // B-014: never leave the button stuck on "Joining…" if main is slow to answer.
+    let timer
+    const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('JOIN_SLOW')), CALL_TIMEOUT_MS) })
     try {
-      const info = await lec.p2p('joinRoom', link)
+      const info = await Promise.race([lec.p2p('joinRoom', link), timeout])
       role = info?.role || 'peer'
       if (info?.connected) conn = 'connected'
       input.value = ''
+      armSlow()
       if (onJoined) onJoined(info)
-    } catch (err) { error = friendlyError(err); conn = 'idle' }
+    } catch (err) {
+      conn = 'idle'
+      error = /JOIN_SLOW/.test(String(err?.message)) ? 'LecScribe is taking too long to join. Try again in a moment.' : friendlyError(err)
+    }
+    clearTimeout(timer)
     busy = false; render()
   }
   async function leave () {
     busy = true; render()
     try { await lec.p2p('leaveRoom') } catch {}
-    role = null; conn = 'idle'; busy = false; render()
+    role = null; conn = 'idle'; busy = false; slow = false; clearTimeout(slowTimer); render()
     if (onLeft) onLeft()
   }
 
   const off = lec.on('p2p:status', (s) => {
     if (s?.role !== 'peer') return
-    if (s.state === 'connected') conn = 'connected'
-    else if (s.state === 'connecting') conn = 'connecting'
+    if (s.state === 'connected') { conn = 'connected'; slow = false; clearTimeout(slowTimer) } else if (s.state === 'connecting') { conn = 'connecting'; if (role === 'peer') armSlow() }
     else if (s.state === 'error') error = s.error || 'Connection problem'
     render()
   })
@@ -83,5 +100,5 @@ export function mountJoinRoom (el, { onJoined, onLeft } = {}) {
   lec.p2p('info').then((info) => { role = info?.role || null; if (info?.connected) conn = 'connected'; render() }).catch(() => render())
   render()
 
-  return { destroy () { destroyed = true; off && off(); offEnd && offEnd(); el.replaceChildren() } }
+  return { destroy () { destroyed = true; clearTimeout(slowTimer); off && off(); offEnd && offEnd(); el.replaceChildren() } }
 }
