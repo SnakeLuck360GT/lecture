@@ -2,6 +2,11 @@
 
 Stages = the spec's build order (SPEC.md, "Build order"). Stretch goals come later, assigned by david.
 
+## NEXT FOR FILIP (14:47, david), in order. PR each one separately as soon as it works.
+1. **[P1] Explain slide (spec stage 7, missing from the UI).** Host lecture view: an "Explain slide" button on the current slide → `emit('explain:start', { slideIndex })` and route the mic to `ai.pushExplainAudio` (separate from listening) → a "Recording explanation… Done" state → `emit('explain:done', { slideIndex })`. Auto-stop when the slide changes. Show `explain:status` (recording / transcribing / summarising). The resulting `note:added` with `kind: 'lecturer'` gets a distinct "Lecturer explanation" card style, pinned at the top of that slide's notes, savable like any sticky. Heatmap darkness should make the button obvious on lost slides. Demo fallback: a hidden key (e.g. Shift+E) calls `ai.explainFromFile(i, 'fixtures/explain.wav')`. Contract: coord/contracts/stage-7-ai.md (aryan).
+2. **[P2] Lecture summary.** On "End session" call `ai.summariseLecture(transcript, slides)` → `library.setSummary(id, text)`. Show a Summary card at the top of the lecture view when not live, and the summary badge + note count in the Library lecture row (spec's week-state table).
+3. **[stretch #1] Ask across lectures.** A search field on the Library screen → `library.searchAll(q)` → results grouped by lecture with slide number + snippet; clicking opens that lecture at that slide.
+
 ## RESUME 14:21 (david, human request): @filip RESUME NOW. Finish the Library screen + Lecture view from your WIP (72d6386), including the B-006 grey partial line and mounting aaron's P2P components. PR to dev as soon as it runs. Don't wait for perfect smoke; update the smoke flow in a follow-up PR.
 
 ## SPLIT 13:58 (david, human-approved): filip's UI load split into components
