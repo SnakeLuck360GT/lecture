@@ -1,15 +1,11 @@
 # BUGS
-## dev health: 🟢 GREEN  (16:05, commit a47c268, 103/103 on the Mac)
+## dev health: 🟢 GREEN  (16:08, commit edd29df, 105/105 on the Mac; UI smoke ok)
 ## Open
 ### H-3 [P0] Random crashes in long live sessions; model efficiency (human 15:53)
 - Owners: @aryan (AI leaks + worker watchdog, PR #56 merged), @filip (renderer DOM caps + crash handlers), @david (soak).
 - Repro / evidence: `node tests/soak/soak.mjs 30 <out>` on the Mac (real models, AI + P2P host + peer + library session, lecture.wav looped live). 'Before' run (pre-#56) in progress since 15:56: no crash yet; temp files grow ~120/min (~11 MB/min): $TMPDIR lecscribe*/qvac* reached 4580 files / 251 MB from today's runs. QVAC workers ~3.7–4.2 GB RSS.
 - Expected: 30 min with flat RSS, no temp growth, 0 crashes; a worker crash auto-recovers.
 - Status: OPEN, AI part FIX CLAIMED (#56); renderer part pending (filip); 'after' soak once both are in.
-### H-2 [P1] Notes auto-saved per session, star = important, per-module Important list (human 15:53)
-- Owners: @aaron (library: auto-save note:added on host + peers, setNoteImportant, listImportant), @filip (star toggle, Important section).
-- Tests: tests/contracts/library.test.mjs (session auto-save, H-2 describe), gated until setNoteImportant exists.
-- Status: LIBRARY PART VERIFIED (16:05, PR #60): session auto-save, setNoteImportant persist/toggle, listImportant per module all pass (103/103). UI part (star + Important section) pending @filip.
 ### H-1 [P1] Slides/notes cropped and hard to read: per-page view, fit without cropping, zoom/pan, notes wrap (human 15:53)
 - Owner: @filip. Verify: Mac, real PDF + a portrait/odd-aspect PDF, zoom in/out/fit, long sticky text not clipped.
 - Status: OPEN (16:02)
@@ -58,6 +54,10 @@
 - Watch: memory (turbo 1.6 GB + LLM 1 GB + embed 0.3 GB, fine on 24 GB), and that finals don't fall behind real time (RTF 0.48 < 1).
 - Status: ACCURACY VERIFIED (14:32): turbo text clearly better, 0 errors. Latency side effect is tracked in B-011.
 ## Closed
+### H-2 [P1] Notes auto-saved per session, star = important, per-module Important list (human 15:53)
+- Owners: @aaron (library: auto-save note:added on host + peers, setNoteImportant, listImportant), @filip (star toggle, Important section).
+- Tests: tests/contracts/library.test.mjs (session auto-save, H-2 describe), gated until setNoteImportant exists.
+- Status: VERIFIED (16:08, Mac, dev edd29df, 105/105): library contract tests + UI smoke (autoSaved 2, star → Important tab, module 'Important notes' grouped by lecture with slide numbers; screenshot smoke4-important.png).
 ### B-015 [P1] Live transcript doesn't reach peers (human request)
 - Stage / owner: s6 / @aaron (room protocol); @filip only if the peer view needs a tweak
 - HUMAN REQUEST (david): aaron's laptop (peer) shows slides + notes but no live transcript.
