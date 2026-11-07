@@ -3,7 +3,13 @@
 // - Owns the host event bus and bridges it to the renderer (see bus.js).
 // - Starts the on-device AI (src/ai, aryan) and P2P (src/p2p, aaron) if they are present.
 // - Handles the macOS microphone permission.
-import { app, BrowserWindow, ipcMain, protocol, session, systemPreferences, shell } from 'electron'
+import { createRequire } from 'node:module'
+const electron = createRequire(import.meta.url)('electron')
+if (typeof electron === 'string') {
+  console.error('LecScribe must run inside Electron, not plain Node. ELECTRON_RUN_AS_NODE is probably set (VS Code sets it for extensions): unset it, then run `npm start`.')
+  process.exit(1)
+}
+const { app, BrowserWindow, ipcMain, protocol, session, systemPreferences, shell } = electron
 import { readFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join, normalize, extname, sep, isAbsolute } from 'node:path'
