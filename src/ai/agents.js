@@ -46,10 +46,10 @@ export function createSummariser ({ bus, complete, opts = {} }) {
         bus.emit('agent:status', { slideIndex: i, state: 'waiting', reason: 'too-short', words: wordCount([...a.seen, ...a.pending]) })
         return
       }
-      // B-005 recall: the LLM sees the slide's WHOLE transcript so far (notes already written are
-      // passed in so it does not repeat them), not just the newest chunks.
-      // H-3: bound the history (a long stay on one slide must not grow memory / the prompt forever)
-      const chunks = [...a.seen, ...fresh].slice(-40)
+      // Human 17:2x: the LLM sees the ENTIRE transcript of THIS slide (everything said while it was up,
+      // including earlier visits), never other slides. Notes already written are passed in so it does not
+      // repeat them. H-3: only a high safety cap (~30 min on one slide) bounds memory.
+      const chunks = [...a.seen, ...fresh].slice(-o.maxSlideChunks)
       a.seen = chunks
       if (!chunks.length) return
       a.lastRun = Date.now()
@@ -59,7 +59,8 @@ export function createSummariser ({ bus, complete, opts = {} }) {
           slideText: slides[i]?.text || '',
           transcript: chunks.map((c) => c.text).join(' '),
           max: o.maxNotes,
-          already: a.notes
+          already: a.notes,
+          maxChars: o.maxSlideChars
         }))
         if (gen !== generation) return
         const said = chunks.map((c) => c.text).join(' ')
@@ -89,7 +90,8 @@ export function createSummariser ({ bus, complete, opts = {} }) {
             // H-5: a repeat of the slide is never kept, not even as the >= 1-note fallback
             drop('on-slide'); continue
           }
-          if (isGeneric(text, slides.map((x) => x.text || '').join(' '))) { soft.push(text); drop('generic'); continue }
+          // judged against THIS slide only (other slides' text must not decide what this slide's notes may say)
+          if (isGeneric(text, slideText)) { soft.push(text); drop('generic'); continue }
           emit(text)
         }
         // Target >= 1 note per slide: once the slide is left with no note at all, keep the best

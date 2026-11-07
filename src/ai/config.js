@@ -38,6 +38,8 @@ export const config = {
     minNewChars: 180, // ~12 s of speech: first sticky shows up while the slide is still up
     minIntervalMs: 12000,
     maxNotes: 3, // filters keep precision; the prompt asks for 'up to 3' only grounded facts
+    maxSlideChunks: 400, // the whole slide's transcript goes to the note agent; safety cap only (~30 min on one slide)
+    maxSlideChars: 8000, // prompt budget for that transcript; if longer, keep the start AND the newest speech
     onSlideOverlap: 0.6, // H-5: drop a note if >= 60% of its content words are on the slide (plus per-line paraphrase check)
     minGrounding: 0.45 // keep a note only if >= 45% of its NEW words were actually said
   }
