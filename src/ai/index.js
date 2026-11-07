@@ -48,7 +48,24 @@ export async function startAI ({ bus, mock = config.mock, preload = !mock } = {}
   // Mock live mic: map stream time onto a script fixture (LECSCRIBE_MOCK_SCRIPT, default fixtures/lecture.script.json).
   const liveTx = mock ? await liveScriptTranscriber(process.env.LECSCRIBE_MOCK_SCRIPT || 'fixtures/lecture.script.json') : transcribe
   const getVocab = () => slideVocab(slides[current]?.text, slides[current + 1]?.text)
-  const live = createLiveStream({ onChunk: emitChunk, getSlideIndex: () => current, transcribe: liveTx, getVocab, onPartial: (p) => bus.emit('transcript:partial', p) })
+  // B-011: quick (fast-model) text drives the tracker; the accurate final is filed to the slide the
+  // tracker chose for that chunk (assign), even if it arrives after the slide changed.
+  const assign = new Map() // chunkId -> slideIndex
+  const num = (id) => Number(String(id).replace(/\D/g, '')) || 0
+  bus.on('slide:changed', (ev) => {
+    if (ev?.source !== 'auto' || !ev.chunkId) return
+    const n = num(ev.chunkId)
+    for (const id of assign.keys()) if (num(id) >= n) assign.set(id, ev.index)
+  })
+  const live = createLiveStream({
+    onChunk: emitChunk,
+    getSlideIndex: () => current,
+    getSlideIndexFor: (id) => { const v = assign.has(id) ? assign.get(id) : current; assign.delete(id); return v },
+    onQuick: (c) => { assign.set(c.id, c.slideIndex); bus.emit('transcript:quick', c) },
+    transcribe: liveTx,
+    getVocab,
+    onPartial: (p) => bus.emit('transcript:partial', p)
+  })
 
   let ready = Promise.resolve()
   if (preload) {

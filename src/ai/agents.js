@@ -84,6 +84,8 @@ export function createSummariser ({ bus, complete, opts = {} }) {
     const i = typeof c.slideIndex === 'number' ? c.slideIndex : current
     const a = agent(i)
     a.pending.push(c)
+    // B-011: an accurate final can arrive after its slide was left: summarise it then.
+    if (i !== current) { schedule(i); return }
     const chars = a.pending.reduce((n, x) => n + (x.text?.length || 0), 0)
     if (chars >= o.minNewChars && Date.now() - a.lastRun >= o.minIntervalMs) schedule(i)
   }
