@@ -13,7 +13,7 @@ const LOST_EXT = 'lecscribe/lost-v1'
 const COUNTS_DEBOUNCE_MS = 200
 
 // ---------------------------------------------------------------- HOST
-export async function createRoom ({ bus, storage, title = '', moduleId = null, weekId = null, bootstrap, baseDir } = {}) {
+export async function createRoom ({ bus, storage, title = '', moduleId = null, weekId = null, bootstrap, baseDir, history } = {}) {
   if (!bus) throw new Error('createRoom: bus is required')
   const store = new Corestore(storage || defaultStorage('host'))
   const feed = store.get({ name: 'room-feed', valueEncoding: 'json' })
@@ -115,6 +115,10 @@ export async function createRoom ({ bus, storage, title = '', moduleId = null, w
   }).catch((err) => bus.emit('p2p:status', { role: 'host', state: 'error', key, link, error: 'slides: ' + err.message }))
   const onSlide = (e) => { if (e && Number.isInteger(e.index)) append({ type: 'slide', index: e.index, source: e.source || 'manual', t: Date.now() }).catch(() => {}) }
   const onNote = (note) => { if (note && note.id) append({ type: 'note', note }).catch(() => {}) }
+  // A room opened mid-lecture first publishes what already happened: { slides, slideIndex, notes }.
+  if (history?.slides) onSlides(history.slides)
+  if (Number.isInteger(history?.slideIndex)) onSlide({ index: history.slideIndex, source: 'manual' })
+  for (const n of history?.notes || []) onNote(n)
   bus.on('slides:loaded', onSlides)
   bus.on('slide:changed', onSlide)
   bus.on('note:added', onNote)

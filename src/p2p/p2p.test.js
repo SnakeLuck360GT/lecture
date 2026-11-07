@@ -131,3 +131,19 @@ test('S8: importWeek fails fast with BAD_LINK and SHARE_TIMEOUT', async () => {
   await assert.rejects(importWeek('garbage', { bootstrap }), /BAD_LINK/)
   await assert.rejects(importWeek(weekLink(Buffer.alloc(32, 9)), { bootstrap, timeoutMs: 1500 }), /SHARE_TIMEOUT/)
 })
+
+test('S6: createRoom({ history }) publishes slides/current slide/notes that happened before the room opened', async () => {
+  const hostBus = mkBus()
+  const history = { slides: [{ index: 0, text: 'A' }, { index: 1, text: 'B' }], slideIndex: 1, notes: [{ id: 'h1', slideIndex: 0, kind: 'ai', text: 'early', sourceChunkIds: [], createdAt: 1 }] }
+  const room = await createRoom({ bus: hostBus, bootstrap, history })
+  const peerBus = mkBus()
+  const slides = waitFor(peerBus, 'slides:loaded')
+  const slide = waitFor(peerBus, 'slide:changed', (e) => e.index === 1)
+  const note = waitFor(peerBus, 'note:added', (n) => n.id === 'h1')
+  const peer = await joinRoom({ bus: peerBus, key: room.key, bootstrap })
+  assert.equal((await slides).length, 2)
+  await slide
+  assert.equal((await note).text, 'early')
+  await peer.close()
+  await room.close()
+})
