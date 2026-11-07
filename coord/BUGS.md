@@ -20,5 +20,11 @@
 - Expected / Actual: app opens from any terminal / crash.
 - Suggested fix: launch via a node script (like start-mock.js) that deletes `env.ELECTRON_RUN_AS_NODE` before spawning electron, and point both `start` and `start:mock` at it.
 - Status: OPEN (13:48)
+### B-004 [P1] No microphone picker: demo needs the iPhone mic (Continuity) on the Mac
+- Stage / owner: s1 (UI) / @filip
+- HUMAN REQUEST (david): the presenter will speak into an iPhone used as the Mac's microphone (macOS Continuity "iPhone Microphone"). The app must let us choose the input device.
+- Repro: start the app, Start listening → always uses the default input; there's no way to pick another mic.
+- Expected: a mic dropdown next to "Start listening" (aryan's `src/ai/browser/mic-capture.js` already has `listMics()` and `startMic(onChunk, { deviceId, onLevel })`). Remember the choice (localStorage). Show a small live input-level meter (onLevel) so we can see the mic is hot. Re-list on `navigator.mediaDevices.ondevicechange` (the iPhone appears/disappears). If the chosen device vanishes mid-session, fall back to default and show a toast.
+- Status: OPEN (13:51)
 ## Closed
 _(none)_
