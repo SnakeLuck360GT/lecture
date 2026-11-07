@@ -50,7 +50,8 @@ export function createLectureView (app) {
     $('search-box').hidden = !lectureId
 
     // saved notes come back as saved stickies
-    for (const n of L?.notes || []) { state.notes.push(n); state.saved.add(n.id) }
+    // H-2: every note of the lecture is kept; the star (state.saved) = marked important
+    for (const n of L?.notes || []) { state.notes.push(n); if (n.important) state.saved.add(n.id) }
     for (const c of L?.transcript || []) addLine(c, false)
     summary.text = String(L?.summary || '')
     summary.busy = false
@@ -65,7 +66,7 @@ export function createLectureView (app) {
     await mountScreenComponents()
     if (role !== 'peer') syncAutoFollow()
 
-    if (role === 'peer') replayCache()
+    if (role === 'peer') { await ensureSession(); replayCache() }
     else if (L?.slides?.length) {
       // Re-publish the stored deck on the bus so the tracker / room / UI all see it.
       lec.emit('slides:loaded', L.slides.map((s, i) => ({ index: i, text: s.text || '', image: s.image || null })))
@@ -82,6 +83,7 @@ export function createLectureView (app) {
     await flushTranscript()
     if (state.role === 'peer' || state.roomOpen) { try { await lec.p2p('leaveRoom') } catch {} }
     state.roomOpen = false
+    await endSession()
     destroyComponents()
     $('search-input').value = ''
     $('search-results').hidden = true
@@ -315,6 +317,10 @@ export function createLectureView (app) {
     if (!state.active || !note || typeof note.id !== 'string') return
     if (state.notes.some((n) => n.id === note.id)) return
     state.notes.push(note)
+    if (note.important) state.saved.add(note.id)
+    // H-2: every generated note is kept automatically (idempotent; covers notes replayed to a peer
+    // before its library session started, and lectures without a session).
+    if (state.lectureId) app.store.saveNote(state.lectureId, note).catch(() => {})
     if (note.slideIndex === state.current) renderNotes()
     updateThumbBadges()
   }
@@ -333,7 +339,7 @@ export function createLectureView (app) {
     const saved = state.notes.filter((n) => state.saved.has(n.id))
     if (!saved.length) {
       const e = el('div', 'notes-empty')
-      e.append(el('p', null, 'No saved notes yet.'), el('p', 'muted', 'Click a sticky note during the lecture to keep it here, filed under this module and lecture.'))
+      e.append(el('p', null, 'No important notes yet.'), el('p', 'muted', 'Every note is saved automatically. Click the star on a note to keep it here and in the module’s Important list.'))
       box.append(e)
       return
     }
@@ -380,10 +386,10 @@ export function createLectureView (app) {
   }
 
   function stickyEl (n) {
-    const saved = state.saved.has(n.id)
-    const d = el('button', `sticky ${n.kind === 'lecturer' ? 'lecturer' : 'ai'}${saved ? ' saved' : ''}`)
+    const starred = state.saved.has(n.id) // H-2: notes are saved automatically; the star = important
+    const d = el('button', `sticky ${n.kind === 'lecturer' ? 'lecturer' : 'ai'}${starred ? ' saved starred' : ''}`)
     d.type = 'button'
-    d.title = saved ? 'Saved. Click to remove from your notes.' : 'Click to save to your notes'
+    d.title = starred ? 'Important. Click to unstar.' : 'Saved automatically. Click to mark as important.'
     const top = el('div', 'sticky-top')
     const kind = el('span', 'sticky-kind', n.kind === 'lecturer' ? 'Lecturer explanation' : 'AI-generated')
     if (n.emphasis === 'exam') {
@@ -393,45 +399,40 @@ export function createLectureView (app) {
     }
     top.append(kind)
     const st = el('span', 'sticky-state')
-    st.innerHTML = saved ? `${iconSvg('check', 12)}<span>Saved</span>` : `${iconSvg('bookmark', 12)}<span>Save</span>`
+    st.innerHTML = starred ? `${iconSvg('star', 13)}<span>Important</span>` : `${iconSvg('star', 13)}<span>Star</span>`
     top.append(st)
     d.append(top, el('div', 'sticky-text', n.text))
     const src = (n.sourceChunkIds || []).map((id) => state.chunks.get(id)?.text).filter(Boolean).join(' … ')
     if (src) d.append(el('div', 'sticky-src', `Heard: “${src}”`))
-    d.addEventListener('click', () => toggleSave(n))
+    d.addEventListener('click', () => toggleImportant(n))
     return d
   }
 
-  async function toggleSave (n) {
-    if (state.saved.has(n.id)) {
-      state.saved.delete(n.id)
-      renderNotes()
-      if (state.lectureId) app.store.unsaveNote(state.lectureId, n.id).then(() => app.libraryChanged()).catch(() => {})
-      toast('Removed from your notes')
-      return
-    }
-    state.saved.add(n.id)
-    const sources = (n.sourceChunkIds || []).map((id) => state.chunks.get(id)).filter(Boolean)
-    lec.emit('note:saved', {
-      note: n,
-      moduleId: state.moduleId,
-      weekId: state.lectureId,
-      lectureId: state.lectureId,
-      slide: { index: n.slideIndex, text: state.slides[n.slideIndex]?.text || '' },
-      sources,
-      savedAt: Date.now()
-    })
+  /** H-2: star / unstar a note (it is already saved). Persists via library.setNoteImportant. */
+  async function toggleImportant (n) {
+    const on = !state.saved.has(n.id)
+    on ? state.saved.add(n.id) : state.saved.delete(n.id)
+    n.important = on
     renderNotes()
     updateThumbBadges()
-    if (state.lectureId) {
-      try {
-        await app.store.saveNote(state.lectureId, { ...n, savedAt: Date.now() })
-        app.libraryChanged()
-        toast(`Saved to ${$('crumb-lecture').textContent}`)
-      } catch (e) {
-        toast(`Could not save the note: ${e.message || e}`, { error: true })
-      }
-    } else toast('Saved')
+    if (on) {
+      const sources = (n.sourceChunkIds || []).map((id) => state.chunks.get(id)).filter(Boolean)
+      lec.emit('note:saved', { // kept for listeners of the old "saved" event
+        note: n, moduleId: state.moduleId, weekId: state.lectureId, lectureId: state.lectureId,
+        slide: { index: n.slideIndex, text: state.slides[n.slideIndex]?.text || '' }, sources, savedAt: Date.now(), important: true
+      })
+    }
+    if (!state.lectureId) { toast(on ? 'Marked important' : 'Unstarred'); return }
+    try {
+      await app.store.setNoteImportant(state.lectureId, n.id, on, n)
+      app.libraryChanged()
+      toast(on ? `Marked important in ${$('crumb-lecture').textContent}` : 'Removed from Important')
+    } catch (e) {
+      on ? state.saved.delete(n.id) : state.saved.add(n.id) // revert
+      n.important = !on
+      renderNotes()
+      toast(`Could not update the note: ${e.message || e}`, { error: true })
+    }
   }
 
   // ---------- transcript ----------
@@ -495,6 +496,19 @@ export function createLectureView (app) {
     const batch = pendingChunks
     pendingChunks = []
     try { await app.store.appendTranscript(state.lectureId, batch) } catch (e) { console.warn('appendTranscript failed', e) }
+  }
+
+  // ---------- library session (H-2: every note:added auto-saves into the live lecture) ----------
+  /** Start recording bus events into this lecture (host: listening / clip / room; peer: after join). */
+  async function ensureSession () {
+    if (state.sessionActive || !state.lectureId || !app.store.persistent) return
+    try { await app.store.startSession(state.lectureId); state.sessionActive = true; app.libraryChanged() } catch (e) { console.warn('startSession failed', e) }
+  }
+  async function endSession () {
+    if (!state.sessionActive) return
+    state.sessionActive = false
+    try { await app.store.endSession() } catch {}
+    app.libraryChanged()
   }
 
   // ---------- listening (live mic) ----------
@@ -668,7 +682,8 @@ export function createLectureView (app) {
         state.mic = null
         await lec.ai('flushAudio').catch(() => {})
         await flushTranscript().catch(() => {})
-        if (state.sessionActive) { await app.store.endSession().catch(() => {}); state.sessionActive = false; app.libraryChanged() }
+        // keep recording into the lecture while the clip or a shared room is still live
+        if (!state.clipPlaying && !state.roomOpen) await endSession()
       } finally {
         setListening(false)
         btn.disabled = !state.slides.length
@@ -684,9 +699,7 @@ export function createLectureView (app) {
       const info = await lec.info()
       if (!info.aiLoaded) toast('The AI is still loading. Speech is transcribed once it is ready.', { ms: 5000 })
       await openMic()
-      if (state.lectureId && app.store.persistent) {
-        try { await app.store.startSession(state.lectureId); state.sessionActive = true } catch (e) { console.warn('startSession failed', e) }
-      }
+      await ensureSession()
       setListening(true)
     } catch (e) {
       console.error(e)
@@ -715,6 +728,7 @@ export function createLectureView (app) {
       audio.pause()
       await lec.ai('stopClip').catch(() => {})
       setClip(false)
+      if (!state.listening && !state.roomOpen) await endSession()
       return
     }
     if (!state.slides.length) { toast('Load the slides first'); return }
@@ -724,6 +738,7 @@ export function createLectureView (app) {
       const p = lec.ai('playClip', 'fixtures/lecture.wav', { realtime: true })
       await audio.play()
       setClip(true)
+      ensureSession()
       p.catch((e) => { toast(`Clip failed: ${e.message || e}`, { error: true }); setClip(false) })
     } catch (e) {
       toast(`Could not play the clip: ${e.message || e}`, { error: true })
@@ -826,7 +841,7 @@ export function createLectureView (app) {
   // aaron PR #33: show reconnecting while the swarm restarts after a network change
   lec.on('p2p:status', (s) => {
     if (s?.role !== 'host') return
-    if (s.state === 'open') state.roomOpen = true
+    if (s.state === 'open') { state.roomOpen = true; if (state.active) ensureSession() }
     else if (s.state === 'closed' || s.state === 'stopped' || s.state === 'left') state.roomOpen = false
     const btn = $('btn-room-pop')
     const reconnecting = (s.state === 'starting' || s.state === 'connecting') && !!s.reason

@@ -26,6 +26,7 @@ const P = {
   check: '<path d="M3.5 8.5L6.5 11.5 12.5 4.5"/>',
   x: '<path d="M4 4l8 8M12 4l-8 8"/>',
   bookmark: '<path d="M4.5 2.5h7v11L8 11l-3.5 2.5z"/>',
+  star: '<path d="M8 2.25l1.75 3.6 3.95.55-2.86 2.77.68 3.93L8 11.25 4.48 13.1l.68-3.93L2.3 6.4l3.95-.55z" stroke-linejoin="round"/>',
   lecture: '<rect x="2" y="2.75" width="12" height="9" rx="1.25"/><path d="M5 14h6"/>'
 }
 
