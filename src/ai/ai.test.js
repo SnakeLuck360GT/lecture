@@ -407,3 +407,10 @@ test('B-011: tracker scores a chunk once (quick), ignores its later final', asyn
   assert.equal(scored, 1)
   tr.dispose()
 })
+
+test('B-005: genuine on-topic note is not dropped by a short title line (Mac run 14:32)', async () => {
+  const { readFile } = await import('node:fs/promises')
+  const slides = JSON.parse(await readFile(new URL('../../fixtures/slides.json', import.meta.url), 'utf8'))
+  assert.equal(isOnSlide("Hash tables are used in Python and Java's dictionaries", slides[0].text), false)
+  assert.equal(isOnSlide('Resizing requires rehashing every key', slides[4].text), true, 'still drops 3-word line paraphrase')
+})
