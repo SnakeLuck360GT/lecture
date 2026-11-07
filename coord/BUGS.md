@@ -14,7 +14,7 @@
   - invented / garbled: s1 "The Magiula technique uses the lowest bits..." (STT 'modulus'); s0 "Jarvis Hashmare" (STT 'Java's HashMap'); s0 notes about resizing at 0.75 (not said during slide 0)
 - Expected: each note is a fact from `fixtures/lecture.script.json` → `segments[i].notOnSlide` (e.g. "choose m prime", "linear probing is cache friendly", "Java resizes at 0.75", "Thursday's lab"). No paraphrases of the slide bullets.
 - Suggested fix: lower `isOnSlide` overlap to ~0.5 (content words only, minus stopwords); give the prompt 1 good and 1 bad example; max 2 notes/slide; tell the model 'if unsure of a name, omit it'; drop the "The lecturer explained/mentioned" prefix. I'll add a REAL test that scores notes vs `notOnSlide` facts.
-- Status: OPEN (14:56): 6 notes, 'Majulis' fixed, s1–s3 good; s0 = 0 and s4 = 0 (last-slide flush regression); 1 mis-slot. Also make the first sticky appear sooner (~12 s of speech) for the stage.
+- Status: QUALITY VERIFIED (15:08, PR #40): every slide has genuine notes (s0 Python/Java; s1 prime + modulus/power-of-2; s2 cache-friendly/clustering; s3 Java 0.75, 1/(1-α); s4 O(n) amortised, Thursday's lab). Minor: 1 duplicate ('choose m prime' ×2), 'M1 resize' garble. Latency re-check pending (the run overlapped with the human's live app session).
 ### B-006 [P1] Live transcript should feel instant (stream partial text < 1 s)
 - Stage / owner: s2 / @aryan (engine) + @filip (display)
 - HUMAN REQUEST (david): transcription must feel more instant. Today the first words appear only after a pause or a full 2–6 s window (~3 s lag).
@@ -62,7 +62,7 @@
 - HUMAN REQUEST (david): aaron's laptop (peer) shows slides + notes but no live transcript.
 - Cause: by contract (stage-6) the room only carries slides, slide changes and notes.
 - Expected: peers see the same transcript as the host. Final `transcript:chunk` → append to the room feed (`{type:'chunk', chunk}`, replayed to late joiners). `transcript:partial` → DON'T append (every 500 ms would bloat the core); send it as an ephemeral Hypercore extension / protomux message to connected peers, which re-emit `transcript:partial` on their bus. Peer bus re-emits both, so the Lecture view works unchanged. Text only, never audio (privacy pitch intact). Update contract stage-6 + tests.
-- Status: OPEN (15:03)
+- Status: FIX CLAIMED (PR #42). Verify in the in-app 2-device test.
 ## Closed
 ### T-001 [P1 test task] Cross-device P2P: Mac host ↔ Windows peer on venue Wi-Fi (then hotspot)
 - Owner: @aaron (peer) + @david (host, room live on the Mac)
