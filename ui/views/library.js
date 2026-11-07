@@ -1,5 +1,5 @@
 // Library screen (owner: filip): module sidebar + lecture list for the selected module.
-import { $, el, icon, toast, fmtDate } from './dom.js'
+import { $, el, icon, toast, fmtDate, hydrateIcons } from './dom.js'
 import { mountComponent } from './components.js'
 
 const STATE_LABEL = { live: 'Live', attended: 'Attended', missed: 'Missed', imported: 'Shared' }
@@ -80,6 +80,43 @@ export function createLibraryView (app) {
     const n = v.lectures.length
     $('lib-module-sub').textContent = `${n} lecture${n === 1 ? '' : 's'}${app.store.persistent ? '' : ' · demo library (not saved)'}`
     renderLectures()
+    loadImportant(mod.id)
+  }
+
+  // ---------- H-2: per-module Important list (starred notes, grouped by lecture, lecture order) ----------
+  let importantSeq = 0
+  async function loadImportant (moduleId) {
+    const seq = ++importantSeq
+    const box = $('important-section')
+    let groups = []
+    try { groups = await app.store.listImportant?.(moduleId) || [] } catch (e) { console.warn('listImportant failed', e) }
+    if (seq !== importantSeq || moduleId !== v.moduleId) return
+    const n = groups.reduce((a, g) => a + (g.notes?.length || 0), 0)
+    box.hidden = !n || !$('ask-results').hidden
+    $('important-count').textContent = n ? String(n) : ''
+    const list = $('important-list')
+    list.replaceChildren()
+    for (const g of groups) {
+      if (!g.notes?.length) continue
+      const card = el('div', 'imp-group')
+      const head = el('div', 'imp-group-head')
+      head.append(el('span', 'imp-lecture', g.lectureTitle || 'Lecture'))
+      if (g.date) head.append(el('span', 'imp-date', fmtDate(g.date)))
+      card.append(head)
+      for (const note of g.notes) {
+        const b = el('button', `imp-note ${note.kind === 'lecturer' || note.kind === 'explain' ? 'lecturer' : 'ai'}`)
+        b.type = 'button'
+        b.title = 'Open this lecture at this slide'
+        const meta = el('span', 'imp-meta')
+        if (Number.isInteger(note.slideIndex)) meta.append(el('span', 'imp-slide', `Slide ${note.slideIndex + 1}`))
+        meta.append(el('span', 'imp-kind', note.kind === 'lecturer' ? 'Lecturer explanation' : note.kind === 'explain' ? 'Explained' : 'AI note'))
+        b.append(meta, el('span', 'imp-text', note.text || ''))
+        b.addEventListener('click', () => app.openLecture(g.lectureId, { role: 'host', jumpTo: Number.isInteger(note.slideIndex) ? note.slideIndex : null }))
+        card.append(b)
+      }
+      list.append(card)
+    }
+    hydrateIcons(box)
   }
 
   function destroyRows () {
@@ -202,9 +239,10 @@ export function createLibraryView (app) {
     const q = $('ask-input').value.trim()
     const box = $('ask-results')
     const seq = ++askSeq
-    if (!q) { box.hidden = true; box.replaceChildren(); $('lecture-list').hidden = false; return }
+    if (!q) { box.hidden = true; box.replaceChildren(); $('lecture-list').hidden = false; if (v.moduleId) loadImportant(v.moduleId); return }
     box.hidden = false
     $('lecture-list').hidden = true
+    $('important-section').hidden = true
     $('lib-empty').hidden = true
     box.replaceChildren(el('div', 'ask-status', 'Searching every lecture on this laptop…'))
     let hits = []

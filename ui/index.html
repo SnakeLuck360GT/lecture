@@ -61,6 +61,10 @@
           <button class="btn ghost" type="button" id="btn-cancel-lecture">Cancel</button>
         </form>
         <div class="lecture-list" id="lecture-list"></div>
+        <section class="important" id="important-section" hidden aria-label="Important notes in this module">
+          <div class="important-head"><span data-icon="star"></span><h2>Important notes</h2><span class="important-count" id="important-count"></span></div>
+          <div class="important-list" id="important-list"></div>
+        </section>
         <div class="empty-state" id="lib-empty" hidden></div>
       </div>
     </main>
@@ -165,7 +169,7 @@
           <div class="notes-head">
             <div class="seg" role="tablist" aria-label="Which notes to show">
               <button class="seg-btn active" id="tab-slide" type="button" role="tab" aria-selected="true">Slide <span class="seg-sub" id="notes-sub"></span></button>
-              <button class="seg-btn" id="tab-saved" type="button" role="tab" aria-selected="false">Saved <span class="seg-count" id="saved-count">0</span></button>
+              <button class="seg-btn" id="tab-saved" type="button" role="tab" aria-selected="false">Important <span class="seg-count" id="saved-count">0</span></button>
             </div>
           </div>
           <div class="notes" id="notes"></div>

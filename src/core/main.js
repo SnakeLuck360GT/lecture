@@ -376,7 +376,13 @@ async function runSmoke (pngPath) {
   await new Promise((r) => setTimeout(r, 800))
   await wc.executeJavaScript('(async () => { const L = window.__lecscribe; const id = L.state.lectureId; await L.openLibrary(); await L.openLecture(id) })()')
   await new Promise((r) => setTimeout(r, 2000))
-  const savedView = await wc.executeJavaScript("({ tab: document.querySelector('#tab-saved')?.classList.contains('active'), count: document.getElementById('saved-count')?.textContent, listed: !!document.querySelector('#notes .saved-group .sticky') })")
+  const savedView = await wc.executeJavaScript("({ tab: document.querySelector('#tab-saved')?.classList.contains('active'), count: document.getElementById('saved-count')?.textContent, listed: !!document.querySelector('#notes .saved-group .sticky.starred') })")
+  // H-2: every note is auto-saved (even unstarred ones) and the module page lists the starred one.
+  savedView.autoSaved = await wc.executeJavaScript('(async () => { const L = window.__lecscribe; const lec = await L.app.store.getLecture(L.state.lectureId); return (lec.notes || []).length })()')
+  await wc.executeJavaScript('window.__lecscribe.openLibrary()')
+  await new Promise((r) => setTimeout(r, 1200))
+  savedView.moduleImportant = await wc.executeJavaScript("({ shown: !document.getElementById('important-section').hidden, notes: document.querySelectorAll('#important-list .imp-note').length })")
+  await writeFile(out.replace(/.png$/i, '') + '-important.png', (await wc.capturePage()).toPNG())
   await writeFile(out.replace(/.png$/i, '') + '-saved.png', (await wc.capturePage()).toPNG())
   // Ask across lectures: back to the Library, search, click the first hit -> lecture opens at that slide.
   await wc.executeJavaScript('window.__lecscribe.openLibrary()')

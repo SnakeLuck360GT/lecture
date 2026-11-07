@@ -251,6 +251,31 @@ label.btn { cursor: pointer; }
 .slide-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 28px; margin-top: calc(-1 * var(--space-1)); }
 .slide-meta { margin-left: auto; display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); color: var(--muted); font-variant-numeric: tabular-nums; }
 
+/* H-2: star = important (every note is saved automatically) */
+.sticky .sticky-state svg path { fill: none; }
+.sticky.starred .sticky-state { color: var(--warn); opacity: 1; }
+.sticky.starred .sticky-state svg path { fill: currentColor; }
+.sticky.starred { box-shadow: inset 3px 0 0 var(--warn), var(--shadow); }
+
+/* H-2: per-module Important notes on the Library */
+.important { max-width: 860px; margin-top: var(--space-6); }
+.important[hidden] { display: none; }
+.important-head { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); color: var(--warn); }
+.important-head h2 { font-size: var(--text-md); font-weight: 600; color: var(--ink); }
+.important-head svg path { fill: currentColor; }
+.important-count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--selected); color: var(--muted); font-size: var(--text-xs); font-weight: 600; display: inline-grid; place-items: center; }
+.important-list { display: flex; flex-direction: column; gap: var(--space-3); }
+.imp-group { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); overflow: hidden; }
+.imp-group-head { display: flex; align-items: baseline; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--line); }
+.imp-lecture { font-weight: 600; }
+.imp-date { color: var(--muted); font-size: var(--text-sm); }
+.imp-note { display: flex; flex-direction: column; gap: 4px; width: 100%; padding: var(--space-3) var(--space-4); border: 0; border-top: 1px solid var(--line); background: transparent; color: var(--ink); text-align: left; cursor: pointer; transition: background var(--fast) var(--ease); }
+.imp-group-head + .imp-note { border-top: 0; }
+.imp-note:hover, .imp-note:focus-visible { background: var(--hover); outline: none; }
+.imp-meta { display: flex; gap: var(--space-2); font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.imp-slide { color: var(--accent); }
+.imp-text { line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+
 /* "Back to live lecture" banner on the Library (HUMAN UI REQUEST 2) */
 .live-banner { display: flex; align-items: center; gap: var(--space-3); max-width: 860px; margin-bottom: var(--space-5); padding: var(--space-3) var(--space-4); border: 1px solid var(--accent); border-radius: var(--radius-lg); background: var(--accent-soft); }
 .live-banner[hidden] { display: none; }
