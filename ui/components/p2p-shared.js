@@ -64,6 +64,8 @@ export async function copyText (text) {
 /** Friendly text for P2P / share errors coming back over IPC. */
 export function friendlyError (err) {
   const msg = String(err?.message || err || '')
+  if (/BAD_CODE/.test(msg)) return 'A join code is 6 digits, like 482 913.'
+  if (/CODE_NOT_FOUND/.test(msg)) return 'No live session with that code. Check the code, and that you’re on the same Wi-Fi or hotspot.'
   if (/BAD_LINK/.test(msg)) return 'That link doesn’t look right. Paste the whole lecscribe:// link.'
   if (/SHARE_TIMEOUT/.test(msg)) return 'Couldn’t reach anyone sharing these notes. Ask your coursemate to keep LecScribe open, then try again.'
   if (/not loaded/i.test(msg)) return 'Sharing isn’t available right now. Restart LecScribe.'

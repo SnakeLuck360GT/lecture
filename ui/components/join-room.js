@@ -39,7 +39,7 @@ export function mountJoinRoom (el, { onJoined, onLeft } = {}) {
 
   const root = h('div', { class: 'lec-join-room' })
   el.replaceChildren(root)
-  const input = h('input', { class: 'lec-input', type: 'text', placeholder: 'Paste a session link', spellcheck: 'false', 'aria-label': 'Session link' })
+  const input = h('input', { class: 'lec-input', type: 'text', placeholder: 'Link or 6-digit code', spellcheck: 'false', 'aria-label': 'Session link or join code' })
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') join() })
 
   function render () {
@@ -62,8 +62,22 @@ export function mountJoinRoom (el, { onJoined, onLeft } = {}) {
   }
 
   async function join () {
-    const link = input.value.trim()
-    if (!link) { error = 'Paste the link your lecturer shared.'; render(); return }
+    let link = input.value.trim()
+    if (!link) { error = 'Paste the link or type the 6-digit code your lecturer shared.'; render(); return }
+    // A 6-digit join code ("482 913", "482-913") -> resolve it to the room link (aryan's src/discovery).
+    const digits = link.replace(/[\s-]/g, '')
+    if (/^\d{6}$/.test(digits)) {
+      if (typeof lec.discovery !== 'function') { error = 'Join codes aren’t available in this version. Paste the full link instead.'; render(); return }
+      busy = true; error = ''; render()
+      try {
+        link = await lec.discovery('resolveCode', digits)
+      } catch (err) {
+        busy = false
+        error = /CODE_NOT_FOUND/.test(String(err?.message || err?.code)) ? 'No live session with that code. Check the code with the lecturer, and that you’re on the same Wi-Fi or hotspot.' : friendlyError(err)
+        render()
+        return
+      }
+    }
     busy = true; error = ''; conn = 'connecting'; render()
     // B-014: never leave the button stuck on "Joining…" if main is slow to answer.
     let timer
