@@ -293,3 +293,20 @@ test('B-005: auto-advance re-files the chunk BEFORE the trigger when it already 
   assert.equal(changes.at(-1)?.chunkId, 'b', 'topic changed at chunk b')
   tr.dispose()
 })
+
+test('B-007: serialSTT never runs two STT calls at once and survives a failing call', async () => {
+  const { serialSTT, sttBusy, promptOpts } = await import('./stt.js')
+  let inFlight = 0; let max = 0
+  const job = (ms, fail) => serialSTT(async () => {
+    inFlight++; max = Math.max(max, inFlight)
+    await tick(ms)
+    inFlight--
+    if (fail) throw new Error('Model was reloaded')
+    return ms
+  })
+  const res = await Promise.allSettled([job(5), job(1, true), job(3), job(2)])
+  assert.equal(max, 1)
+  assert.deepEqual(res.map((r) => r.status), ['fulfilled', 'rejected', 'fulfilled', 'fulfilled'])
+  assert.equal(sttBusy(), false)
+  assert.deepEqual(promptOpts('Hash, Tables', 'previous tail text'), { prompt: 'Hash, Tables' }, 'prompt is vocabulary only (stable)')
+})

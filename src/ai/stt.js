@@ -7,12 +7,35 @@ import { loadWav16k, writeTempWav } from './wav.js'
 
 const SR = 16000
 
+// B-007: the whisper worker RELOADS the model when the prompt changes, which aborts any request in
+// flight ("RPCError: Model was reloaded"). So every STT call goes through ONE serial lock, and a
+// failed call is retried once.
+let sttTail = Promise.resolve()
+let sttPending = 0
+export const sttBusy = () => sttPending > 0
+export function serialSTT (fn) {
+  sttPending++
+  const run = sttTail.then(fn, fn)
+  sttTail = run.catch(() => {}).finally(() => { sttPending-- })
+  return run
+}
+let errorSink = null
+export function onSttError (fn) { errorSink = fn }
+
 /** Transcribe one audio source (path to a WAV, or Float32Array 16 kHz mono) → plain text. */
-export async function transcribeAudio (audio, { prompt } = {}) {
+export async function transcribeAudio (audio, { prompt, partial } = {}) {
   const q = await sdk()
   const modelId = await sttModel()
   const audioChunk = typeof audio === 'string' ? audio : await writeTempWav(audio, SR)
-  const text = await q.transcribe({ modelId, audioChunk, ...(prompt ? { prompt } : {}) })
+  const once = () => serialSTT(() => q.transcribe({ modelId, audioChunk, ...(prompt ? { prompt } : {}) }))
+  let text
+  try {
+    text = await once()
+  } catch (e) {
+    errorSink?.({ error: String(e?.message || e), partial: !!partial, retried: !partial })
+    if (partial) throw e // partials are disposable
+    text = await once() // finals: retry once
+  }
   return cleanText(typeof text === 'string' ? text : (text || []).map((s) => s.text).join(' '))
 }
 
@@ -37,10 +60,12 @@ export function windows (samples, chunkSec = config.stt.chunkSec) {
 
 /**
  * B-005: whisper's prompt biases decoding towards its words, so we feed the vocabulary of the
- * current + next slide (e.g. "HashMap", "modulus") plus the tail of the previous chunk.
+ * current + next slide (e.g. "HashMap", "modulus").
+ * B-007: the prompt is the slide vocabulary ONLY (no previous-chunk tail), so it changes only on a
+ * slide change and the worker rarely has to reload. `prev` is accepted but ignored.
  */
-export function promptOpts (vocab, prev) {
-  const p = [String(vocab || '').slice(0, 220), String(prev || '').slice(-120)].filter(Boolean).join(' ').trim()
+export function promptOpts (vocab, prev) { // eslint-disable-line no-unused-vars
+  const p = String(vocab || '').slice(0, 240).trim()
   return p ? { prompt: p } : {}
 }
 
@@ -181,7 +206,7 @@ export function createLiveStream ({
   }
 
   const maybePartial = () => {
-    if (!onPartial || partialRunning || running || backlog.length) return
+    if (!onPartial || partialRunning || running || backlog.length || sttBusy()) return
     if (speechFrames * FRAME / SR < 0.5) return // wait for ~0.5 s of speech
     const at = now()
     if (at - lastPartialAt < partialMs) return
