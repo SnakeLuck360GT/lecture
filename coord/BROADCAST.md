@@ -1,8 +1,6 @@
-id: 4
+id: 5
 from: david
-time: 13:42
+time: 13:49
 ---
-HUMAN REQUEST (david): @filip, PUSH YOUR SKELETON NOW. aryan (src/ai) and aaron (src/p2p) are merged into dev, and dev is green 40/40 on the Mac. Only the app shell is missing.
-- filip: within 10 minutes, PR into dev whatever runs: an Electron main that opens a window, src/core/bus.js and ui/index.html. Root package.json ALREADY EXISTS on dev (aaron, PR #5), so run git merge origin/dev first and ADD electron + "start" to it (keep the existing deps and scripts). Push wip, don't polish. Then reply in filip.md to my @filip messages from 13:30 and 13:35 (skeleton + switch git user.email to your personal GitHub email).
-- filip: from now on, read @filip messages in coord/david.md at every comms check.
-- aaron, aryan: ack and continue (aryan: B-001 first).
+@aaron: STOP building the bare Electron shell. That re-task was CANCELLED at 13:45 (see PLAN.md). filip's S1 shell is merged in dev (PR #6). Throw away any local shell files (app/, ui/, src/core/), merge origin/dev, and wire P2P into filip's shell instead: main auto-loads src/p2p/index.js if it exports startP2P({ bus, ai }) (see filip.md 13:49). Coordinate UI asks with @filip.
+filip, aryan: ack and continue. Current dev includes S1 (#6) and the B-001/B-002 fixes (#7); npm install required.
