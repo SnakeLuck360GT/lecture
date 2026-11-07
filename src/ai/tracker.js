@@ -30,6 +30,7 @@ const clamp01 = (x) => Math.max(0, Math.min(1, x))
 export function createTracker ({ bus, embedMany, embedOne, opts = {} }) {
   const o = { ...config.tracker, ...opts }
   let slideVecs = [] // number[][] (index-aligned with slides)
+  let slideTexts = []
   let slidesReady = Promise.resolve()
   let current = 0
   let holdUntil = 0
@@ -44,6 +45,7 @@ export function createTracker ({ bus, embedMany, embedOne, opts = {} }) {
     recent.length = 0
     slideVecs = []
     const texts = (slides || []).map((s) => s.text || '')
+    slideTexts = texts
     slidesReady = embedMany(texts).then((v) => { slideVecs = v }).catch((e) => {
       console.error('[ai/tracker] slide embedding failed', e)
     })
@@ -68,6 +70,10 @@ export function createTracker ({ bus, embedMany, embedOne, opts = {} }) {
     const newest = chunk.text || ''
     busy = busy.then(async () => {
       await slidesReady
+      // B-016: if embedding the slides failed (e.g. a collided job), retry instead of silently never tracking
+      if (!slideVecs.length && slideTexts.length) {
+        try { slideVecs = await embedMany(slideTexts) } catch (e) { console.error('[ai/tracker] slide embedding retry failed', e?.message || e) }
+      }
       if (!slideVecs.length) return
       // B-002: score the newest chunk on its own (reacts to a topic change at once) AND the
       // rolling window (stable). Decide on the fresh scores first, then fall back to the window.

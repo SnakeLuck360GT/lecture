@@ -3,6 +3,7 @@ import { writeFile, mkdtemp, unlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { sdk, ocrModel, touchOcr, noteSdkError } from './models.js'
+import { serial } from './serial.js'
 
 /** image: file path | data URL | Buffer → recognised text (reading order, top→bottom). */
 export async function ocr (image) {
@@ -11,8 +12,7 @@ export async function ocr (image) {
   const input = await toInput(image)
   touchOcr()
   try {
-    const { blocks } = q.ocr({ modelId, image: input })
-    return blocksToText(await blocks)
+    return await serial('ocr', async () => blocksToText(await q.ocr({ modelId, image: input }).blocks))
   } catch (e) { noteSdkError(e); throw e } finally {
     if (input !== image) unlink(input).catch(() => {}) // H-3: temp file made from a data URL
   }

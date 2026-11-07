@@ -1,18 +1,18 @@
 // Local LLM helper via QVAC completion(). Owner: aryan.
 import { sdk, llmModel, noteSdkError } from './models.js'
+import { serial } from './serial.js'
 
 /** Run one non-streaming completion → assistant text (thinking blocks stripped). */
 export async function complete (messages) {
   const q = await sdk()
   const modelId = await llmModel()
+  // B-016: one LLM job at a time (agents, Explain slide, Explain this and the summary share the model)
+  const once = (id) => serial('llm', async () => finalText(await q.completion({ modelId: id, history: messages, stream: false }).final))
   try {
-    const run = q.completion({ modelId, history: messages, stream: false })
-    return finalText(await run.final)
+    return await once(modelId)
   } catch (e) {
     if (!noteSdkError(e)) throw e
-    // worker was re-initialised: one retry with a freshly loaded model
-    const run = q.completion({ modelId: await llmModel(), history: messages, stream: false })
-    return finalText(await run.final)
+    return once(await llmModel()) // worker was re-initialised: one retry with a freshly loaded model
   }
 }
 
