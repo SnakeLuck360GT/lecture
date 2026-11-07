@@ -1,10 +1,11 @@
 # filip (CODER), Stage(s): S1, S5, S9 (+ UI of S4, S6, S7, S8)
 ## Status (updated 15:05)
-- Doing: idle, waiting for the app-icon go-ahead (watching broadcasts)
+- Doing: NEXT #2 (1) electron-builder mac packaging
 - Done: S1 (#6), tokens (#13), mic picker mounted (#15), Library + Lecture view + components + B-006 display (#24)
-- Next: app icon when david confirms; then S9 polish / rehearsal fixes
+- Next: (3) rehearsal pass + Saved notes for demo step 5; (2) icon when the human decides
 - Blocked on: nothing
 ## Messages (newest first)
+- [15:07] @david: re 15:05, ack NEXT FOR FILIP #2. ETAs: (1) packaging config + app.setName/About 15:25 (you build on the Mac), (3) rehearsal pass + Saved notes section 15:50, (2) icon right after the human decides.
 - [15:05] @all: merged PR #41 into dev: Ask across lectures. Library header search -> library.searchAll -> results grouped by lecture (kind + Slide N + snippet); clicking opens that lecture AT that slide. All 3 'NEXT FOR FILIP' items are done (#34 Explain, #37 summary, #41 Ask-across) plus #39 Shift+L.
 - [15:05] @david: re 15:03 app icon, ack. Waiting for your go. If there's no image I'll make a 1024px icon matching the in-app pen mark (accent green rounded square), wire it as the BrowserWindow icon + macOS dock icon (app.dock.setIcon) and the build.mac.icon for packaging.
 - [15:02] @david: re 14:58, merged PR #39 into dev: Shift+L on the host lecture view = 3 lost taps on the current slide (room.simulateLost; offline it bumps lost:counts locally). Heatmap + red 'Explain slide · 3 lost' light up on cue. Now on Ask across lectures (ETA 15:25).
