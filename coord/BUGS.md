@@ -1,6 +1,28 @@
 # BUGS
 ## dev health: 🟢 GREEN  (15:38, commit 53b9f2b, 97/97 on the Mac)
 ## Open
+### H-3 [P0] Random crashes in long live sessions; model efficiency (human 15:53)
+- Owners: @aryan (AI leaks + worker watchdog, PR #56 merged), @filip (renderer DOM caps + crash handlers), @david (soak).
+- Repro / evidence: `node tests/soak/soak.mjs 30 <out>` on the Mac (real models, AI + P2P host + peer + library session, lecture.wav looped live). 'Before' run (pre-#56) in progress since 15:56: no crash yet; temp files grow ~120/min (~11 MB/min): $TMPDIR lecscribe*/qvac* reached 4580 files / 251 MB from today's runs. QVAC workers ~3.7–4.2 GB RSS.
+- Expected: 30 min with flat RSS, no temp growth, 0 crashes; a worker crash auto-recovers.
+- Status: OPEN, AI part FIX CLAIMED (#56); renderer part pending (filip); 'after' soak once both are in.
+### H-2 [P1] Notes auto-saved per session, star = important, per-module Important list (human 15:53)
+- Owners: @aaron (library: auto-save note:added on host + peers, setNoteImportant, listImportant), @filip (star toggle, Important section).
+- Tests: tests/contracts/library.test.mjs (session auto-save, H-2 describe), gated until setNoteImportant exists.
+- Status: OPEN (16:02)
+### H-1 [P1] Slides/notes cropped and hard to read: per-page view, fit without cropping, zoom/pan, notes wrap (human 15:53)
+- Owner: @filip. Verify: Mac, real PDF + a portrait/odd-aspect PDF, zoom in/out/fit, long sticky text not clipped.
+- Status: OPEN (16:02)
+### H-4 [P1] Summaries / notes with too little context (human via aaron 15:55)
+- Owner: @aryan. Expected: notes agent runs only after ≥ ~40 words on a slide; summariseLecture needs ≥ ~80 words, else a clear "not enough lecture yet" message.
+- Status: OPEN (16:02)
+### H-5 [P1] Generated notes must never repeat the slide (human via aaron 15:58)
+- Owner: @aryan. Expected: 0 on-slide/paraphrase notes in the fixture run (no note beats a repeat). Verify with live-demo + the live mic.
+- Status: OPEN (16:02)
+### H-6 [P1] NEW: "Explain this" for any user (peer too), answered by the HOST AI (aryan 16:01)
+- Owners: @aryan (host AI answers explain:request → note:added kind 'explain'), @aaron (forward peer requests over the room), @filip (button host + peer, 'explain' style). Contract stage-7-ai v1.1.
+- Verify: host click and peer click (Windows on the hotspot) → an 'explain' note on that slide on both devices, auto-saved (H-2).
+- Status: OPEN (16:02)
 ### B-004 [P1] No microphone picker: demo needs the iPhone mic (Continuity) on the Mac
 - Stage / owner: s1 (UI) / @aryan (reassigned from filip at , component ui/components/mic-picker.js)
 - HUMAN REQUEST (david): the presenter will speak into an iPhone used as the Mac's microphone (macOS Continuity "iPhone Microphone"). The app must let us choose the input device.
