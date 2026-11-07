@@ -268,8 +268,12 @@ export async function createLibrary ({ dir, embed, embedQuery, embedDocs, passag
       const meta = await queue(id, async () => {
         const m = await mustMeta(id)
         const notes = await readJson(L(id, 'notes.json'), [])
-        const saved = { ...note, savedAt: note.savedAt || Date.now() }
         const i = notes.findIndex((n) => n.id === note.id)
+        const prev = i >= 0 ? notes[i] : null
+        // H-2: re-saving (e.g. auto-save, then a click) never loses the star or the first save time.
+        const saved = { ...prev, ...note, important: note.important ?? prev?.important ?? false, savedAt: prev?.savedAt || note.savedAt || Date.now() }
+        // keep the note linked to its transcript even if a re-save carries no chunk ids
+        if (!(note.sourceChunkIds && note.sourceChunkIds.length) && prev?.sourceChunkIds?.length) saved.sourceChunkIds = prev.sourceChunkIds
         if (i >= 0) notes[i] = saved
         else notes.push(saved)
         await writeJson(L(id, 'notes.json'), notes)
@@ -278,6 +282,41 @@ export async function createLibrary ({ dir, embed, embedQuery, embedDocs, passag
       })
       changed('lecture', { moduleId: meta.moduleId, lectureId: id })
       return summary(meta)
+    },
+    /** H-2: star / unstar a note. If it isn't saved yet, pass the note as the 4th arg and it is saved first. */
+    async setNoteImportant (id, noteId, important = true, note = null) {
+      let result = null
+      const meta = await queue(id, async () => {
+        const m = await mustMeta(id)
+        const notes = await readJson(L(id, 'notes.json'), [])
+        let n = notes.find((x) => x.id === noteId)
+        if (!n) {
+          if (!note || note.id !== noteId) throw new Error('note not found: ' + noteId)
+          n = { ...note, savedAt: Date.now() }
+          notes.push(n)
+          await addItems(id, [{ id: `note-${n.id}`, kind: 'note', refId: n.id, slideIndex: n.slideIndex ?? null, text: String(n.text || '') }])
+        }
+        n.important = !!important
+        n.importantAt = important ? Date.now() : null
+        await writeJson(L(id, 'notes.json'), notes)
+        result = n
+        return writeMeta(m)
+      })
+      changed('important', { moduleId: meta.moduleId, lectureId: id, noteId })
+      return result
+    },
+    /** H-2: a module's starred notes, grouped by lecture in lecture order (date, then creation). */
+    async listImportant (moduleId) {
+      const metas = (await allLectureMetas()).filter((l) => l.moduleId === moduleId)
+      metas.sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')) || a.createdAt - b.createdAt)
+      const out = []
+      for (const l of metas) {
+        const notes = (await readJson(L(l.id, 'notes.json'), [])).filter((n) => n.important)
+        if (!notes.length) continue
+        notes.sort((a, b) => (a.slideIndex ?? 1e9) - (b.slideIndex ?? 1e9) || (a.createdAt || 0) - (b.createdAt || 0))
+        out.push({ lectureId: l.id, lectureTitle: l.title, date: l.date || null, state: l.state, notes })
+      }
+      return out
     },
     async unsaveNote (id, noteId) {
       const meta = await queue(id, async () => {
@@ -470,9 +509,13 @@ export async function createLibrary ({ dir, embed, embedQuery, embedDocs, passag
       await api.updateLecture(id, { state: 'live' })
       const onSlides = (slides) => { api.saveSlides(id, slides).catch((e) => console.error('[library] saveSlides', e)) }
       const onChunk = (c) => { api.appendTranscript(id, [c]).catch((e) => console.error('[library] appendTranscript', e)) }
+      // H-2: every generated note (AI + lecturer) is saved the moment it arrives, linked to its slide and
+      // transcript chunks (slideIndex + sourceChunkIds). Works the same on a peer (notes come from the room).
+      const onNote = (n) => { if (n && n.id && n.kind !== 'personal') api.saveNote(id, n).catch((e) => console.error('[library] auto-save note', e)) }
       bus.on('slides:loaded', onSlides)
       bus.on('transcript:chunk', onChunk)
-      session = { id, off: () => { bus.off('slides:loaded', onSlides); bus.off('transcript:chunk', onChunk) } }
+      bus.on('note:added', onNote)
+      session = { id, off: () => { bus.off('slides:loaded', onSlides); bus.off('transcript:chunk', onChunk); bus.off('note:added', onNote) } }
       return id
     },
     async endSession () {
