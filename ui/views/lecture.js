@@ -31,6 +31,7 @@ export function createLectureView (app) {
     state.chunks = new Map()
     state.lines = []
     state.lost = {}
+    document.querySelector('.strip-wrap')?.classList.remove('has-heat') // B-010: heat belongs to a live room
     state.persistSlides = false
     state.heatmapMounted = false
     if (lectureId) {
@@ -52,6 +53,8 @@ export function createLectureView (app) {
     summary.text = String(L?.summary || '')
     summary.busy = false
     renderSummary()
+    // Demo step 5: re-opening a past lecture from the Library lands on its saved notes.
+    setNotesView(!fresh && role !== 'peer' && state.saved.size && jumpTo == null ? 'saved' : 'slide')
     renderTranscript()
     resetSlideUi(fresh)
     renderNotes()
@@ -305,11 +308,50 @@ export function createLectureView (app) {
     updateThumbBadges()
   }
 
+  /** 'slide' = notes for the current slide (live); 'saved' = everything saved in this lecture (demo step 5). */
+  function setNotesView (view) {
+    state.notesView = view === 'saved' ? 'saved' : 'slide'
+    for (const [id, v] of [['tab-slide', 'slide'], ['tab-saved', 'saved']]) {
+      $(id).classList.toggle('active', state.notesView === v)
+      $(id).setAttribute('aria-selected', String(state.notesView === v))
+    }
+    renderNotes()
+  }
+
+  function renderSaved (box) {
+    const saved = state.notes.filter((n) => state.saved.has(n.id))
+    if (!saved.length) {
+      const e = el('div', 'notes-empty')
+      e.append(el('p', null, 'No saved notes yet.'), el('p', 'muted', 'Click a sticky note during the lecture to keep it here, filed under this module and lecture.'))
+      box.append(e)
+      return
+    }
+    const bySlide = new Map()
+    for (const n of saved) {
+      const k = Number.isInteger(n.slideIndex) ? n.slideIndex : -1
+      if (!bySlide.has(k)) bySlide.set(k, [])
+      bySlide.get(k).push(n)
+    }
+    for (const [i, notes] of [...bySlide.entries()].sort((a, b) => a[0] - b[0])) {
+      const g = el('div', 'saved-group')
+      const head = el('button', 'saved-slide', i >= 0 ? `Slide ${i + 1}` : 'Lecture')
+      head.type = 'button'
+      head.title = 'Show this slide'
+      if (i >= 0) head.addEventListener('click', () => go(i, 'manual'))
+      g.append(head)
+      notes.sort((a, b) => (a.kind === 'lecturer' ? -1 : 0) - (b.kind === 'lecturer' ? -1 : 0) || (a.createdAt || 0) - (b.createdAt || 0))
+      for (const n of notes) g.append(stickyEl(n))
+      box.append(g)
+    }
+  }
+
   function renderNotes () {
     const box = $('notes')
     const mine = state.notes.filter((n) => n.slideIndex === state.current)
-    $('notes-sub').textContent = state.slides.length ? `Slide ${state.current + 1}` : ''
+    $('notes-sub').textContent = state.slides.length ? `· ${state.current + 1}` : ''
+    $('saved-count').textContent = String(state.notes.filter((n) => state.saved.has(n.id)).length)
     box.replaceChildren()
+    if (state.notesView === 'saved') return renderSaved(box)
     if (!mine.length) {
       const e = el('div', 'notes-empty')
       e.append(el('p', null, state.slides.length
@@ -640,6 +682,7 @@ export function createLectureView (app) {
 
   function setListening (on) {
     state.listening = on
+    if (on && state.notesView === 'saved') setNotesView('slide') // live: follow the current slide
     const btn = $('btn-listen')
     btn.classList.toggle('on', on)
     btn.querySelector('.label').textContent = on ? 'Stop listening' : 'Start listening'
@@ -744,6 +787,8 @@ export function createLectureView (app) {
   })
   lec.on('explain:status', onExplainStatus)
   $('btn-summarise').addEventListener('click', () => writeSummary())
+  $('tab-slide').addEventListener('click', () => setNotesView('slide'))
+  $('tab-saved').addEventListener('click', () => setNotesView('saved'))
   $('btn-explain').addEventListener('click', () => (explain.recording ? stopExplain(true) : startExplain()))
   // aaron PR #33: show reconnecting while the swarm restarts after a network change
   lec.on('p2p:status', (s) => {

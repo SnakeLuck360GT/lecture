@@ -195,3 +195,56 @@ test('with aryan search helpers: transcript indexed as passages, hybrid ranking,
   assert.equal(store.items.filter((it) => it.kind === 'transcript').length, 2)
   assert.ok(docCalls > 0)
 })
+
+test('personal notes: CRUD per slide, persist, searchable as kind personal, never exported/shared, never note:added', async () => {
+  const dir = tmp()
+  const bus = new EventEmitter()
+  const noteAdded = []
+  bus.on('note:added', (n) => noteAdded.push(n))
+  const lib = await createLibrary({ dir, embed: fakeEmbed, bus, bootstrap })
+  const m = await lib.createModule({ name: 'M' })
+  const l = await lib.createLecture(m.id, { title: 'L' })
+  await lib.saveNote(l.id, note('n1', 0, 'shared AI sticky about hashing'))
+
+  const a = await lib.addPersonalNote(l.id, { slideIndex: 2, text: 'ask about tombstones in the exam review' })
+  const b = await lib.addPersonalNote(l.id, { slideIndex: 2, text: '' }) // empty draft, not indexed
+  await lib.addPersonalNote(l.id, { slideIndex: 3, text: 'redo the resize example' })
+  assert.equal(a.kind, 'personal')
+  assert.deepEqual((await lib.listPersonalNotes(l.id, 2)).map((n) => n.id), [a.id, b.id])
+  assert.equal((await lib.listPersonalNotes(l.id)).length, 3)
+
+  const u = await lib.updatePersonalNote(l.id, b.id, { text: 'linear probing\nis cache friendly' })
+  assert.equal(u.text, 'linear probing\nis cache friendly')
+  await lib.deletePersonalNote(l.id, a.id)
+  assert.deepEqual((await lib.listPersonalNotes(l.id, 2)).map((n) => n.id), [b.id])
+
+  // persistence across instances
+  const lib2 = await createLibrary({ dir, embed: fakeEmbed })
+  assert.equal((await lib2.listPersonalNotes(l.id)).length, 2)
+  assert.equal((await lib2.getLecture(l.id)).personalNotes.length, 2)
+  assert.equal((await lib2.listLectures(m.id))[0].personalCount, 2)
+
+  // searchable, kind personal; deleted note gone from the index
+  const hits = await lib.search(l.id, 'linear probing cache friendly', 3)
+  assert.equal(hits[0].kind, 'personal')
+  assert.equal(hits[0].refId, b.id)
+  assert.equal(hits[0].slideIndex, 2)
+  assert.ok(!(await lib.search(l.id, 'tombstones exam review', 5)).some((h) => h.refId === a.id))
+  await lib.rebuildIndex(l.id)
+  assert.equal((await lib.search(l.id, 'resize example', 1))[0].kind, 'personal')
+
+  // never leaves the device
+  const bundle = await lib.exportLecture(l.id)
+  assert.deepEqual(bundle.notes.map((n) => n.id), ['n1'])
+  assert.ok(!JSON.stringify(bundle).includes('cache friendly'))
+  assert.equal(bundle.personalNotes, undefined)
+  const { link } = await lib.shareLecture(l.id)
+  const other = await createLibrary({ dir: tmp(), embed: fakeEmbed, bootstrap })
+  const om = await other.createModule({ name: 'M' })
+  const missed = await other.createLecture(om.id, { title: 'L', state: 'missed' })
+  const got = await other.importLecture(missed.id, link, { timeoutMs: 15000 })
+  assert.equal(got.notes.length, 1)
+  assert.equal(got.personalNotes.length, 0)
+  assert.equal(noteAdded.length, 0, 'personal notes must never be emitted as note:added')
+  await lib.close(); await other.close()
+})
