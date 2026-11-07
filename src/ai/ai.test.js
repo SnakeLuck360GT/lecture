@@ -445,3 +445,23 @@ test('B-005: rephrased duplicates are caught, distinct facts on the same slide a
   assert.equal(similar('Choose the table size m to be prime', 'If m is a power of two, only the lowest bits of the key are used'), false)
   assert.equal(similar('Linear probing is cache friendly', 'Linear probing suffers from primary clustering'), false)
 })
+
+test('auto-follow off: tracker keeps scoring but never auto-advances; on again resumes', async () => {
+  const bus = new EventEmitter()
+  const ai = await startAI({ bus, mock: true })
+  const changes = []; let scores = 0
+  bus.on('slide:changed', (e) => { if (e.source === 'auto') changes.push(e) })
+  bus.on('tracker:scores', () => scores++)
+  bus.emit('slides:loaded', SLIDES)
+  assert.equal(ai.setAutoFollow(false), false)
+  assert.equal(ai.getAutoFollow(), false)
+  bus.emit('transcript:chunk', { id: 'x1', slideIndex: 0, text: 'bubble sort swap adjacent elements repeatedly' })
+  await ai.idle()
+  assert.equal(changes.length, 0)
+  assert.equal(scores, 1)
+  ai.setAutoFollow(true)
+  bus.emit('transcript:chunk', { id: 'x2', slideIndex: 0, text: 'bubble sort swap adjacent elements repeatedly' })
+  await ai.idle()
+  assert.equal(changes.length, 1)
+  await ai.close()
+})
