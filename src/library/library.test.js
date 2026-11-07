@@ -192,6 +192,7 @@ test('with aryan search helpers: transcript indexed as passages, hybrid ranking,
   assert.deepEqual(passage.chunkIds, ['c-1', 'c-2'], 'chunks of the same slide merged into one passage')
   assert.equal(passage.slideIndex, 0)
   const { readFileSync } = await import('node:fs')
+  await lib.flush()
   const store = JSON.parse(readFileSync(join(dir, 'lectures', l.id, 'vectors.json'), 'utf8'))
   assert.equal(store.embedder, 'docs-v1')
   assert.equal(store.items.filter((it) => it.kind === 'transcript').length, 2)
@@ -288,4 +289,37 @@ test('H-2: star notes (setNoteImportant), re-save keeps the star, listImportant 
   const lib2 = await createLibrary({ dir, embed: fakeEmbed })
   assert.equal((await lib2.listImportant(m.id))[0].notes[0].id, 'z')
   assert.equal((await lib2.search(w4.id, 'AVL rotations', 1))[0].refId, 'z')
+})
+
+test('B-017: vector store is cached + flushed debounced (no rewrite per chunk), compact v2 on disk, v1 files still read', async () => {
+  const { readFileSync, writeFileSync, statSync } = await import('node:fs')
+  const dir = tmp()
+  const lib = await createLibrary({ dir, embed: fakeEmbed })
+  const m = await lib.createModule({ name: 'M' })
+  const l = await lib.createLecture(m.id, { title: 'Long lecture' })
+  const file = join(dir, 'lectures', l.id, 'vectors.json')
+  const before = readFileSync(file, 'utf8')
+  for (let i = 0; i < 150; i++) await lib.appendTranscript(l.id, [{ id: `c-${i}`, slideIndex: i % 5, tStart: i * 5, tEnd: i * 5 + 5, text: `chunk number ${i} about hashing and probing` }])
+  assert.equal(readFileSync(file, 'utf8'), before, 'not rewritten on every chunk')
+  assert.ok((await lib.search(l.id, 'chunk number 149', 1))[0].refId) // served from memory
+  await lib.flush()
+  const text = readFileSync(file, 'utf8')
+  const disk = JSON.parse(text)
+  assert.equal(disk.v, 2)
+  assert.equal(disk.items.length, 150)
+  assert.equal(typeof disk.items[0].vec, 'string') // base64 Float32, not a JSON number array
+  assert.ok(!text.includes('\n  '), 'no pretty-printing')
+  assert.ok(statSync(file).size < 150 * 2000, `compact: ${statSync(file).size} bytes`)
+
+  // a v1 file (vector: number[]) written by an older build is still searchable
+  const old = await lib.createLecture(m.id, { title: 'Old format' })
+  const oldFile = join(dir, 'lectures', old.id, 'vectors.json')
+  await lib.flush()
+  const v = await fakeEmbed('legacy note about tombstones')
+  writeFileSync(oldFile, JSON.stringify({ dim: v.length, embedder: 'plain-v1', items: [{ id: 'note-x', kind: 'note', refId: 'x', slideIndex: 1, text: 'legacy note about tombstones', vector: v }] }, null, 2))
+  const fresh = await createLibrary({ dir: join(dir, '.', ''), embed: fakeEmbed }) // same dir, other spelling
+  const { dropStore } = await import('./vecstore.js')
+  dropStore(oldFile) // simulate a new process that has not cached it yet
+  assert.equal((await fresh.search(old.id, 'tombstones', 1))[0].refId, 'x')
+  await lib.close()
 })

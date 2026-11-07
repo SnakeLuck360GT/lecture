@@ -27,7 +27,7 @@ export function keywordScore (query, text) {
 export function rank (items, { query, queryVector, k = 5, score: scorer }) {
   const scored = []
   for (const it of items) {
-    const hasVec = queryVector && Array.isArray(it.vector) && it.vector.length
+    const hasVec = queryVector && it.vector && it.vector.length
     let score
     if (scorer) {
       try { score = scorer({ cosine: hasVec ? cosine(queryVector, it.vector) : 0, query, text: it.text, kind: it.kind }) } catch { score = 0 }

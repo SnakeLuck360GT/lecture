@@ -4,6 +4,7 @@ import { readdir, mkdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { readJson, readText, writeJson, writeAtomic, removeDir, newId, keyedQueue } from './fsutil.js'
 import { rank } from './vectors.js'
+import { loadStore, saveStore, flushUnder, dropStore } from './vecstore.js'
 import { imageToBuffer, bufferToDataUrl } from '../p2p/util.js'
 import { shareWeek, importWeek } from '../p2p/share.js'
 
@@ -76,8 +77,9 @@ export async function createLibrary ({ dir, embed, embedQuery, embedDocs, passag
     await writeJson(L(meta.id, 'lecture.json'), meta)
     return meta
   }
-  const readVectors = (id) => readJson(L(id, 'vectors.json'), { items: [] })
-  const writeVectors = (id, store) => writeJson(L(id, 'vectors.json'), store)
+  // B-017: in-memory per-lecture stores, flushed debounced (see vecstore.js)
+  const readVectors = (id) => loadStore(L(id, 'vectors.json'))
+  const writeVectors = (id, store, opts) => saveStore(L(id, 'vectors.json'), store, opts)
 
   async function addItems (id, items) {
     if (!items.length) return
@@ -85,8 +87,8 @@ export async function createLibrary ({ dir, embed, embedQuery, embedDocs, passag
     const store = await readVectors(id)
     const ids = new Set(items.map((it) => it.id))
     store.items = store.items.filter((it) => !ids.has(it.id))
-    items.forEach((it, i) => store.items.push({ ...it, vector: vectors[i] }))
-    const v = store.items.find((it) => Array.isArray(it.vector))
+    items.forEach((it, i) => store.items.push({ ...it, vector: vectors[i] ? Float32Array.from(vectors[i]) : null }))
+    const v = store.items.find((it) => it.vector && it.vector.length)
     store.dim = v ? v.vector.length : null
     store.embedder = EMBEDDER
     await writeVectors(id, store)
@@ -103,8 +105,8 @@ export async function createLibrary ({ dir, embed, embedQuery, embedDocs, passag
       else fresh.push(it)
     }
     const vectors = await embedMany(fresh.map((it) => it.text))
-    store.items = [...store.items.filter((it) => it.kind !== kind), ...keep, ...fresh.map((it, i) => ({ ...it, vector: vectors[i] }))]
-    const v = store.items.find((it) => Array.isArray(it.vector))
+    store.items = [...store.items.filter((it) => it.kind !== kind), ...keep, ...fresh.map((it, i) => ({ ...it, vector: vectors[i] ? Float32Array.from(vectors[i]) : null }))]
+    const v = store.items.find((it) => it.vector && it.vector.length)
     store.dim = v ? v.vector.length : null
     store.embedder = EMBEDDER
     await writeVectors(id, store)
@@ -209,7 +211,7 @@ export async function createLibrary ({ dir, embed, embedQuery, embedDocs, passag
         await writeJson(L(meta.id, 'notes.json'), [])
         await writeJson(L(meta.id, 'transcript.json'), [])
         await writeJson(L(meta.id, 'slides.json'), [])
-        await writeVectors(meta.id, { items: [] })
+        await writeVectors(meta.id, { items: [] }, { now: true })
       })
       changed('lectures', { moduleId, lectureId: meta.id })
       return summary(meta)
@@ -252,6 +254,7 @@ export async function createLibrary ({ dir, embed, embedQuery, embedDocs, passag
       const meta = await readMeta(id)
       if (session?.id === id) api.endSession()
       await api.stopSharing(id)
+      dropStore(L(id, 'vectors.json')) // never let a pending flush re-create a deleted lecture
       await queue(id, () => removeDir(L(id)))
       changed('lectures', { moduleId: meta?.moduleId, lectureId: id })
       return true
@@ -524,14 +527,18 @@ export async function createLibrary ({ dir, embed, embedQuery, embedDocs, passag
       session = null
       off()
       await queue(id, async () => {}) // let pending writes land
+      await flushUnder(dir)
       const meta = await readMeta(id)
       if (meta && meta.state === 'live') await api.updateLecture(id, { state: 'attended' })
       return id
     },
     activeLecture: () => session?.id ?? null,
 
+    /** Write any pending vector-store changes now (they are otherwise flushed within ~1 s). */
+    flush: () => flushUnder(dir),
     async close () {
       if (session) await api.endSession()
+      await flushUnder(dir)
       for (const s of shares.values()) await s.stop().catch(() => {})
       shares.clear()
     }
