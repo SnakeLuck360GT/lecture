@@ -278,3 +278,18 @@ test('B-006: live partials stream while speaking, stop after the final, never qu
   assert.ok(partials[0].tEnd - partials[0].tStart <= 1.2, 'first partial within ~1 s of speech')
   assert.ok(maxBusy <= 2, 'at most one partial + one final in flight')
 })
+
+test('B-005: auto-advance re-files the chunk BEFORE the trigger when it already matched the new slide', async () => {
+  const bus = new EventEmitter()
+  const tr = createTracker({ bus, embedMany: mockEmbed, embedOne: mockEmbed, opts: { threshold: 0.6, margin: 0.05 } })
+  const changes = []
+  bus.on('slide:changed', (e) => changes.push(e))
+  bus.emit('slides:loaded', SLIDES)
+  bus.emit('transcript:chunk', { id: 'a', slideIndex: 0, text: 'introduction to sorting algorithms today' })
+  bus.emit('transcript:chunk', { id: 'b', slideIndex: 0, text: 'now bubble' })
+  bus.emit('transcript:chunk', { id: 'c', slideIndex: 0, text: 'bubble sort swap adjacent elements repeatedly' })
+  await tr.idle()
+  assert.equal(changes.at(-1)?.index, 1)
+  assert.equal(changes.at(-1)?.chunkId, 'b', 'topic changed at chunk b')
+  tr.dispose()
+})

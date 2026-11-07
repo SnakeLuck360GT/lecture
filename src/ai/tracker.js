@@ -36,6 +36,7 @@ export function createTracker ({ bus, embedMany, embedOne, opts = {} }) {
   const recent = [] // recent chunk texts
   let busy = Promise.resolve()
   let pending = null // narrow-win candidate awaiting confirmation
+  let lastFresh = null // { chunkId, scores } of the previous chunk (B-005 mis-slot fix)
 
   const onSlides = (slides) => {
     current = 0
@@ -50,7 +51,7 @@ export function createTracker ({ bus, embedMany, embedOne, opts = {} }) {
   const onChanged = (ev) => {
     if (!ev || typeof ev.index !== 'number') return
     current = ev.index
-    if (ev.source === 'manual') { holdUntil = Date.now() + o.manualHoldMs; recent.length = 0; pending = null }
+    if (ev.source === 'manual') { holdUntil = Date.now() + o.manualHoldMs; recent.length = 0; pending = null; lastFresh = null }
   }
 
   const onChunk = (chunk) => {
@@ -73,6 +74,8 @@ export function createTracker ({ bus, embedMany, embedOne, opts = {} }) {
       const fresh = score(cv)
       const win = wv ? score(wv) : fresh
       bus.emit('tracker:scores', { chunkId: chunk.id, scores: fresh, windowScores: win })
+      const prevFresh = lastFresh
+      lastFresh = { chunkId: chunk.id, scores: fresh }
       if (Date.now() < holdUntil) return
       const args = { current, threshold: o.threshold, margin: o.margin }
       const d = decide({ scores: fresh, ...args }) || decide({ scores: win, ...args })
@@ -82,10 +85,15 @@ export function createTracker ({ bus, embedMany, embedOne, opts = {} }) {
       const sure = d.index === current + 1 || d.margin >= o.strongMargin || (pending && pending.index === d.index)
       if (!sure) { pending = d; return }
       {
+        const oldIndex = current
         pending = null
         current = d.index
         recent.length = 0
-        bus.emit('slide:changed', { index: d.index, source: 'auto', confidence: d.confidence, chunkId: chunk.id })
+        // If the chunk BEFORE the trigger already matched the new slide better than the old one,
+        // the topic changed there: report it so S4 re-files it under the new slide.
+        const from = prevFresh?.scores
+        const earlier = from && from[d.index] !== undefined && from[d.index] > (from[oldIndex] ?? -1) && prevFresh.chunkId
+        bus.emit('slide:changed', { index: d.index, source: 'auto', confidence: d.confidence, chunkId: earlier || chunk.id })
       }
     }).catch((e) => console.error('[ai/tracker] chunk scoring failed', e))
   }
