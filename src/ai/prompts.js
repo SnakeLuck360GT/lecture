@@ -1,20 +1,31 @@
 // Prompt builders for the local LLM. Kept short: small models + speed. Owner: aryan.
 
-export function stickyPrompt ({ slideText, transcript, max = 3, already = [] }) {
+export function stickyPrompt ({ slideText, transcript, max = 2, already = [] }) {
   return [
     {
       role: 'system',
-      content: 'You write short margin notes for a student during a lecture. ' +
-        'Only include points the lecturer SAID that are NOT already written on the slide: ' +
-        'explanations, examples, hints, warnings, exam tips. Each note at most 25 words. ' +
-        'Reply with ONLY a JSON array of strings. Reply [] if nothing new was said. /no_think'
+      content: 'You write margin notes for a student during a lecture. A note records something the lecturer SAID ' +
+        'that is NOT written on the slide: a tip, example, reason, number, warning, exam hint or announcement. ' +
+        'Rules: never restate or paraphrase a slide line; use only facts from the transcript; the transcript comes from ' +
+        'speech recognition, so if a name or word looks garbled, leave it out; each note is one plain sentence, at most 20 words, ' +
+        'with no "The lecturer said" prefix. Reply with ONLY a JSON array of strings, or [] if nothing new was said. /no_think'
+    },
+    {
+      role: 'user',
+      content: 'SLIDE TEXT:\nBinary search\nRequires a sorted array\nO(log n) comparisons\n\n' +
+        'WHAT THE LECTURER SAID:\nSo binary search needs the array sorted. A classic bug is computing the middle as low plus high over two, ' +
+        'which can overflow, so use low plus high minus low over two. That one shows up in interviews a lot.\n\nWrite up to 2 new notes as a JSON array of strings.'
+    },
+    {
+      role: 'assistant',
+      content: '["Compute mid as low + (high - low) / 2; (low + high) / 2 can overflow", "The overflow bug is a common interview question"]'
     },
     {
       role: 'user',
       content: `SLIDE TEXT:\n${clip(slideText, 1200) || '(no text)'}\n\n` +
         (already.length ? `NOTES ALREADY WRITTEN (do not repeat):\n- ${already.join('\n- ')}\n\n` : '') +
         `WHAT THE LECTURER SAID:\n${clip(transcript, 2500)}\n\n` +
-        `Write up to ${max} new notes as a JSON array of strings.`
+        `Write up to ${max} new notes as a JSON array of strings. Do NOT restate the slide text.`
     }
   ]
 }

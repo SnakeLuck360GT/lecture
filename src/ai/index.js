@@ -6,7 +6,7 @@
 //   ai.playClip('fixtures/lecture.wav')       // emits transcript:chunk, slide:changed(auto), note:added
 import { config } from './config.js'
 import { setStatusBus, sttModel, embedModel, llmModel, closeAll } from './models.js'
-import { transcribeAudio, playClip as sttPlayClip, createLiveStream, transcribeFile } from './stt.js'
+import { transcribeAudio, playClip as sttPlayClip, createLiveStream, transcribeFile, slideVocab } from './stt.js'
 import { embed as realEmbed, cosine } from './embed.js'
 import { createTracker } from './tracker.js'
 import { createSummariser } from './agents.js'
@@ -45,7 +45,8 @@ export async function startAI ({ bus, mock = config.mock, preload = !mock } = {}
   const emitChunk = (c) => bus.emit('transcript:chunk', c)
   // Mock live mic: map stream time onto a script fixture (LECSCRIBE_MOCK_SCRIPT, default fixtures/lecture.script.json).
   const liveTx = mock ? await liveScriptTranscriber(process.env.LECSCRIBE_MOCK_SCRIPT || 'fixtures/lecture.script.json') : transcribe
-  const live = createLiveStream({ onChunk: emitChunk, getSlideIndex: () => current, transcribe: liveTx })
+  const getVocab = () => slideVocab(slides[current]?.text, slides[current + 1]?.text)
+  const live = createLiveStream({ onChunk: emitChunk, getSlideIndex: () => current, transcribe: liveTx, getVocab })
 
   let ready = Promise.resolve()
   if (preload) {
@@ -73,7 +74,7 @@ export async function startAI ({ bus, mock = config.mock, preload = !mock } = {}
         const side = await readSidecar(wavPath)
         if (side) tx = sidecarTranscriber(side)
       }
-      const c = sttPlayClip({ wavPath, onChunk: emitChunk, getSlideIndex: () => current, realtime, transcribe: tx })
+      const c = sttPlayClip({ wavPath, onChunk: emitChunk, getSlideIndex: () => current, realtime, transcribe: tx, getVocab })
       clip = c
       try {
         await c.done
