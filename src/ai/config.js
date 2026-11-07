@@ -33,8 +33,8 @@ export const config = {
     manualHoldMs: 10000
   },
   agents: {
-    minNewChars: 400,
-    minIntervalMs: 20000,
+    minNewChars: 180, // ~12 s of speech: first sticky shows up while the slide is still up
+    minIntervalMs: 12000,
     maxNotes: 3, // filters keep precision; the prompt asks for 'up to 3' only grounded facts
     onSlideOverlap: 0.7, // drop a note if >= 70% of its content words are on the slide (plus per-line paraphrase check)
     minGrounding: 0.45 // keep a note only if >= 45% of its NEW words were actually said
