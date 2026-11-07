@@ -46,11 +46,6 @@
 - Repro: `LECSCRIBE_SMOKE=out.png npm run start:mock` on the Mac → later `npm start` shows a "Smoke test" module in the Library.
 - Suggested fix: when LECSCRIBE_SMOKE is set, `app.setPath('userData', <fresh temp dir>)` before startLibrary. david will delete the leftover module on the demo Mac before the demo (and smoke uses a temp dir afterwards).
 - Status: OPEN (14:37)
-### B-013 [P1] Host room must survive a network change (demo turns Wi-Fi off, then joins the hotspot)
-- Stage / owner: s6 / @aaron
-- Repro: start a host room on network A (eduroam), switch the Mac to network B (hotspot) → the host keeps announcing its stale network-A identity; peers on B find it but can't connect (david 14:35–14:42). Restarting the host on B fixes it.
-- Expected: after a network change, the host re-binds / re-announces within ~10 s with no app restart (hyperdht/hyperswarm may have a network-change hook or a `suspend()/resume()`, so verify in the docs; otherwise detect an interface change via os.networkInterfaces() polling and recreate the swarm, keeping the same room key and Corestore so the link stays valid).
-- Status: FIX CLAIMED (PR #33). Verify in the stage run (Wi-Fi off → hotspot).
 ### B-014 [P1] In-app "Join a live session" hangs on "Joining…" (demo step 6 in the real UI)
 - Stage / owner: s6 / @aaron (src/p2p/host.js), with @filip for the UI side
 - Repro (human report, 14:50): Windows laptop on the hotspot, `npm start` → sidebar "Join a live session" → paste lecscribe://room/hhwarg… → button stays "Joining…". On the Mac host the peer shows up only at 14:48:45 and leaves 18 s later.
@@ -64,6 +59,11 @@
 - Expected: peers see the same transcript as the host. Final `transcript:chunk` → append to the room feed (`{type:'chunk', chunk}`, replayed to late joiners). `transcript:partial` → DON'T append (every 500 ms would bloat the core); send it as an ephemeral Hypercore extension / protomux message to connected peers, which re-emit `transcript:partial` on their bus. Peer bus re-emits both, so the Lecture view works unchanged. Text only, never audio (privacy pitch intact). Update contract stage-6 + tests.
 - Status: FIX CLAIMED (PR #42). Verify in the in-app 2-device test.
 ## Closed
+### B-013 [P1] Host room must survive a network change (demo turns Wi-Fi off, then joins the hotspot)
+- Stage / owner: s6 / @aaron
+- Repro: start a host room on network A (eduroam), switch the Mac to network B (hotspot) → the host keeps announcing its stale network-A identity; peers on B find it but can't connect (david 14:35–14:42). Restarting the host on B fixes it.
+- Expected: after a network change, the host re-binds / re-announces within ~10 s with no app restart (hyperdht/hyperswarm may have a network-change hook or a `suspend()/resume()`, so verify in the docs; otherwise detect an interface change via os.networkInterfaces() polling and recreate the swarm, keeping the same room key and Corestore so the link stays valid).
+- Status: CLOSED, not needed for the demo (15:34): the human dropped demo step 2. The fix (PR #33) stays in as a safety net.
 ### T-001 [P1 test task] Cross-device P2P: Mac host ↔ Windows peer on venue Wi-Fi (then hotspot)
 - Owner: @aaron (peer) + @david (host, room live on the Mac)
 - Steps: `node src/p2p/scripts/room-demo.js join lecscribe://room/uebob54ojy8umd663tt8oeb9nxfpry7uwwqm334gdqk8b5jgpzxy` from the Windows laptop on venue Wi-Fi; report connect time, slides+images, notes, latency. Then repeat on a phone hotspot.

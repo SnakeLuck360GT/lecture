@@ -21,12 +21,12 @@ Fixtures (david, `fixtures/`, fixed, same every run):
 | Offline | all | n/a | no outbound network calls during session (models already downloaded) | demo step 2 | pending |
 
 ## Demo smoke checklist (= the exact on-stage click-path; re-run before every release)
-Setup: host Mac (david's) has mic permission granted, models pre-downloaded (`npm run ai:warm`), BOTH laptops already on the phone hotspot, and the app (re)started AFTER joining the hotspot, the app runs from main, `fixtures/deck.pdf` + `fixtures/lecture.wav` are ready, and a 2nd device has the app installed. Have the backup screen recording ready.
+Setup (step 2 dropped 15:34; the Mac stays on the hotspot the whole time): host Mac (david's) has mic permission granted, models pre-downloaded (`npm run ai:warm`), BOTH laptops already on the phone hotspot, and the app (re)started AFTER joining the hotspot, the app runs from main, `fixtures/deck.pdf` + `fixtures/lecture.wav` are ready, and a 2nd device has the app installed. Have the backup screen recording ready.
 
 | # | Time | Action | Expected result | Last run |
 |---|---|---|---|---|
 | 1 | 0:00 | Launch app, open module "COMP26120" → Week 3, load `deck.pdf` | Slide 1 visible with thumbnails; all 5 slides loaded in < 10 s | n/a |
-| 2 | 0:20 | Turn host Wi-Fi OFF | App keeps working; no error banners | n/a |
+| 2 | 0:20 | ~~Turn host Wi-Fi OFF~~ DROPPED by the human (15:34). Instead SAY: "Everything you'll see runs on this Mac: speech-to-text, embeddings and the LLM, all through QVAC. No cloud, no accounts." Point at the on-device badge. | n/a | n/a |
 | 3 | 0:40 | Click Start listening; presenter reads the script for slides 1→5 into the LIVE MIC (backup: play `lecture.wav`) | Transcript appears within ~5 s; slide auto-advances 1→2→…→5 roughly in time with the narration; manual prev/next still works | n/a |
 | 4 | 1:30 | Watch the margin | ≥ 1 sticky per slide for things said but not written; labelled AI; click one → "saved" state | n/a |
 | 5 | 2:00 | Open notebook → COMP26120 → Week 3 | Saved sticky listed under the right module/week, with its slide | n/a |
