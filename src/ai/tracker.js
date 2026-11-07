@@ -54,7 +54,13 @@ export function createTracker ({ bus, embedMany, embedOne, opts = {} }) {
     if (ev.source === 'manual') { holdUntil = Date.now() + o.manualHoldMs; recent.length = 0; pending = null; lastFresh = null }
   }
 
+  const seen = new Set() // B-011: a chunk is scored once (quick text if present, else the final)
   const onChunk = (chunk) => {
+    if (chunk?.id) {
+      if (seen.has(chunk.id)) return
+      seen.add(chunk.id)
+      if (seen.size > 500) seen.delete(seen.values().next().value)
+    }
     recent.push(chunk.text || '')
     while (recent.length > o.windowChunks) recent.shift()
     const windowText = recent.join(' ')
@@ -101,6 +107,7 @@ export function createTracker ({ bus, embedMany, embedOne, opts = {} }) {
   bus.on('slides:loaded', onSlides)
   bus.on('slide:changed', onChanged)
   bus.on('transcript:chunk', onChunk)
+  bus.on('transcript:quick', onChunk)
   return {
     current: () => current,
     idle: () => busy,
@@ -108,6 +115,7 @@ export function createTracker ({ bus, embedMany, embedOne, opts = {} }) {
       bus.off('slides:loaded', onSlides)
       bus.off('slide:changed', onChanged)
       bus.off('transcript:chunk', onChunk)
+      bus.off('transcript:quick', onChunk)
     }
   }
 }

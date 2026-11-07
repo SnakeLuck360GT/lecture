@@ -88,8 +88,9 @@ export function slideVocab (...texts) {
 }
 
 let chunkN = 0
-export function makeChunk ({ tStart, tEnd, text, slideIndex }) {
-  return { id: `c-${++chunkN}`, slideIndex, tStart: round2(tStart), tEnd: round2(tEnd), text }
+export const newChunkId = () => `c-${++chunkN}`
+export function makeChunk ({ tStart, tEnd, text, slideIndex, id }) {
+  return { id: id || newChunkId(), slideIndex, tStart: round2(tStart), tEnd: round2(tEnd), text }
 }
 const round2 = (x) => Math.round(x * 100) / 100
 
@@ -143,8 +144,11 @@ export function playClip ({ wavPath, onChunk, getSlideIndex, realtime = true, tr
 /**
  * Live mic (PRIMARY demo path): energy-VAD segmenter over pushed Float32 16 kHz mono PCM.
  * Cuts a segment at a pause (>= silenceMs) once it is >= minSec long, or hard-cuts at maxSec.
- * Silent segments are dropped. Transcription runs in one serial queue; if it falls behind,
- * queued segments are merged so latency stays bounded.
+ * Silent segments are dropped.
+ * B-011: every segment first gets a QUICK text from the fast model (onQuick, drives the tracker so
+ * slides advance ~as soon as the words are spoken), then the accurate FINAL (onChunk, same chunk id,
+ * drives notes/transcript/library). If the final model falls more than one segment behind, the
+ * older segments are finalised with their quick text (quality: 'fast') so lag stays bounded.
  * B-006: while a segment is still open, the growing audio is re-transcribed every partialMs and
  * reported through onPartial({ text, tStart, tEnd }) so words show up < 1 s after being spoken.
  * Partials use the fast partial model on its own queue (B-008), so they keep flowing while a
@@ -155,9 +159,10 @@ export function createLiveStream ({
   onChunk, getSlideIndex, transcribe = transcribeAudio,
   getVocab = () => '',
   minSec = config.stt.liveMinSec, maxSec = config.stt.liveMaxSec, silenceMs = config.stt.liveSilenceMs,
-  maxMergeSec = 10,
+  onQuick = null, getSlideIndexFor = null,
   onPartial = null, partialMs = config.stt.livePartialMs, now = () => Date.now()
 }) {
+  const slideFor = (id) => (getSlideIndexFor ? getSlideIndexFor(id) : getSlideIndex())
   const FRAME = 480 // 30 ms
   const frames = [] // current segment's frames (Float32Array each)
   let frameBuf = new Float32Array(0)
@@ -181,31 +186,48 @@ export function createLiveStream ({
     const n = frames.length * FRAME
     const audio = new Float32Array(n)
     frames.forEach((f, i) => audio.set(f, i * FRAME))
-    const seg = { id: segN++, tStart: segStart, tEnd: segStart + n / SR, audio, speech: speechFrames }
+    const seg = { id: segN++, tStart: segStart, tEnd: segStart + n / SR, audio, speech: speechFrames, quick: null, quickP: null }
     frames.length = 0; speechFrames = 0; silentRun = 0; segStart = t
     if (seg.speech * FRAME / SR < 0.4) { lastFinalSeg = Math.max(lastFinalSeg, seg.id); return } // basically silence
+    seg.chunkId = newChunkId()
+    if (onQuick) {
+      seg.quickP = transcribe(audio, { ...promptOpts(getVocab(), prev), tStart: seg.tStart, tEnd: seg.tEnd, partial: true, quick: true })
+        .then((text) => {
+          seg.quick = text || ''
+          if (text) onQuick({ id: seg.chunkId, slideIndex: getSlideIndex(), tStart: round2(seg.tStart), tEnd: round2(seg.tEnd), text })
+        })
+        .catch((e) => { seg.quick = ''; console.error('[ai/stt] quick failed', e?.message || e) })
+    }
     backlog.push(seg)
     pump()
   }
 
+  const emitFinal = (s, text, quality) => {
+    lastFinalSeg = Math.max(lastFinalSeg, s.id)
+    if (!text) return
+    prev = text
+    onChunk({ ...makeChunk({ id: s.chunkId, tStart: s.tStart, tEnd: s.tEnd, text, slideIndex: slideFor(s.chunkId) }), ...(quality ? { quality } : {}) })
+  }
+
   const pump = () => {
     if (running || !backlog.length) return
-    // merge everything waiting into one segment (bounded latency when STT is slower than real time)
-    const segs = [backlog.shift()]
-    while (backlog.length && (backlog[0].tEnd - segs[0].tStart) <= maxMergeSec) segs.push(backlog.shift())
-    let audio = segs[0].audio
-    if (segs.length > 1) {
-      audio = new Float32Array(segs.reduce((a, s) => a + s.audio.length, 0))
-      let off = 0
-      for (const s of segs) { audio.set(s.audio, off); off += s.audio.length }
-    }
-    const tStart = segs[0].tStart; const tEnd = segs.at(-1).tEnd; const lastId = segs.at(-1).id
     running = (async () => {
+      // Behind by more than one segment: finalise the older ones with their quick text.
+      while (backlog.length > 1 && backlog[0].quickP) {
+        const s = backlog.shift()
+        await s.quickP
+        emitFinal(s, s.quick, 'fast')
+      }
+      const s = backlog.shift()
       try {
-        const text = await transcribe(audio, { ...promptOpts(getVocab(), prev), tStart, tEnd })
-        lastFinalSeg = Math.max(lastFinalSeg, lastId)
-        if (text) { prev = text; onChunk(makeChunk({ tStart, tEnd, text, slideIndex: getSlideIndex() })) }
-      } catch (e) { lastFinalSeg = Math.max(lastFinalSeg, lastId); console.error('[ai/stt] live segment failed', e) }
+        const text = await transcribe(s.audio, { ...promptOpts(getVocab(), prev), tStart: s.tStart, tEnd: s.tEnd })
+        if (text) emitFinal(s, text)
+        else { if (s.quickP) await s.quickP; emitFinal(s, s.quick, s.quick ? 'fast' : undefined) }
+      } catch (e) {
+        console.error('[ai/stt] live segment failed', e?.message || e)
+        if (s.quickP) await s.quickP
+        emitFinal(s, s.quick, 'fast')
+      }
       running = null
       pump()
     })()

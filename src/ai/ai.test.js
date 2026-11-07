@@ -363,3 +363,47 @@ test('stretch: exam-emphasis flag on notes the lecturer flagged (fixtures slide 
   assert.equal(notes.find((n) => /Python/.test(n.text))?.emphasis, undefined)
   sum.dispose()
 })
+
+test('B-011: quick text per segment (same id as its final), slow finals stay <= 1 segment behind, slide filing', async () => {
+  const { createLiveStream } = await import('./stt.js')
+  const SR = 16000
+  const quicks = []
+  const finals = []
+  const live = createLiveStream({
+    getSlideIndex: () => 0,
+    getSlideIndexFor: (id) => (id === quicks[1]?.id ? 9 : 0), // pretend the tracker re-filed the 2nd chunk
+    // quick = fast (1 ms); final = slow (300 ms, slower than real time in this test)
+    transcribe: async (a, o) => { await tick(o.quick || o.partial ? 1 : 300); return `${o.quick ? 'quick' : 'final'} ${o.tStart.toFixed(1)}` },
+    onQuick: (c) => quicks.push(c),
+    onChunk: (c) => finals.push(c)
+  })
+  const tone = (sec) => Float32Array.from({ length: Math.round(sec * SR) }, (_, i) => Math.sin(i / 5) * 0.2)
+  const sil = (sec) => new Float32Array(Math.round(sec * SR))
+  // 5 utterances of 2.2 s separated by 0.6 s pauses, pushed fast (finals cannot keep up)
+  for (let k = 0; k < 5; k++) {
+    for (const part of [tone(2.2), sil(0.6)]) for (let i = 0; i < part.length; i += 1600) live.push(part.subarray(i, i + 1600))
+    await tick(5)
+  }
+  assert.equal(quicks.length, 5, 'one quick text per segment, emitted promptly')
+  await live.flush()
+  await tick(20)
+  assert.equal(finals.length, 5, 'every segment finalised')
+  assert.deepEqual(finals.map((f) => f.id), quicks.map((q) => q.id), 'finals keep the quick chunk ids, in order')
+  assert.ok(finals.some((f) => f.quality === 'fast'), 'older segments fell back to quick text when behind')
+  assert.ok(finals.some((f) => /^final/.test(f.text)), 'newest segments still get the accurate model')
+  assert.equal(finals[1].slideIndex, 9, 'final filed to the slide chosen for its chunk')
+})
+
+test('B-011: tracker scores a chunk once (quick), ignores its later final', async () => {
+  const bus = new EventEmitter()
+  let scored = 0
+  const tr = createTracker({ bus, embedMany: mockEmbed, embedOne: async (t) => { scored++; return mockEmbed(t) }, opts: { threshold: 0.3 } })
+  bus.emit('slides:loaded', SLIDES)
+  bus.emit('transcript:quick', { id: 'q1', slideIndex: 0, text: 'bubble sort swaps adjacent elements' })
+  await tr.idle()
+  assert.equal(tr.current(), 1)
+  bus.emit('transcript:chunk', { id: 'q1', slideIndex: 0, text: 'bubble sort swaps adjacent elements repeatedly' })
+  await tr.idle()
+  assert.equal(scored, 1)
+  tr.dispose()
+})
