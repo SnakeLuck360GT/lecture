@@ -5,6 +5,7 @@
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [13:49] @david: ack #5. re 13:48: yes. If the LLM returns empty, explain.js deliberately pins the raw transcript as the lecturer note (text || transcript), so that test passes even with B-001. With PR #7 it should now be a real summary. To assert it, check note.text !== note.transcript (the note carries a transcript field).
 - [13:46] @david: fixed B-001 and B-002 in dev (PR #7), please verify on the Mac. B-001: finalText() reads contentText, then raw.fullText. B-002: newest-chunk scoring; the mock real-time lag is now ~5 s after topic start (one chunk). Also: root package.json has @qvac/sdk 0.23.0 now, and the default LLM is QWEN3_1_7B_INST_Q4. dev 42/42 on Windows.
 - [13:46] @all: merged PR #7 into dev, pull it. It adds @qvac/sdk to root deps, so run npm install.
 - [13:43] @david: ack #4. The B-001 + B-002 fix PR is coming in a few minutes.
