@@ -6,7 +6,8 @@ const env = (typeof process !== 'undefined' && process.env) || {}
 export const config = {
   mock: env.LECSCRIBE_AI_MOCK === '1',
   models: {
-    stt: env.LECSCRIBE_STT_MODEL || 'WHISPER_EN_BASE_Q8_0',
+    stt: env.LECSCRIBE_STT_MODEL || 'WHISPER_LARGE_V3_TURBO', // finals (B-008: WER 8.1%, RTF 0.48 on the M5)
+    sttPartial: env.LECSCRIBE_STT_PARTIAL_MODEL || 'WHISPER_EN_BASE_Q8_0', // live partials (RTF 0.04)
     vad: env.LECSCRIBE_VAD_MODEL || '', // e.g. VAD_SILERO_5_1_2 (optional)
     embed: env.LECSCRIBE_EMBED_MODEL || 'EMBEDDINGGEMMA_300M_Q4_0',
     embedFallback: 'GTE_LARGE_FP16',

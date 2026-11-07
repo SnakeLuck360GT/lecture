@@ -10,13 +10,15 @@ const SR = 16000
 // B-007: the whisper worker RELOADS the model when the prompt changes, which aborts any request in
 // flight ("RPCError: Model was reloaded"). So every STT call goes through ONE serial lock, and a
 // failed call is retried once.
-let sttTail = Promise.resolve()
-let sttPending = 0
-export const sttBusy = () => sttPending > 0
-export function serialSTT (fn) {
-  sttPending++
-  const run = sttTail.then(fn, fn)
-  sttTail = run.catch(() => {}).finally(() => { sttPending-- })
+// B-008: one queue PER MODEL (turbo finals / base partials), so a 2.5 s final never blocks partials.
+const queues = new Map() // key -> { tail, pending }
+const queue = (key) => { if (!queues.has(key)) queues.set(key, { tail: Promise.resolve(), pending: 0 }); return queues.get(key) }
+export const sttBusy = (key = 'final') => queue(key).pending > 0
+export function serialSTT (fn, key = 'final') {
+  const qq = queue(key)
+  qq.pending++
+  const run = qq.tail.then(fn, fn)
+  qq.tail = run.catch(() => {}).finally(() => { qq.pending-- })
   return run
 }
 let errorSink = null
@@ -25,9 +27,12 @@ export function onSttError (fn) { errorSink = fn }
 /** Transcribe one audio source (path to a WAV, or Float32Array 16 kHz mono) → plain text. */
 export async function transcribeAudio (audio, { prompt, partial } = {}) {
   const q = await sdk()
-  const modelId = await sttModel()
+  const kind = partial ? 'partial' : 'final'
+  const modelId = await sttModel(kind)
   const audioChunk = typeof audio === 'string' ? audio : await writeTempWav(audio, SR)
-  const once = () => serialSTT(() => q.transcribe({ modelId, audioChunk, ...(prompt ? { prompt } : {}) }))
+  // same model for both kinds -> same queue (B-007 guarantee)
+  const key = partial && config.models.sttPartial !== config.models.stt ? 'partial' : 'final'
+  const once = () => serialSTT(() => q.transcribe({ modelId, audioChunk, ...(prompt ? { prompt } : {}) }), key)
   let text
   try {
     text = await once()
@@ -142,8 +147,9 @@ export function playClip ({ wavPath, onChunk, getSlideIndex, realtime = true, tr
  * queued segments are merged so latency stays bounded.
  * B-006: while a segment is still open, the growing audio is re-transcribed every partialMs and
  * reported through onPartial({ text, tStart, tEnd }) so words show up < 1 s after being spoken.
- * A partial is skipped while a final or another partial is running (finals have priority, no
- * queue build-up), and a partial that resolves after its segment's final is dropped.
+ * Partials use the fast partial model on its own queue (B-008), so they keep flowing while a
+ * slower, accurate final is transcribed. A partial is skipped while another partial is running
+ * (no queue build-up), and a partial that resolves after its segment's final is dropped.
  */
 export function createLiveStream ({
   onChunk, getSlideIndex, transcribe = transcribeAudio,
@@ -206,7 +212,8 @@ export function createLiveStream ({
   }
 
   const maybePartial = () => {
-    if (!onPartial || partialRunning || running || backlog.length || sttBusy()) return
+    // B-008: partials run on their own (fast) model, so they no longer wait for a running final.
+    if (!onPartial || partialRunning || sttBusy(config.models.sttPartial !== config.models.stt ? 'partial' : 'final')) return
     if (speechFrames * FRAME / SR < 0.5) return // wait for ~0.5 s of speech
     const at = now()
     if (at - lastPartialAt < partialMs) return
