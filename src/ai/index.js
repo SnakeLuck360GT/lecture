@@ -25,7 +25,7 @@ export { cosine }
  * @param {boolean} [o.mock]      no models (also env LECSCRIBE_AI_MOCK=1)
  * @param {boolean} [o.preload]   load STT/embed/LLM now (default true when not mocked)
  */
-export async function startAI ({ bus, mock = config.mock, preload = !mock } = {}) {
+export async function startAI ({ bus, mock = config.mock, preload = !mock, agentOpts = {} } = {}) {
   if (!bus) throw new Error('startAI needs a bus')
   setStatusBus(bus)
   if (!mock && !process.env.LECSCRIBE_TEST) startMemoryLog(bus)
@@ -43,7 +43,7 @@ export async function startAI ({ bus, mock = config.mock, preload = !mock } = {}
 
   const trackOpts = mock && !process.env.LECSCRIBE_TRACK_THRESHOLD ? { threshold: config.tracker.mockThreshold } : {}
   const tracker = createTracker({ bus, embedMany: (t) => embed(t), embedOne: (t) => embed(t), opts: trackOpts })
-  const agents = createSummariser({ bus, complete })
+  const agents = createSummariser({ bus, complete, opts: agentOpts })
   const explainer = createExplainer({ bus, getSlides: () => slides, transcribe, complete })
   const emitChunk = (c) => bus.emit('transcript:chunk', c)
   // Mock live mic: map stream time onto a script fixture (LECSCRIBE_MOCK_SCRIPT, default fixtures/lecture.script.json).
@@ -135,7 +135,8 @@ export async function startAI ({ bus, mock = config.mock, preload = !mock } = {}
     async summariseLecture (chunks, slidesArg = slides) {
       const outline = (slidesArg || []).map((s, i) => `${i + 1}. ${String(s.text || '').split('\n')[0].slice(0, 80)}`).join('\n')
       const transcript = (chunks || []).map((c) => c.text).join(' ')
-      if (!transcript) return ''
+      // H-4: a summary needs something to summarise
+      if ((transcript.match(/\S+/g) || []).length < config.agents.minLectureWords) return 'Not enough of the lecture has been transcribed yet to write a summary.'
       return complete(lecturePrompt({ outline, transcript }))
     },
     /** Wait until tracker, agents and explainer queues are drained (tests). */

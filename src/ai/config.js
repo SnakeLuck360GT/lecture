@@ -33,6 +33,8 @@ export const config = {
     manualHoldMs: 10000
   },
   agents: {
+    minWords: Number(env.LECSCRIBE_MIN_WORDS || 40), // H-4: never summarise a slide on less context than this
+    minLectureWords: 80, // H-4: floor for summariseLecture
     minNewChars: 180, // ~12 s of speech: first sticky shows up while the slide is still up
     minIntervalMs: 12000,
     maxNotes: 3, // filters keep precision; the prompt asks for 'up to 3' only grounded facts
