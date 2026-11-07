@@ -119,6 +119,10 @@ async function onJoined ({ key, title } = {}) {
   toast('Joined the room. Slides and notes arrive live.')
 }
 
+// H-3: never let a stray error kill the UI silently; main prints these as [renderer:error].
+window.addEventListener('error', (e) => console.error('[ui] uncaught:', e.message, e.filename ? `${e.filename}:${e.lineno}` : ''))
+window.addEventListener('unhandledrejection', (e) => console.error('[ui] unhandled rejection:', e.reason?.stack || e.reason))
+
 async function boot () {
   hydrateIcons()
   try {
