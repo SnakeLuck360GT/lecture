@@ -3,6 +3,7 @@
 // PENDING (skipped) until src/ai/index.js is merged into dev.
 import { test, describe, before, after } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { src, fx, REAL, pending, maybeImport, recordingBus, waitFor, slidesFixture, script, checkChunk, checkNote } from './../helpers.mjs'
 
 const AI = src('ai', 'index.js')
@@ -133,6 +134,57 @@ describe('REAL: demo quality on fixtures (LECSCRIBE_REAL=1, macOS host)', { skip
       score()
       console.log(`tracking accuracy ${ok}/${n}`)
       assert.ok(ok / n >= 0.8, `tracking accuracy ${ok}/${n}`)
+    } finally { await ai.close() }
+  })
+})
+
+// --- S2 LIVE MIC path (primary demo path since broadcast #3) ---
+// Streams fixtures/lecture.wav through ai.pushAudio() in 250 ms Float32 frames, as the renderer mic helper would.
+// Mock: frames pushed fast. REAL: frames pushed at real-time pace, measuring speech→chunk latency.
+function wavToF32 (path) {
+  const b = readFileSync(path)
+  let o = 12; let data = null
+  while (o < b.length - 8) { const id = b.toString('ascii', o, o + 4); const size = b.readUInt32LE(o + 4); if (id === 'data') data = b.subarray(o + 8, o + 8 + size); o += 8 + size + (size % 2) }
+  const f = new Float32Array(data.length / 2)
+  for (let i = 0; i < f.length; i++) f[i] = data.readInt16LE(i * 2) / 32768
+  return f
+}
+
+describe('S2 live mic: pushAudio() streaming', { skip }, () => {
+  test('streamed lecture → transcript chunks covering the talk, auto slide changes, then flushAudio() resolves', { timeout: REAL ? 600_000 : 60_000 }, async () => {
+    const { startAI } = await maybeImport(AI)
+    const bus = recordingBus()
+    const ai = await startAI({ bus, mock: MOCK })
+    try {
+      assert.equal(typeof ai.pushAudio, 'function')
+      bus.emit('slides:loaded', slidesFixture())
+      const pcm = wavToF32(fx('lecture.wav'))
+      const FRAME = 4000 // 250 ms @ 16 kHz
+      const t0 = Date.now()
+      const pushedAt = [] // wall-clock time when audio second s was pushed
+      for (let i = 0; i < pcm.length; i += FRAME) {
+        ai.pushAudio(pcm.slice(i, i + FRAME))
+        pushedAt[Math.floor((i + FRAME) / 16000)] = Date.now()
+        if (REAL) await new Promise((r) => setTimeout(r, Math.max(0, t0 + ((i + FRAME) / 16) - Date.now())))
+      }
+      if (typeof ai.flushAudio === 'function') await ai.flushAudio()
+      await waitFor(() => bus.events('transcript:chunk').length >= 3, 30_000, 200)
+      const chunks = bus.events('transcript:chunk')
+      for (const c of chunks) assert.deepEqual(checkChunk(c), [], JSON.stringify(c))
+      assert.ok(chunks.at(-1).tEnd > script().durationSec - 15, `last chunk ends at ${chunks.at(-1).tEnd}s of ${script().durationSec}s`)
+      if (REAL) {
+        const words = chunks.map((c) => c.text).join(' ').toLowerCase()
+        for (const w of ['hash', 'collision', 'load factor', 'resiz']) assert.ok(words.includes(w), `transcript missing "${w}"`)
+        const seq = bus.events('slide:changed').filter((e) => e.source === 'auto').map((e) => e.index)
+        console.log(`live: ${chunks.length} chunks, auto slides ${JSON.stringify(seq)}`)
+        assert.deepEqual(seq, [1, 2, 3, 4], `live auto sequence ${JSON.stringify(seq)}`)
+        // latency: chunk emitted vs when its last audio second was pushed
+        const lat = bus.log.filter((e) => e.name === 'transcript:chunk').map((e) => e.t - (pushedAt[Math.ceil(e.payload.tEnd)] ?? e.t))
+        lat.sort((a, b) => a - b)
+        const p50 = lat[Math.floor(lat.length / 2)]; const p90 = lat[Math.floor(lat.length * 0.9)]
+        console.log(`live STT latency p50=${p50}ms p90=${p90}ms`)
+        assert.ok(p90 < 8000, `p90 speech→chunk latency ${p90}ms ≥ 8 s`)
+      }
     } finally { await ai.close() }
   })
 })
