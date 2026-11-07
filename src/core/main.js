@@ -23,6 +23,20 @@ const SCHEME = 'app'
 const HOST = 'lecscribe'
 const MOCK = process.env.LECSCRIBE_AI_MOCK === '1'
 
+// Real app name in dev too (menus/About say "LecScribe", not "Electron"). setName would move the
+// default userData folder, so keep the existing one: everyone's library stays where it is.
+{
+  const userData = app.getPath('userData')
+  app.setName('LecScribe')
+  app.setPath('userData', userData)
+  app.setAboutPanelOptions({
+    applicationName: 'LecScribe',
+    applicationVersion: app.getVersion(),
+    copyright: 'LecScribe team, University of Manchester',
+    credits: 'On-device AI by QVAC. Peer-to-peer sharing by Pears. No cloud, no accounts.'
+  })
+}
+
 // B-012: smoke runs must never write into the real library (it would show up on stage).
 // Must run before app 'ready' and before the library starts.
 if (process.env.LECSCRIBE_SMOKE) {
@@ -301,6 +315,15 @@ async function runSmoke (pngPath) {
   const saved = await wc.executeJavaScript('(async () => { const L = window.__lecscribe; return !!(await L.app.store.getLecture(L.state.lectureId))?.summary })()')
   await writeFile(out.replace(/.png$/i, '') + '-summary.png', (await wc.capturePage()).toPNG())
   const summary = { chars: summaryText.length, saved }
+  // Demo step 5: save a sticky, go back to the Library, re-open the lecture -> lands on "Saved" with the note.
+  bus.emit('note:added', { id: 'n-smoke', slideIndex: 1, kind: 'ai', text: 'Linear probing is cache friendly but suffers from primary clustering.', sourceChunkIds: ['c-900'], createdAt: Date.now() })
+  await new Promise((r) => setTimeout(r, 400))
+  await wc.executeJavaScript("[...document.querySelectorAll('#notes .sticky')].find((s) => s.textContent.includes('Linear probing'))?.click()")
+  await new Promise((r) => setTimeout(r, 800))
+  await wc.executeJavaScript('(async () => { const L = window.__lecscribe; const id = L.state.lectureId; await L.openLibrary(); await L.openLecture(id) })()')
+  await new Promise((r) => setTimeout(r, 2000))
+  const savedView = await wc.executeJavaScript("({ tab: document.querySelector('#tab-saved')?.classList.contains('active'), count: document.getElementById('saved-count')?.textContent, listed: !!document.querySelector('#notes .saved-group .sticky') })")
+  await writeFile(out.replace(/.png$/i, '') + '-saved.png', (await wc.capturePage()).toPNG())
   // Ask across lectures: back to the Library, search, click the first hit -> lecture opens at that slide.
   await wc.executeJavaScript('window.__lecscribe.openLibrary()')
   await new Promise((r) => setTimeout(r, 800))
@@ -320,7 +343,7 @@ async function runSmoke (pngPath) {
     askOpened.wanted = want
   }
   const ask = { hits: hitCount, opened: askOpened }
-  const result = { ok: slides.length > 0 && ui.current === 1 && ui.img, lost: lostLabel, explain, summary, ask, slides: slides.length, texts: slides.map((s) => s.text.slice(0, 40)), ui, events: [...new Set(seen)] }
+  const result = { ok: slides.length > 0 && ui.current === 1 && ui.img, lost: lostLabel, explain, summary, savedView, ask, slides: slides.length, texts: slides.map((s) => s.text.slice(0, 40)), ui, events: [...new Set(seen)] }
   console.log('[smoke] ' + JSON.stringify(result))
   app.exit(result.ok ? 0 : 1)
 }

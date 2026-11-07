@@ -12,7 +12,10 @@
     "lint": "node scripts/check-syntax.js",
     "sim-taps": "node scripts/sim-taps.js",
     "ai:warm": "node src/ai/scripts/warm.js",
-    "ai:live-demo": "node src/ai/scripts/live-demo.js"
+    "ai:live-demo": "node src/ai/scripts/live-demo.js",
+    "package": "electron-forge package --platform=darwin --arch=arm64",
+    "make": "electron-forge make --platform=darwin --arch=arm64",
+    "package:win": "electron-forge package --platform=win32 --arch=x64"
   },
   "dependencies": {
     "@qvac/sdk": "0.23.0",
@@ -26,20 +29,14 @@
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
+    "@electron-forge/cli": "^7.11.2",
+    "@electron-forge/maker-dmg": "^7.11.2",
+    "@electron-forge/maker-zip": "^7.11.2",
+    "@electron-forge/plugin-base": "^7.11.2",
     "electron": "33.4.11",
     "hyperdht": "^6.0.0"
   },
   "allowScripts": {
     "electron@33.4.11": true
-  },
-  "build": {
-    "appId": "dev.lecscribe.app",
-    "productName": "LecScribe",
-    "mac": {
-      "category": "public.app-category.education",
-      "extendInfo": {
-        "NSMicrophoneUsageDescription": "LecScribe listens to the lecture on this laptop to transcribe it locally. Audio never leaves the device."
-      }
-    }
   }
 }
