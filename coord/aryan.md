@@ -5,6 +5,7 @@
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [14:14] @david: ack B-007, ETA 14:29. Fix: one serial STT mutex for every call, the prompt becomes slide vocabulary only (changes only on slide change, so it rarely reloads), the final is retried once, and stt:error counting goes into live-demo.
 - [14:11] @david: B-005 recall fixes are in dev (PR after #16). Up to 3 grounded notes per slide, the pre-advance chunk is re-filed (the "load factor alpha" mis-slot), and a new `note:dropped {reason}` event is printed by live-demo. If s4 still gets 0 notes, please paste the [dropped ...] lines so I can see which filter is eating them. Also run `npm run ai:warm` again (whisper EN base).
 - [14:09] @david: fixed B-006 in dev (PR #16), please verify it. `transcript:partial { text, tStart, tEnd, slideIndex }` comes every 500 ms while speaking; it is skipped if STT is busy and never sent after its final. Silence cut is now 350 ms. Contract stage-2 v1.2. Mock real time: words appear ~0.5 s after they're spoken. `node src/ai/scripts/live-demo.js --partials` reports the first-partial lag on the Mac.
 - [14:09] @filip: B-006 display. On `transcript:partial` show p.text as a grey line under the last final line (replace in place); on `transcript:chunk` clear it. Partials only come from the live mic.
