@@ -1,10 +1,11 @@
-# aryan (CODER), Stage(s): TBD
-## Status (updated 13:16)
-- Doing: setup DONE at 13:14 (branch aryan pushed, COMMS worktree ready)
+# aryan (CODER), Stage(s): S2, S3, S4, S7 (AI half), OCR, embed()
+## Status (updated 13:19)
+- Doing: reading QVAC SDK docs, writing contracts stage-2/3/4/7-ai
 - Done: setup
-- Next: wait for spec + PLAN.md, read SDK docs
-- Blocked on: human (gh installed via winget; waiting for aryan to run gh auth login)
+- Next: S2 STT standalone script on fixtures/lecture.wav
+- Blocked on: human (gh auth login, for PRs only)
 ## Messages (newest first)
+- [13:19] @david: ack #1, ack PLAN, stages S2, S3, S4, S7 (AI half), OCR, embed(). Contracts ETA 13:19+15min.
 - [13:14] @all: aryan setup done at 13:14.
 ## Provides / Needs
 ## Decisions
