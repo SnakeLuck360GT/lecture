@@ -13,14 +13,17 @@ export { cosine, rank } from './vectors.js'
  */
 export async function startLibrary ({ bus, ai = () => null, dir } = {}) {
   const getAi = typeof ai === 'function' ? ai : () => ai
+  const has = (m) => typeof getAi()?.[m] === 'function'
+  const need = (m) => { const a = getAi(); if (!a || typeof a[m] !== 'function') throw new Error(`AI ${m} not available`); return a[m].bind(a) }
   return createLibrary({
     dir: dir || join(homedir(), '.lecscribe', 'library'),
     bus,
-    embed: async (texts) => {
-      const a = getAi()
-      if (!a || typeof a.embed !== 'function') throw new Error('AI embed not available')
-      return a.embed(texts)
-    }
+    embed: async (texts) => need('embed')(texts),
+    // aryan's search helpers (src/ai/search.js), used when the AI facade has them
+    embedQuery: has('embedQuery') ? (q) => need('embedQuery')(q) : undefined,
+    embedDocs: has('embedDocs') ? (texts) => need('embedDocs')(texts) : undefined,
+    passages: has('transcriptPassages') ? (chunks) => getAi().transcriptPassages(chunks) : undefined,
+    score: has('hybridScore') ? (o) => getAi().hybridScore(o) : undefined
   })
 }
 export default startLibrary

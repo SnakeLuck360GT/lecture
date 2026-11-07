@@ -15,8 +15,13 @@ const STATES = new Set(['live', 'attended', 'missed', 'imported'])
  * @param {(t: string|string[]) => Promise<number[]|number[][]>} [o.embed]   on-device embedder (ai.embed)
  * @param {{on,off,emit}} [o.bus]             main bus: emits 'library:changed', used by startSession
  * @param {Array} [o.bootstrap]               DHT bootstrap (tests only)
+ * Optional search helpers from aryan's AI facade (src/ai/search.js). Each falls back to plain behaviour:
+ * @param {(q: string) => Promise<number[]>} [o.embedQuery]        query embedding (task prefix)
+ * @param {(texts: string[]) => Promise<number[][]>} [o.embedDocs] document embedding (task prefix)
+ * @param {(chunks) => {id, slideIndex, tStart, tEnd, text, chunkIds}[]} [o.passages]  merge chunks into ~30 s passages
+ * @param {({cosine, query, text, kind}) => number} [o.score]       hybrid ranking score
  */
-export async function createLibrary ({ dir, embed, bus, bootstrap } = {}) {
+export async function createLibrary ({ dir, embed, embedQuery, embedDocs, passages, score, bus, bootstrap } = {}) {
   if (!dir) throw new Error('createLibrary: dir is required')
   await mkdir(join(dir, 'lectures'), { recursive: true })
   const queue = keyedQueue()
@@ -24,18 +29,39 @@ export async function createLibrary ({ dir, embed, bus, bootstrap } = {}) {
   const modulesFile = join(dir, 'modules.json')
   const L = (id, ...p) => join(dir, 'lectures', safeId(id), ...p)
   const changed = (what, extra = {}) => { try { bus?.emit('library:changed', { what, ...extra }) } catch {} }
+  // Vectors made by different embedders are not comparable; a store made by another one gets rebuilt.
+  const EMBEDDER = embedDocs ? 'docs-v1' : embed ? 'plain-v1' : 'none'
 
   // ---------------------------------------------------------------- embedding (never throws)
   async function embedMany (texts) {
-    if (!embed || !texts.length) return texts.map(() => null)
+    const fn = embedDocs || embed
+    if (!fn || !texts.length) return texts.map(() => null)
     try {
-      const out = await embed(texts)
+      const out = await fn(texts)
       if (Array.isArray(out) && Array.isArray(out[0])) return out.map(toArray)
       if (texts.length === 1 && Array.isArray(out)) return [toArray(out)]
     } catch (err) {
       console.error('[library] embed failed, falling back to keyword search:', err?.message || err)
     }
     return texts.map(() => null)
+  }
+  async function embedOneQuery (q) {
+    try {
+      if (embedQuery) { const v = await embedQuery(q); return toArray(Array.isArray(v[0]) ? v[0] : v) }
+      if (embed) { const v = await embed([q]); return toArray(Array.isArray(v[0]) ? v[0] : v) }
+    } catch (err) {
+      console.error('[library] query embed failed, keyword search only:', err?.message || err)
+    }
+    return null
+  }
+  /** Transcript -> index items: ~30 s passages when aryan's helper is there, else one item per chunk. */
+  function transcriptItems (transcript) {
+    if (passages) {
+      try {
+        return passages(transcript).map((p) => ({ id: `passage-${p.id}`, kind: 'transcript', refId: p.chunkIds?.[0] ?? p.id, chunkIds: p.chunkIds || [], slideIndex: p.slideIndex ?? null, text: p.text }))
+      } catch (err) { console.error('[library] passages failed, indexing raw chunks:', err?.message || err) }
+    }
+    return transcript.map((c) => ({ id: `chunk-${c.id}`, kind: 'transcript', refId: c.id, chunkIds: [c.id], slideIndex: c.slideIndex ?? null, text: c.text }))
   }
 
   // ---------------------------------------------------------------- lecture files
@@ -62,6 +88,25 @@ export async function createLibrary ({ dir, embed, bus, bootstrap } = {}) {
     items.forEach((it, i) => store.items.push({ ...it, vector: vectors[i] }))
     const v = store.items.find((it) => Array.isArray(it.vector))
     store.dim = v ? v.vector.length : null
+    store.embedder = EMBEDDER
+    await writeVectors(id, store)
+  }
+  /** Replace all items of one kind, re-embedding only items whose text changed (cheap per new chunk). */
+  async function syncKind (id, kind, items) {
+    const store = await readVectors(id)
+    const old = new Map(store.items.filter((it) => it.kind === kind).map((it) => [it.id, it]))
+    const keep = []
+    const fresh = []
+    for (const it of items) {
+      const prev = old.get(it.id)
+      if (prev && prev.text === it.text && store.embedder === EMBEDDER) keep.push({ ...it, vector: prev.vector })
+      else fresh.push(it)
+    }
+    const vectors = await embedMany(fresh.map((it) => it.text))
+    store.items = [...store.items.filter((it) => it.kind !== kind), ...keep, ...fresh.map((it, i) => ({ ...it, vector: vectors[i] }))]
+    const v = store.items.find((it) => Array.isArray(it.vector))
+    store.dim = v ? v.vector.length : null
+    store.embedder = EMBEDDER
     await writeVectors(id, store)
   }
   async function removeItems (id, pred) {
@@ -253,7 +298,7 @@ export async function createLibrary ({ dir, embed, bus, bootstrap } = {}) {
         if (fresh.length) {
           transcript.push(...fresh)
           await writeJson(L(id, 'transcript.json'), transcript)
-          await addItems(id, fresh.map((c) => ({ id: `chunk-${c.id}`, kind: 'transcript', refId: c.id, slideIndex: c.slideIndex ?? null, text: c.text })))
+          await syncKind(id, 'transcript', transcriptItems(transcript))
         }
         return writeMeta(m)
       })
@@ -276,9 +321,13 @@ export async function createLibrary ({ dir, embed, bus, bootstrap } = {}) {
     async search (id, query, k = 5) {
       await mustMeta(id)
       if (!String(query || '').trim()) return []
-      const store = await readVectors(id)
-      const [qv] = store.items.some((it) => it.vector) ? await embedMany([String(query)]) : [null]
-      return rank(store.items, { query, queryVector: qv, k }).map((h) => ({ ...h, lectureId: id }))
+      let store = await readVectors(id)
+      if (EMBEDDER !== 'none' && store.items.length && store.embedder !== EMBEDDER) {
+        await api.rebuildIndex(id) // made by another embedder (e.g. before embedDocs existed): vectors not comparable
+        store = await readVectors(id)
+      }
+      const qv = store.items.some((it) => it.vector) ? await embedOneQuery(String(query)) : null
+      return rank(store.items, { query, queryVector: qv, k, score }).map((h) => ({ ...h, lectureId: id }))
     },
     async searchAll (query, k = 5) {
       if (!String(query || '').trim()) return []
@@ -297,7 +346,7 @@ export async function createLibrary ({ dir, embed, bus, bootstrap } = {}) {
         const items = [
           ...slides.filter((s) => s.text?.trim()).map((s) => ({ id: `slide-${s.index}`, kind: 'slide', refId: String(s.index), slideIndex: s.index, text: s.text })),
           ...notes.map((n) => ({ id: `note-${n.id}`, kind: 'note', refId: n.id, slideIndex: n.slideIndex ?? null, text: String(n.text || '') })),
-          ...transcript.map((c) => ({ id: `chunk-${c.id}`, kind: 'transcript', refId: c.id, slideIndex: c.slideIndex ?? null, text: c.text })),
+          ...transcriptItems(transcript),
           ...(sum.trim() ? [{ id: 'summary', kind: 'summary', refId: 'summary', slideIndex: null, text: sum }] : [])
         ]
         await addItems(id, items)
