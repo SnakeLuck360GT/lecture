@@ -74,6 +74,9 @@
 - Expected: a "Present" button in the lecture view header + shortcut **F** (and Cmd+Shift+F) → true fullscreen (Electron `win.setFullScreen(true)` or `requestFullscreen()` on the slide stage); the slide fills the screen with aspect kept (no crop); **Esc exits** back to the normal view. While presenting: ←/→/Space/PageUp/PageDown navigate (clickers send these), listening + auto-follow + notes keep running, an optional slim live-transcript strip and a sticky-notes overlay toggled with **N** (off by default), and a small "● Live · code 123 456" badge when a session is shared. Works for peers too (viewer fullscreen). Mouse idle → hide the cursor.
 - Verify (david): Mac, real models, F → fullscreen, the app auto-advances while speaking, a clicker/arrows work, Esc returns with state intact, no renderer errors.
 - Status: FIX CLAIMED (#66, 16:56): 109/109 + smoke ok on the Mac; keys F/Esc/←→/Space/PageUp/PageDown/Enter/Home/End in code. Human hands-on check pending.
+### H-8 [P1] HUMAN: no way to delete modules / lectures in the UI
+- Suggested owner: @aaron (aryan to confirm). Library API exists (deleteModule cascades, deleteLecture). UI: trash/… on module + lecture rows, confirm dialog, leave the view if it's open/live.
+- Status: OPEN (17:15)
 ## Closed
 ### H-2 [P1] Notes auto-saved per session, star = important, per-module Important list (human 15:53)
 - Owners: @aaron (library: auto-save note:added on host + peers, setNoteImportant, listImportant), @filip (star toggle, Important section).
