@@ -235,7 +235,10 @@ label.btn { cursor: pointer; }
 .lec-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 320px; }
 .stage { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); min-height: 0; min-width: 0; }
 .slide-card { position: relative; flex: 1; min-height: 0; display: grid; place-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); overflow: hidden; }
-#slide-img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+/* H-1 (aaron): pin the page to the card and letterbox it. The old max-height:100% inside an auto grid
+   row never resolved, so tall pages overflowed and were clipped by the card. */
+#slide-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
+.sticky-text { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; }
 .slide-text { padding: var(--space-8); font-size: var(--text-lg); white-space: pre-wrap; line-height: 1.5; }
 .slide-empty { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); text-align: center; padding: var(--space-6); color: var(--muted); max-width: 420px; }
 .slide-empty .empty-icon { color: var(--faint); }
