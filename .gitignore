@@ -17,7 +17,11 @@ __pycache__/
 
 # Build outputs
 dist/
-build/
+build/*
+!build/icon.svg
+!build/icon.png
+!build/icon.icns
+!build/icon.ico
 out/
 .next/
 .expo/

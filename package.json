@@ -15,7 +15,8 @@
     "ai:live-demo": "node src/ai/scripts/live-demo.js",
     "package": "electron-forge package --platform=darwin --arch=arm64",
     "make": "electron-forge make --platform=darwin --arch=arm64",
-    "package:win": "electron-forge package --platform=win32 --arch=x64"
+    "package:win": "electron-forge package --platform=win32 --arch=x64",
+    "icon": "electron scripts/make-icon.js"
   },
   "dependencies": {
     "@qvac/sdk": "0.23.0",
@@ -34,7 +35,8 @@
     "@electron-forge/maker-zip": "^7.11.2",
     "@electron-forge/plugin-base": "^7.11.2",
     "electron": "33.4.11",
-    "hyperdht": "^6.0.0"
+    "hyperdht": "^6.0.0",
+    "png2icons": "^2.0.1"
   },
   "allowScripts": {
     "electron@33.4.11": true
