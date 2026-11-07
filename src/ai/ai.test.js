@@ -286,7 +286,7 @@ test('B-005: auto-advance re-files the chunk BEFORE the trigger when it already 
   bus.on('slide:changed', (e) => changes.push(e))
   bus.emit('slides:loaded', SLIDES)
   bus.emit('transcript:chunk', { id: 'a', slideIndex: 0, text: 'introduction to sorting algorithms today' })
-  bus.emit('transcript:chunk', { id: 'b', slideIndex: 0, text: 'now bubble' })
+  bus.emit('transcript:chunk', { id: 'b', slideIndex: 0, text: 'now bubble sort' })
   bus.emit('transcript:chunk', { id: 'c', slideIndex: 0, text: 'bubble sort swap adjacent elements repeatedly' })
   await tr.idle()
   assert.equal(changes.at(-1)?.index, 1)
@@ -422,4 +422,19 @@ test('B-005: STT vocab puts spoken forms of slide shorthand first (mod -> modulu
   assert.ok(v.includes('alpha') && v.includes('constant time'))
   assert.ok(promptOpts(v).prompt.includes('modulus'))
   assert.ok(!slideVocab('A modern model').includes('modulus'), 'whole-word match only')
+})
+
+test('B-005: a slide left with no note keeps its best soft-dropped candidate (>= 1 note per slide)', async () => {
+  const bus = new EventEmitter()
+  const deck = [{ index: 0, text: 'Hash Tables\nHashing, collisions, load factor, resizing' }, { index: 1, text: 'Hash functions\nMap a key to an array index' }]
+  // generic: every word is already somewhere in the deck
+  const sum = createSummariser({ bus, complete: async () => '["Hashing maps a key to an index"]' })
+  const notes = []
+  bus.on('note:added', (n) => notes.push(n))
+  bus.emit('slides:loaded', deck)
+  bus.emit('transcript:chunk', { id: 'c1', slideIndex: 0, text: 'so hashing maps a key to an index in the table' })
+  bus.emit('slide:changed', { index: 1, source: 'auto' })
+  await sum.idle()
+  assert.equal(notes.filter((n) => n.slideIndex === 0).length, 1)
+  sum.dispose()
 })

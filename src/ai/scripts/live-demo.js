@@ -23,6 +23,7 @@ bus.on('stt:error', (e) => { sttErrors++; console.log(ts(), `  !! stt:error (${e
 bus.on('transcript:partial', (p) => { partials++; const lag = (Date.now() - t0) / 1000 - p.tEnd; if (firstPartialLag === null) firstPartialLag = lag; if (args.includes('--partials')) console.log(ts(), `  ~ partial ${p.tStart}-${p.tEnd}s: ${p.text.slice(0, 70)}`) })
 bus.on('slide:changed', (e) => console.log(ts(), `>>> slide ${e.index} (${e.source}, conf ${e.confidence?.toFixed?.(2)})`))
 bus.on('note:dropped', (n) => console.log(ts(), `  [dropped ${n.reason} s${n.slideIndex}] ${n.text}`))
+bus.on('agent:status', (a) => { if (a.state !== 'queued') console.log(ts(), `  (agent s${a.slideIndex} ${a.state}${a.error ? ' ' + a.error : ''})`) })
 bus.on('note:added', (n) => console.log(ts(), `  [note ${n.kind} s${n.slideIndex}] ${n.text}`))
 
 const ai = await startAI({ bus, mock })
@@ -31,7 +32,7 @@ const FRAME = 1600 // 100 ms
 const start = Date.now()
 for (let off = 0; off < samples.length; off += FRAME) {
   ai.pushAudio(samples.subarray(off, off + FRAME))
-  if (!fast) {
+  if (fast) { if ((off / FRAME) % 5 === 0) await new Promise((r) => setTimeout(r, 2)) } else {
     const wait = start + ((off + FRAME) / 16000) * 1000 - Date.now()
     if (wait > 0) await new Promise((r) => setTimeout(r, wait))
   }

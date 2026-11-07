@@ -28,9 +28,10 @@ export function createSummariser ({ bus, complete, opts = {} }) {
     return agents.get(i)
   }
 
-  const schedule = (i) => {
+  // force: run even with nothing new (final pass for a slide that was left with no note yet)
+  const schedule = (i, force = false) => {
     const a = agent(i)
-    if (a.queued || a.pending.length === 0) return
+    if (a.queued || (a.pending.length === 0 && !(force && a.seen.length))) return
     a.queued = true
     const gen = generation
     bus.emit('agent:status', { slideIndex: i, state: 'queued' })
@@ -54,15 +55,8 @@ export function createSummariser ({ bus, complete, opts = {} }) {
         }))
         if (gen !== generation) return
         const said = chunks.map((c) => c.text).join(' ')
-        for (const raw of parseNotes(out, o.maxNotes)) {
-          const text = tidyNote(raw)
-          if (!text) continue
-          // B-005: drop paraphrases of the slide and anything not grounded in what was said.
-          const drop = (reason) => bus.emit('note:dropped', { slideIndex: i, text, reason })
-          if (isOnSlide(text, slides[i]?.text, o.onSlideOverlap)) { drop('on-slide'); continue }
-          if (grounding(text, said, slides[i]?.text) < o.minGrounding) { drop('ungrounded'); continue }
-          if (isGeneric(text, slides.map((x) => x.text || '').join(' '))) { drop('generic'); continue }
-          if (a.notes.some((n) => similar(n, text))) { drop('duplicate'); continue }
+        const slideText = slides[i]?.text || ''
+        const emit = (text) => {
           a.notes.push(text)
           const emphasis = examEmphasis(text, said)
           bus.emit('note:added', {
@@ -74,6 +68,28 @@ export function createSummariser ({ bus, complete, opts = {} }) {
             createdAt: Date.now(),
             ...(emphasis ? { emphasis } : {})
           })
+        }
+        const soft = [] // candidates dropped only for soft reasons (fallback, see below)
+        for (const raw of parseNotes(out, o.maxNotes)) {
+          const text = tidyNote(raw)
+          if (!text) continue
+          // B-005: drop paraphrases of the slide and anything not grounded in what was said.
+          const drop = (reason) => bus.emit('note:dropped', { slideIndex: i, text, reason })
+          if (grounding(text, said, slideText) < o.minGrounding) { drop('ungrounded'); continue }
+          if (a.notes.some((n) => similar(n, text))) { drop('duplicate'); continue }
+          if (isOnSlide(text, slideText, o.onSlideOverlap)) {
+            if (slideOverlap(text, slideText) < 0.6) soft.push(text)
+            drop('on-slide'); continue
+          }
+          if (isGeneric(text, slides.map((x) => x.text || '').join(' '))) { soft.push(text); drop('generic'); continue }
+          emit(text)
+        }
+        // Target >= 1 note per slide: once the slide is left with no note at all, keep the best
+        // softly-dropped candidate (grounded, not a near-verbatim copy) rather than nothing.
+        if (!a.notes.length && i !== current && soft.length) {
+          const best = soft.sort((x, y) => slideOverlap(x, slideText) - slideOverlap(y, slideText))[0]
+          bus.emit('note:dropped', { slideIndex: i, text: best, reason: 'kept-as-fallback' })
+          emit(best)
         }
         bus.emit('agent:status', { slideIndex: i, state: 'done' })
       } catch (e) {
@@ -100,11 +116,17 @@ export function createSummariser ({ bus, complete, opts = {} }) {
     if (left === current) return
     // The chunk that triggered an auto-advance was spoken about the NEW slide: move it over.
     if (ev.chunkId && agents.has(left)) {
-      const from = agent(left).pending
-      const k = from.findIndex((c) => c.id === ev.chunkId)
-      if (k >= 0) agent(current).pending.push(...from.splice(k).map((c) => ({ ...c, slideIndex: current })))
+      const old = agent(left)
+      const moved = []
+      // also take it back from what the old slide already used (an early mid-slide run)
+      const ks = old.seen.findIndex((c) => c.id === ev.chunkId)
+      if (ks >= 0) moved.push(...old.seen.splice(ks))
+      const k = old.pending.findIndex((c) => c.id === ev.chunkId)
+      if (k >= 0) moved.push(...old.pending.splice(k))
+      else if (ks >= 0) moved.push(...old.pending.splice(0))
+      if (moved.length) agent(current).pending.push(...moved.map((c) => ({ ...c, slideIndex: current })))
     }
-    schedule(left)
+    schedule(left, agents.has(left) && agent(left).notes.length === 0)
   }
 
   bus.on('slides:loaded', onSlides)

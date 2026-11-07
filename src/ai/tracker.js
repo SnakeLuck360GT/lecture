@@ -98,7 +98,7 @@ export function createTracker ({ bus, embedMany, embedOne, opts = {} }) {
         // If the chunk BEFORE the trigger already matched the new slide better than the old one,
         // the topic changed there: report it so S4 re-files it under the new slide.
         const from = prevFresh?.scores
-        const earlier = from && from[d.index] !== undefined && from[d.index] > (from[oldIndex] ?? -1) && prevFresh.chunkId
+        const earlier = from && from[d.index] !== undefined && from[d.index] - (from[oldIndex] ?? -1) >= o.margin && from[d.index] >= o.threshold * 0.7 && prevFresh.chunkId
         bus.emit('slide:changed', { index: d.index, source: 'auto', confidence: d.confidence, chunkId: earlier || chunk.id })
       }
     }).catch((e) => console.error('[ai/tracker] chunk scoring failed', e))
