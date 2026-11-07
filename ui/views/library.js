@@ -113,6 +113,7 @@ export function createLibraryView (app) {
     if (l.date) meta.append(el('span', null, fmtDate(l.date)))
     if (l.slideCount) meta.append(el('span', null, `${l.slideCount} slides`))
     meta.append(el('span', null, `${l.noteCount || 0} saved note${l.noteCount === 1 ? '' : 's'}`))
+    if (l.hasSummary) meta.append(el('span', 'summary-badge', 'Summary'))
     if (l.state === 'imported') meta.append(el('span', 'shared-tag', l.sharedBy ? `Shared by ${l.sharedBy}` : 'Shared by a coursemate'))
     main.append(meta)
     row.append(el('span', 'lr-icon'), main)

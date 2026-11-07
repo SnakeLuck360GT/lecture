@@ -48,6 +48,9 @@ export function createLectureView (app) {
     // saved notes come back as saved stickies
     for (const n of L?.notes || []) { state.notes.push(n); state.saved.add(n.id) }
     for (const c of L?.transcript || []) addLine(c, false)
+    summary.text = String(L?.summary || '')
+    summary.busy = false
+    renderSummary()
     renderTranscript()
     resetSlideUi(fresh)
     renderNotes()
@@ -439,6 +442,48 @@ export function createLectureView (app) {
     })
   }
 
+  // ---------- Lecture summary (PLAN 'NEXT FOR FILIP' #2) ----------
+  const summary = { text: '', busy: false }
+
+  function renderSummary () {
+    const card = $('summary-card')
+    const live = state.listening
+    const canWrite = state.role !== 'peer' && state.lines.length > 0 && !summary.busy
+    card.hidden = live || state.role === 'peer' || (!summary.text && !summary.busy && !canWrite)
+    $('summary-text').textContent = summary.text
+    const st = $('summary-state')
+    st.textContent = summary.busy ? 'Writing on this laptop…' : summary.text ? 'AI-generated' : ''
+    st.classList.toggle('busy', summary.busy)
+    const btn = $('btn-summarise')
+    btn.hidden = !canWrite
+    btn.textContent = summary.text ? 'Rewrite summary' : 'Write summary'
+  }
+
+  /** Summarise the transcript with the local LLM and store it on the lecture. */
+  async function writeSummary () {
+    if (summary.busy || state.role === 'peer') return
+    const chunks = state.lines.map((c) => ({ id: c.id, slideIndex: c.slideIndex, tStart: c.tStart, tEnd: c.tEnd, text: c.text }))
+    if (!chunks.length) return
+    summary.busy = true
+    renderSummary()
+    const lectureId = state.lectureId
+    try {
+      const slides = state.slides.map((s) => ({ index: s.index, text: s.text || '' })) // no images over IPC
+      const text = String(await lec.ai('summariseLecture', chunks, slides) || '').trim()
+      if (!text) throw new Error('the model returned an empty summary')
+      if (lectureId !== state.lectureId) return // user opened another lecture meanwhile
+      summary.text = text
+      if (lectureId) {
+        try { await app.store.setSummary(lectureId, text); app.libraryChanged() } catch (e) { console.warn('setSummary failed', e) }
+      }
+    } catch (e) {
+      toast(`Could not write the summary: ${e.message || e}`, { error: true, ms: 6000 })
+    } finally {
+      summary.busy = false
+      renderSummary()
+    }
+  }
+
   // ---------- Explain slide (stage 7, aryan's contract stage-7-ai.md) ----------
   const explain = { recording: false, slide: null, ownMic: null, busy: false }
 
@@ -546,11 +591,14 @@ export function createLectureView (app) {
         await state.mic?.stop()
         state.mic = null
         await lec.ai('flushAudio').catch(() => {})
+        await flushTranscript().catch(() => {})
         if (state.sessionActive) { await app.store.endSession().catch(() => {}); state.sessionActive = false; app.libraryChanged() }
       } finally {
         setListening(false)
         btn.disabled = !state.slides.length
       }
+      // Ending the session writes the lecture summary in the background.
+      if (state.active && state.lines.length) writeSummary()
       return
     }
     btn.disabled = true
@@ -579,6 +627,7 @@ export function createLectureView (app) {
     btn.querySelector('.label').textContent = on ? 'Stop listening' : 'Start listening'
     $('transcript').classList.toggle('live', on)
     renderTranscript()
+    renderSummary()
     lec.emit('listen:state', { listening: on })
   }
 
@@ -676,6 +725,7 @@ export function createLectureView (app) {
     if (state.active) { updateThumbBadges(); refreshExplain() }
   })
   lec.on('explain:status', onExplainStatus)
+  $('btn-summarise').addEventListener('click', () => writeSummary())
   $('btn-explain').addEventListener('click', () => (explain.recording ? stopExplain(true) : startExplain()))
   // aaron PR #33: show reconnecting while the swarm restarts after a network change
   lec.on('p2p:status', (s) => {
