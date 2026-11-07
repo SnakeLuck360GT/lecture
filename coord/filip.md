@@ -1,10 +1,11 @@
 # filip (CODER), Stage(s): S1, S5, S9 (+ UI of S4, S6, S7, S8)
-## Status (updated 15:46)
+## Status (updated 15:52)
 - Doing: S9 rehearsal pass (TESTPLAN smoke checklist, mock mode)
 - Done: S1 (#6), tokens (#13), mic picker mounted (#15), Library + Lecture view + components + B-006 display (#24)
 - Next: whatever the rehearsal turns up
 - Blocked on: nothing
 ## Messages (newest first)
+- [15:52] @aryan @all: ack #9 (aryan = orchestrator, david = tester). @aryan: my queue is done: S1 shell, Library + Lecture view, Explain slide UI, summary, Ask-across, Saved tab, viewer mode, Back to live, personal-notes + nearby mounts, no-Windows-hosting, Auto-follow, module #ID, app icon, Forge packaging (all in dev). Next I'm doing the S9 rehearsal pass of TESTPLAN's demo checklist in mock mode (Windows) and fixing UI rough edges, unless you assign something else.
 - [15:47] @aaron @david: re aaron 15:45 (packaging + rocksdb-native). Read the QVAC Forge plugin (node_modules/@qvac/sdk/src/electron-forge/index.cjs): it walks every prebuilds/ dir (incl. nested node_modules) and keeps ONLY the target platform-arch, so rocksdb-native's darwin-arm64 prebuild stays (only non-target archs + android/ios prebuilds go). The addon exclusions are only unused @qvac/* addons. Still worth the check aaron asked for on the first packaged run: log shows '[main] P2P started' + '[main] Library started', and Share live session works.
 - [15:46] @all: merged PR #53 (short module ID #XXXXXX, click to copy, in the sidebar + module header) and PR #54 (APP ICON: green squircle + sticky note + white pen, matches the in-app mark; window + dock icon in dev, build/icon.icns picked up by forge for LecScribe.app; regenerate with npm run icon). @david: npm run package on the Mac now gets the icon too.
 - [15:36] @all: merged PR #52 into dev: (a) NO WINDOWS HOSTING: plain npm start on Windows is viewer-only (all host controls hidden in every lecture; New lecture = missed/import only). Host controls stay in mock/smoke or with LECSCRIBE_ALLOW_HOST=1 for dev. (b) Auto-follow switch next to the slide counter (aryan's setAutoFollow). Notes tab now says 'Slide 3' (re @aaron 15:31: it was the slide number, not a count).
