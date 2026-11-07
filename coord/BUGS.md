@@ -1,5 +1,5 @@
 # BUGS
-## dev health: 🟢 GREEN  (14:11, commit fd91079, 66/66 on the Mac)
+## dev health: 🟢 GREEN  (14:22, commit 84fb35a, 70/70 on the Mac)
 ## Open
 ### B-004 [P1] No microphone picker: demo needs the iPhone mic (Continuity) on the Mac
 - Stage / owner: s1 (UI) / @aryan (reassigned from filip at , component ui/components/mic-picker.js)
@@ -14,7 +14,7 @@
   - invented / garbled: s1 "The Magiula technique uses the lowest bits..." (STT 'modulus'); s0 "Jarvis Hashmare" (STT 'Java's HashMap'); s0 notes about resizing at 0.75 (not said during slide 0)
 - Expected: each note is a fact from `fixtures/lecture.script.json` → `segments[i].notOnSlide` (e.g. "choose m prime", "linear probing is cache friendly", "Java resizes at 0.75", "Thursday's lab"). No paraphrases of the slide bullets.
 - Suggested fix: lower `isOnSlide` overlap to ~0.5 (content words only, minus stopwords); give the prompt 1 good and 1 bad example; max 2 notes/slide; tell the model 'if unsure of a name, omit it'; drop the "The lecturer explained/mentioned" prefix. I'll add a REAL test that scores notes vs `notOnSlide` facts.
-- Status: REOPENED after the fix claim (14:07): 6 notes, s2 has 0, s4 is a paraphrase of a slide bullet. Recall fixes queued after B-006.
+- Status: OPEN, close (14:22): 8 notes, every slide ≥ 1, copies dropped. Weak spots: generic s3 'Open addressing used in hash maps', s4 'Amortized cost of resizing is constant' (≈ slide bullet), s2 still misses 'linear probing is cache friendly'. Re-test after B-008 (turbo should transcribe those words).
 ### B-006 [P1] Live transcript should feel instant (stream partial text < 1 s)
 - Stage / owner: s2 / @aryan (engine) + @filip (display)
 - HUMAN REQUEST (david): transcription must feel more instant. Today the first words appear only after a pause or a full 2–6 s window (~3 s lag).
@@ -23,13 +23,6 @@
 - aryan: add `transcript:partial` to contracts/stage-2.md. I'll add a REAL latency test (first partial < 1.2 s after speech starts).
 - Order for aryan: B-004 → B-006 → B-005.
 - Status: ENGINE VERIFIED (14:11, Mac real models, dev fd91079): partials every ~0.5 s trail speech by ~0.2–0.5 s (e.g. at 4.5 s wall: text up to audio 4.29 s), 152 partials / 92 s, finals lag 0.3 s, tracking unchanged. REMAINING: @filip shows the grey live line in the UI.
-### B-007 [P1] Live STT drops whole segments: "RPCError: Model was reloaded" (partials collide with finals)
-- Stage / owner: s2 / @aryan
-- Repro (Mac, real models, dev eb3cc39): `node src/ai/scripts/live-demo.js fixtures/slides.json fixtures/lecture.wav` → 5× `[ai/stt] live segment failed RPCError: Model was reloaded` per 92 s run (also 5× in the human's live-mic session in the app). Those finals never emit, so text is missing (the human reports "transcriber isn't that accurate"), and notes lose their source text too.
-- Root cause (from the worker stack): `transcribe` → `restorePrompt` → `ASRGgml.reload` → `WhisperDriver.reload` aborts the in-flight request. The per-call slide-vocabulary prompt forces a model reload, and a concurrent partial/final run gets cancelled.
-- Expected: 0 failed segments, every final emitted.
-- Suggested fix: serialise ALL STT calls (partials + finals) through ONE queue, with finals taking priority (drop a pending partial when a final is queued). Set the vocabulary prompt once per slide change, not per call (or don't pass a per-call prompt at all). Retry a final once if it gets an RPCError. Add `stt:error` counting to live-demo output.
-- Status: OPEN (14:13)
 ### B-008 [P1] Transcript accuracy: use WHISPER_LARGE_V3_TURBO for finals, keep EN_BASE for partials
 - Stage / owner: s2 / @aryan
 - HUMAN REPORT (david): "transcriber isn't that accurate".
@@ -43,6 +36,13 @@
 - Watch: memory (turbo 1.6 GB + LLM 1 GB + embed 0.3 GB, fine on 24 GB), and that finals don't fall behind real time (RTF 0.48 < 1).
 - Status: OPEN (14:20)
 ## Closed
+### B-007 [P1] Live STT drops whole segments: "RPCError: Model was reloaded" (partials collide with finals)
+- Stage / owner: s2 / @aryan
+- Repro (Mac, real models, dev eb3cc39): `node src/ai/scripts/live-demo.js fixtures/slides.json fixtures/lecture.wav` → 5× `[ai/stt] live segment failed RPCError: Model was reloaded` per 92 s run (also 5× in the human's live-mic session in the app). Those finals never emit, so text is missing (the human reports "transcriber isn't that accurate"), and notes lose their source text too.
+- Root cause (from the worker stack): `transcribe` → `restorePrompt` → `ASRGgml.reload` → `WhisperDriver.reload` aborts the in-flight request. The per-call slide-vocabulary prompt forces a model reload, and a concurrent partial/final run gets cancelled.
+- Expected: 0 failed segments, every final emitted.
+- Suggested fix: serialise ALL STT calls (partials + finals) through ONE queue, with finals taking priority (drop a pending partial when a final is queued). Set the vocabulary prompt once per slide change, not per call (or don't pass a per-call prompt at all). Retry a final once if it gets an RPCError. Add `stt:error` counting to live-demo output.
+- Status: VERIFIED (14:22, Mac real models, dev 84fb35a): stt errors 0 / 92 s, 150 partials, first partial lag 0.33 s, 19 finals, tracking [1,2,3,4].
 ### B-003 [P2] App won't start if ELECTRON_RUN_AS_NODE is set (e.g. launched from a VS Code terminal)
 - Stage / owner: s1 / @filip
 - Repro: on the Mac, in a VS Code integrated terminal (it exports ELECTRON_RUN_AS_NODE=1), run `npm start` → crash `TypeError: Cannot read properties of undefined (reading 'exports')` at cjsPreparseModuleExports. `env -u ELECTRON_RUN_AS_NODE npm start` works.
