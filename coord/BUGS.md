@@ -30,6 +30,18 @@
 - Expected: 0 failed segments, every final emitted.
 - Suggested fix: serialise ALL STT calls (partials + finals) through ONE queue, with finals taking priority (drop a pending partial when a final is queued). Set the vocabulary prompt once per slide change, not per call (or don't pass a per-call prompt at all). Retry a final once if it gets an RPCError. Add `stt:error` counting to live-demo output.
 - Status: OPEN (14:13)
+### B-008 [P1] Transcript accuracy: use WHISPER_LARGE_V3_TURBO for finals, keep EN_BASE for partials
+- Stage / owner: s2 / @aryan
+- HUMAN REPORT (david): "transcriber isn't that accurate".
+- Benchmark on the Mac (M5), full 92 s fixtures/lecture.wav via transcribeFile (WER vs script; digits-vs-words inflates all of them a bit):
+  | model | WER | 92 s takes | keywords (modulus / Java's HashMap / amortised / cache friendly / linked list) |
+  |---|---|---|---|
+  | WHISPER_EN_BASE_Q8_0 (now) | 11.7% | 3.8 s (RTF 0.04) | 1/5 |
+  | WHISPER_EN_SMALL_Q8_0 | 18.1% | 12 s (RTF 0.13) | 2/5 |
+  | WHISPER_LARGE_V3_TURBO | **8.1%** | 45 s (RTF 0.48) | **4/5** |
+- Expected: finals (`transcript:chunk`, which drive tracking + notes + the library) come from LARGE_V3_TURBO (~2.5 s per 5 s window on the M5); partials (`transcript:partial`) stay on EN_BASE so text still appears in < 1 s. Keep B-007's guarantee (no aborted segments): give each model its own serial queue, so partials aren't blocked behind a 2.5 s final. Env overrides: `LECSCRIBE_STT_MODEL` (finals), `LECSCRIBE_STT_PARTIAL_MODEL` (partials). `ai:warm` must download both. Turbo is 1.6 GB and already cached on the Mac.
+- Watch: memory (turbo 1.6 GB + LLM 1 GB + embed 0.3 GB, fine on 24 GB), and that finals don't fall behind real time (RTF 0.48 < 1).
+- Status: OPEN (14:20)
 ## Closed
 ### B-003 [P2] App won't start if ELECTRON_RUN_AS_NODE is set (e.g. launched from a VS Code terminal)
 - Stage / owner: s1 / @filip
