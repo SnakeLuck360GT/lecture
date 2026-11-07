@@ -546,3 +546,35 @@ test('H-5: the >= 1-note fallback never keeps a repeat of the slide', async () =
   assert.equal(notes.length, 0)
   sum.dispose()
 })
+
+test('B-016: one job at a time per model, models independent, errors do not block', async () => {
+  const { serial, busy } = await import('./serial.js')
+  let inEmbed = 0; let maxEmbed = 0; const order = []
+  const job = (key, ms, fail) => serial(key, async () => {
+    if (key === 'embed') { inEmbed++; maxEmbed = Math.max(maxEmbed, inEmbed) }
+    await tick(ms)
+    if (key === 'embed') inEmbed--
+    order.push(key)
+    if (fail) throw new Error('Cannot set new job')
+  })
+  const all = Promise.allSettled([job('embed', 20), job('embed', 1, true), job('embed', 1), job('llm', 1)])
+  assert.equal(busy('embed'), true)
+  const r = await all
+  assert.equal(maxEmbed, 1, 'never two embed jobs at once')
+  assert.equal(order[0], 'llm', 'other models are not blocked')
+  assert.deepEqual(r.map((x) => x.status), ['fulfilled', 'rejected', 'fulfilled', 'fulfilled'])
+  assert.equal(busy('embed'), false)
+})
+
+test('B-016: tracker retries slide embedding if the first attempt failed', async () => {
+  const bus = new EventEmitter()
+  let first = true
+  const flaky = async (t) => { if (first) { first = false; throw new Error('Cannot set new job') } return mockEmbed(t) }
+  const tr = createTracker({ bus, embedMany: flaky, embedOne: mockEmbed, opts: { threshold: 0.3 } })
+  bus.emit('slides:loaded', SLIDES)
+  await tick(5)
+  bus.emit('transcript:chunk', { id: 'r1', slideIndex: 0, text: 'bubble sort swap adjacent elements repeatedly' })
+  await tr.idle()
+  assert.equal(tr.current(), 1, 'tracking works after the retry')
+  tr.dispose()
+})

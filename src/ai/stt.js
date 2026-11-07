@@ -5,6 +5,7 @@ import { sdk, sttModel } from './models.js'
 import { config } from './config.js'
 import { loadWav16k, writeTempWav, removeTemp } from './wav.js'
 import { noteSdkError } from './models.js'
+import { serial, busy } from './serial.js'
 
 const SR = 16000
 
@@ -12,16 +13,9 @@ const SR = 16000
 // flight ("RPCError: Model was reloaded"). So every STT call goes through ONE serial lock, and a
 // failed call is retried once.
 // B-008: one queue PER MODEL (turbo finals / base partials), so a 2.5 s final never blocks partials.
-const queues = new Map() // key -> { tail, pending }
-const queue = (key) => { if (!queues.has(key)) queues.set(key, { tail: Promise.resolve(), pending: 0 }); return queues.get(key) }
-export const sttBusy = (key = 'final') => queue(key).pending > 0
-export function serialSTT (fn, key = 'final') {
-  const qq = queue(key)
-  qq.pending++
-  const run = qq.tail.then(fn, fn)
-  qq.tail = run.catch(() => {}).finally(() => { qq.pending-- })
-  return run
-}
+// (queues live in serial.js and are shared with embed / llm / ocr, B-016)
+export const sttBusy = (key = 'final') => busy('stt-' + key)
+export function serialSTT (fn, key = 'final') { return serial('stt-' + key, fn) }
 let errorSink = null
 export function onSttError (fn) { errorSink = fn }
 

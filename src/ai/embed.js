@@ -1,5 +1,6 @@
 // S3 / shared: text embeddings via QVAC. Owner: aryan.
 import { sdk, embedModel, noteSdkError } from './models.js'
+import { serial } from './serial.js'
 
 /** embed(string) → number[] ; embed(string[]) → number[][] (vectors L2-normalised). */
 export async function embed (text) {
@@ -14,10 +15,11 @@ async function embedOnce (text) {
   const modelId = await embedModel()
   if (Array.isArray(text)) {
     if (text.length === 0) return []
-    const { embedding } = await q.embed({ modelId, text: text.map(safe) })
+    // B-016: one embed job at a time (tracker scoring + library indexing used to collide)
+    const { embedding } = await serial('embed', () => q.embed({ modelId, text: text.map(safe) }))
     return embedding.map(normalise)
   }
-  const { embedding } = await q.embed({ modelId, text: safe(text) })
+  const { embedding } = await serial('embed', () => q.embed({ modelId, text: safe(text) }))
   return normalise(embedding)
 }
 
