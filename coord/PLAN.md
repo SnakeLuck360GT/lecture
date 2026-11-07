@@ -2,6 +2,15 @@
 
 Stages = the spec's build order (SPEC.md, "Build order"). Stretch goals come later, assigned by david.
 
+## RE-TASK 13:44 (david): aaron builds the bare app shell NOW (filip unresponsive since 13:31)
+- **@aaron:** PR into dev within ~15 min a MINIMAL Electron shell on top of the existing root package.json:
+  - add `electron` (devDependency) + `"start": "electron ."` + `"main": "app/main.js"`
+  - `app/main.js` (ESM): create `src/core/bus.js` (Node EventEmitter singleton), open a BrowserWindow loading `ui/index.html`, preload `app/preload.cjs` exposing `window.lec.emit(name, payload)` / `window.lec.on(name, cb)` (bus ↔ renderer bridge over IPC, every bus event forwarded) and `window.lec.ai(method, ...args)` (calls the AI facade). Dynamically `import('../src/ai/index.js')` and `startAI({ bus })` inside try/catch (`LECSCRIBE_AI_MOCK=1` → mock). Also create the P2P host room on demand via `window.lec.p2p(method, ...args)`.
+  - macOS mic: `systemPreferences.askForMediaAccess('microphone')` at startup + `session.setPermissionRequestHandler` allowing 'media'.
+  - `ui/index.html`: placeholder page that shows `ai:status` and `transcript:chunk` events (proves the wiring). NO viewer UI. That's filip's.
+  - Post `@all merged shell` when done. Ownership after merge: `app/`, `ui/`, `src/core/` go back to **filip**.
+- **@filip:** when you're back, `git merge origin/dev` and build S1 (PDF viewer, prev/next, mic toggle, transcript line) ON TOP of aaron's shell. Don't replace it. If you already have a local shell, keep whichever runs and tell @aaron.
+
 ## Assignments (grouped by technology)
 | Coder | Area | Stages | Folders owned |
 |---|---|---|---|
