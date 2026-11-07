@@ -575,7 +575,11 @@ export function createLectureView (app) {
   lec.on('transcript:chunk', onChunk)
   lec.on('transcript:partial', onPartial)
   lec.on('ai:status', onAiStatus)
-  lec.on('lost:counts', (counts) => { state.lost = counts || {}; if (state.active) updateThumbBadges() })
+  lec.on('lost:counts', (counts) => {
+    state.lost = counts || {}
+    document.querySelector('.strip-wrap')?.classList.toggle('has-heat', Object.values(state.lost).some((n) => Number(n) > 0))
+    if (state.active) updateThumbBadges()
+  })
   lec.on('clip:ended', () => setClip(false))
   lec.on('room:ended', () => { if (state.role === 'peer') toast('The host ended the room') })
 
