@@ -175,3 +175,26 @@ test('agents move the chunk that triggered an auto-advance to the new slide', as
   assert.ok(seen[1].includes('bubble'), 'slide 1 agent got it')
   sum.dispose()
 })
+
+test('B-001: finalText reads contentText / raw.fullText of the real CompletionFinal shape', async () => {
+  const { finalText } = await import('./llm.js')
+  const raw = '<think>\n\n</think>\n\n```json\n["Choose m prime to spread keys", "Java resizes at 0.75"]\n```'
+  const real = { contentText: '```json\n["Choose m prime to spread keys", "Java resizes at 0.75"]\n```', toolCalls: [], stats: {}, raw: { fullText: raw }, cacheableAssistantContent: '' }
+  assert.deepEqual(parseNotes(finalText(real)), ['Choose m prime to spread keys', 'Java resizes at 0.75'])
+  assert.deepEqual(parseNotes(finalText({ contentText: '', raw: { fullText: raw } })), ['Choose m prime to spread keys', 'Java resizes at 0.75'])
+  assert.equal(finalText('plain'), 'plain')
+  assert.equal(finalText({}), '')
+})
+
+test('B-002: tracker advances on the FIRST chunk of a new topic even with old text in the window', async () => {
+  const bus = new EventEmitter()
+  const tr = createTracker({ bus, embedMany: mockEmbed, embedOne: mockEmbed, opts: { threshold: 0.2, margin: 0.05 } })
+  bus.emit('slides:loaded', SLIDES)
+  bus.emit('transcript:chunk', { id: 'a', slideIndex: 0, text: 'introduction today sorting algorithms overview' })
+  await tr.idle()
+  assert.equal(tr.current(), 0)
+  bus.emit('transcript:chunk', { id: 'b', slideIndex: 0, text: 'bubble sort swap adjacent elements repeatedly' })
+  await tr.idle()
+  assert.equal(tr.current(), 1, 'advanced on first bubble-sort chunk')
+  tr.dispose()
+})
