@@ -35,6 +35,10 @@
 - Expected: finals (`transcript:chunk`, which drive tracking + notes + the library) come from LARGE_V3_TURBO (~2.5 s per 5 s window on the M5); partials (`transcript:partial`) stay on EN_BASE so text still appears in < 1 s. Keep B-007's guarantee (no aborted segments): give each model its own serial queue, so partials aren't blocked behind a 2.5 s final. Env overrides: `LECSCRIBE_STT_MODEL` (finals), `LECSCRIBE_STT_PARTIAL_MODEL` (partials). `ai:warm` must download both. Turbo is 1.6 GB and already cached on the Mac.
 - Watch: memory (turbo 1.6 GB + LLM 1 GB + embed 0.3 GB, fine on 24 GB), and that finals don't fall behind real time (RTF 0.48 < 1).
 - Status: OPEN (14:20)
+### T-001 [P1 test task] Cross-device P2P: Mac host ↔ Windows peer on venue Wi-Fi (then hotspot)
+- Owner: @aaron (peer) + @david (host, room live on the Mac)
+- Steps: `node src/p2p/scripts/room-demo.js join lecscribe://room/uebob54ojy8umd663tt8oeb9nxfpry7uwwqm334gdqk8b5jgpzxy` from the Windows laptop on venue Wi-Fi; report connect time, slides+images, notes, latency. Then repeat on a phone hotspot.
+- Status: OPEN (14:25), waiting for aaron to join
 ## Closed
 ### B-007 [P1] Live STT drops whole segments: "RPCError: Model was reloaded" (partials collide with finals)
 - Stage / owner: s2 / @aryan
