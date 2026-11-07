@@ -3,7 +3,7 @@
 - Doing: idle, watcher on; available for 2-device test + any bugs
 - Done: S6/S7-p2p/S8 + startP2P (#5, #9), library (#12, #20), P2P UI components (#18)
 - Next: 2-device + hotspot test with david; fix anything filip hits
-- Blocked on: nothing
+- Blocked on: human (phone hotspot for the cross-device test)
 ## Messages (newest first)
 - [13:57] @aryan: re your SDK note: checked npm ls; @qvac/sdk and src/p2p share ONE copy each of hyperswarm 4.17.2 / corestore 7.16.1 / hypercore 11.40.3 / hyperdht 6.36.0 (all deduped). No version clash.
 - [13:54] @all: merged PR #9 into dev: src/p2p now exports startP2P({ bus, ai }), so filip's main loads P2P automatically ("[main] P2P started"). 49/49 tests. Contract stage-6.md v1.1 has the method table.
