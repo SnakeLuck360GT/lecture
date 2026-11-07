@@ -238,3 +238,35 @@ test('simulateLost via the app facade works offline (no room) and with a room', 
   assert.deepEqual(p2p.simulateLost(1, 2), { 1: 2 }) // with a room: merges into the room counts
   await p2p.close()
 })
+
+test('B-015: transcript streams to peers: finals in the feed (late joiners get them), partials ephemeral via extension', async () => {
+  const hostBus = mkBus()
+  const room = await createRoom({ bus: hostBus, bootstrap })
+  hostBus.emit('slides:loaded', [{ index: 0, text: 'A' }])
+  hostBus.emit('transcript:chunk', { id: 'c-1', slideIndex: 0, tStart: 0, tEnd: 5, text: 'said before the peer joined' })
+
+  const peerBus = mkBus()
+  const early = waitFor(peerBus, 'transcript:chunk', (c) => c.id === 'c-1')
+  const peer = await joinRoom({ bus: peerBus, key: room.link, bootstrap })
+  assert.equal((await early).text, 'said before the peer joined')
+
+  // partials: ephemeral, only to connected peers (resend until the extension channel is up)
+  const gotPartial = waitFor(peerBus, 'transcript:partial', (p) => p.text === 'live words')
+  const timer = setInterval(() => hostBus.emit('transcript:partial', { text: 'live words', tStart: 5, tEnd: 6.5, slideIndex: 0 }), 200)
+  const p = await gotPartial
+  clearInterval(timer)
+  assert.equal(p.tEnd, 6.5)
+
+  const live = waitFor(peerBus, 'transcript:chunk', (c) => c.id === 'c-2')
+  hostBus.emit('transcript:chunk', { id: 'c-2', slideIndex: 0, tStart: 5, tEnd: 10, text: 'live final' })
+  assert.equal((await live).text, 'live final')
+
+  // partials never bloat the feed
+  const feed = room._internals.feed
+  const types = []
+  for (let i = 0; i < feed.length; i++) types.push((await feed.get(i)).type)
+  assert.ok(types.includes('chunk'))
+  assert.ok(!types.includes('partial'))
+  await peer.close()
+  await room.close()
+})

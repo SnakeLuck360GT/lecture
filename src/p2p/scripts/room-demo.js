@@ -29,10 +29,15 @@ if (mode === 'host') {
     bus.emit('slide:changed', { index: i, source: 'auto' })
     bus.emit('note:added', { id: `demo-${Date.now()}`, slideIndex: i, kind: 'ai', text: `Demo note for slide ${i}`, sourceChunkIds: [], createdAt: Date.now() })
     console.log('host: slide ->', i)
+    // B-015: fake live transcript (partials every ~0.5 s, then a final chunk)
+    const words = `Now on slide ${i}: the lecturer explains it in more detail`.split(' ')
+    const t = i * 5
+    words.forEach((_, w) => setTimeout(() => bus.emit('transcript:partial', { text: words.slice(0, w + 1).join(' '), tStart: t, tEnd: t + 0.4 * (w + 1), slideIndex: i }), 400 * w))
+    setTimeout(() => bus.emit('transcript:chunk', { id: `c-${Date.now()}`, slideIndex: i, tStart: t, tEnd: t + 4, text: words.join(' ') }), 400 * words.length)
   }, 5000)
   process.on('SIGINT', async () => { await room.close(); process.exit(0) })
 } else if (mode === 'join' && key) {
-  for (const e of ['p2p:status', 'room:info', 'slides:loaded', 'slide:changed', 'note:added', 'lost:counts', 'room:ended']) log(e)
+  for (const e of ['p2p:status', 'room:info', 'slides:loaded', 'slide:changed', 'note:added', 'transcript:chunk', 'transcript:partial', 'lost:counts', 'room:ended']) log(e)
   const t0 = Date.now()
   bus.once('slides:loaded', () => console.log(`>>> slides arrived ${((Date.now() - t0) / 1000).toFixed(1)} s after join`))
   const peer = await joinRoom({ bus, key })
