@@ -4,6 +4,7 @@
 import { config } from './config.js'
 import { stickyPrompt } from './prompts.js'
 import { parseNotes } from './llm.js'
+import { examEmphasis } from './emphasis.js'
 
 let noteN = 0
 export const newNoteId = () => `n-${Date.now().toString(36)}-${++noteN}`
@@ -59,13 +60,15 @@ export function createSummariser ({ bus, complete, opts = {} }) {
           if (isGeneric(text, slides.map((x) => x.text || '').join(' '))) { drop('generic'); continue }
           if (a.notes.some((n) => similar(n, text))) { drop('duplicate'); continue }
           a.notes.push(text)
+          const emphasis = examEmphasis(text, said)
           bus.emit('note:added', {
             id: newNoteId(),
             slideIndex: i,
             kind: 'ai',
             text,
             sourceChunkIds: chunks.map((c) => c.id),
-            createdAt: Date.now()
+            createdAt: Date.now(),
+            ...(emphasis ? { emphasis } : {})
           })
         }
         bus.emit('agent:status', { slideIndex: i, state: 'done' })
