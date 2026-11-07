@@ -164,7 +164,7 @@ test('live stream: VAD cuts at pauses, drops silence, passes stream times', asyn
 test('agents move the chunk that triggered an auto-advance to the new slide', async () => {
   const bus = new EventEmitter()
   const seen = []
-  const sum = createSummariser({ bus, complete: async (m) => { seen.push(m[1].content); return '[]' } })
+  const sum = createSummariser({ bus, complete: async (m) => { seen.push(m.at(-1).content); return '[]' } })
   bus.emit('slides:loaded', SLIDES)
   bus.emit('transcript:chunk', { id: 'c1', slideIndex: 0, text: 'intro words about sorting' })
   bus.emit('transcript:chunk', { id: 'c2', slideIndex: 0, text: 'bubble sort swaps neighbours' })

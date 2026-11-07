@@ -48,8 +48,14 @@ export function createSummariser ({ bus, complete, opts = {} }) {
           already: a.notes
         }))
         if (gen !== generation) return
-        for (const text of parseNotes(out, o.maxNotes)) {
-          if (isOnSlide(text, slides[i]?.text)) continue
+        const said = chunks.map((c) => c.text).join(' ')
+        for (const raw of parseNotes(out, o.maxNotes)) {
+          const text = tidyNote(raw)
+          if (!text) continue
+          // B-005: drop paraphrases of the slide and anything not grounded in what was said.
+          if (isOnSlide(text, slides[i]?.text, o.onSlideOverlap)) continue
+          if (grounding(text, said) < o.minGrounding) continue
+          if (a.notes.some((n) => similar(n, text))) continue
           a.notes.push(text)
           bus.emit('note:added', {
             id: newNoteId(),
@@ -105,13 +111,60 @@ export function createSummariser ({ bus, complete, opts = {} }) {
   }
 }
 
+// ---- B-005 note filters (content words only; light stemming so "probes" ~ "probing") ----
+const STOP = new Set(('the a an and or of to in on for is are was were be been being this that these those it its with as at by ' +
+  'from we you they i he she so but not can will just like also than then there their them our your which what when where ' +
+  'how why who all any each more most some such into over under about very too only one two use used uses using do does did ' +
+  'lecturer said says explained mentioned noted note notes slide important remember point key really').split(' '))
+
+export function contentWords (s) {
+  return (String(s || '').toLowerCase().match(/[a-z0-9]+(?:'[a-z]+)?/g) || [])
+    .map((w) => w.replace(/'s$/, ''))
+    .filter((w) => (w.length > 2 || /\d/.test(w)) && !STOP.has(w))
+    .map(stem)
+}
+const stem = (w) => w.length > 5 ? w.slice(0, 5) : w
+
+/** Share of the note's content words that are already on the slide. */
+export function slideOverlap (note, slideText) {
+  const nw = contentWords(note)
+  if (!nw.length) return 1
+  const sw = new Set(contentWords(slideText))
+  return nw.filter((w) => sw.has(w)).length / nw.length
+}
+
 /** Drop notes that are basically a copy of slide text (spec: only what is NOT on the slide). */
-export function isOnSlide (note, slideText) {
-  if (!slideText) return false
-  const words = (s) => String(s).toLowerCase().match(/[a-z0-9]{3,}/g) || []
-  const nw = words(note)
+export function isOnSlide (note, slideText, maxOverlap = 0.5) {
+  if (!slideText) return contentWords(note).length === 0
+  const nw = contentWords(note)
   if (nw.length === 0) return true
-  const sw = new Set(words(slideText))
-  const overlap = nw.filter((w) => sw.has(w)).length / nw.length
-  return overlap >= 0.85
+  const sw = new Set(contentWords(slideText))
+  const novel = nw.filter((w) => !sw.has(w)).length
+  return slideOverlap(note, slideText) >= maxOverlap || novel < 2
+}
+
+/** Share of the note's content words that occur in what the lecturer said (anti-hallucination). */
+export function grounding (note, said) {
+  const nw = contentWords(note)
+  if (!nw.length) return 0
+  const tw = new Set(contentWords(said))
+  return nw.filter((w) => tw.has(w)).length / nw.length
+}
+
+function similar (a, b) {
+  const A = new Set(contentWords(a)); const B = contentWords(b)
+  if (!B.length) return true
+  return B.filter((w) => A.has(w)).length / B.length >= 0.7
+}
+
+/** Strip "The lecturer explained that ..." style prefixes; capitalise. */
+export function tidyNote (t) {
+  let s = String(t || '').trim()
+    .replace(/^(note:\s*)/i, '')
+    .replace(/^(the\s+)?(lecturer|professor|speaker|they|he|she)\s+(also\s+)?(said|says|explained|explains|mentioned|mentions|noted|notes|pointed out|emphasi[sz]ed|stressed|highlighted)\s+(that\s+)?/i, '')
+    .replace(/^(it\s+was\s+(mentioned|noted|explained)\s+that\s+)/i, '')
+    .trim()
+  if (!s) return ''
+  s = s[0].toUpperCase() + s.slice(1)
+  return s
 }

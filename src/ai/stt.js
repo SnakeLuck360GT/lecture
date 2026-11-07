@@ -35,6 +35,28 @@ export function windows (samples, chunkSec = config.stt.chunkSec) {
   return out
 }
 
+/**
+ * B-005: whisper's prompt biases decoding towards its words, so we feed the vocabulary of the
+ * current + next slide (e.g. "HashMap", "modulus") plus the tail of the previous chunk.
+ */
+export function promptOpts (vocab, prev) {
+  const p = [String(vocab || '').slice(0, 220), String(prev || '').slice(-120)].filter(Boolean).join(' ').trim()
+  return p ? { prompt: p } : {}
+}
+
+/** Distinct, informative words of slide text, for the STT prompt. */
+export function slideVocab (...texts) {
+  const seen = new Set(); const out = []
+  for (const t of texts) {
+    for (const w of String(t || '').split(/[\s,;:()\[\]•\-–]+/)) {
+      const k = w.toLowerCase().replace(/[^a-z0-9'.]/g, '')
+      if (k.length < 3 || seen.has(k)) continue
+      seen.add(k); out.push(w.replace(/[.]+$/, ''))
+    }
+  }
+  return out.join(', ')
+}
+
 let chunkN = 0
 export function makeChunk ({ tStart, tEnd, text, slideIndex }) {
   return { id: `c-${++chunkN}`, slideIndex, tStart: round2(tStart), tEnd: round2(tEnd), text }
@@ -64,7 +86,7 @@ export async function transcribeFile (wavPath, { chunkSec } = {}) {
  * @param {(audio, opts)=>Promise<string>} [o.transcribe]  injectable for tests/mock
  * @returns {{ stop(): void, done: Promise<void> }}
  */
-export function playClip ({ wavPath, onChunk, getSlideIndex, realtime = true, transcribe = transcribeAudio, chunkSec }) {
+export function playClip ({ wavPath, onChunk, getSlideIndex, realtime = true, transcribe = transcribeAudio, chunkSec, getVocab = () => '' }) {
   let stopped = false
   const t0 = Date.now()
   const done = (async () => {
@@ -72,7 +94,7 @@ export function playClip ({ wavPath, onChunk, getSlideIndex, realtime = true, tr
     let prev = ''
     for (const w of windows(samples, chunkSec)) {
       if (stopped) return
-      const text = await transcribe(w.samples, prev ? { prompt: prev.slice(-200) } : {})
+      const text = await transcribe(w.samples, promptOpts(getVocab(), prev))
       if (stopped) return
       if (realtime) {
         const wait = t0 + w.tEnd * 1000 - Date.now()
@@ -96,6 +118,7 @@ export function playClip ({ wavPath, onChunk, getSlideIndex, realtime = true, tr
  */
 export function createLiveStream ({
   onChunk, getSlideIndex, transcribe = transcribeAudio,
+  getVocab = () => '',
   minSec = config.stt.liveMinSec, maxSec = config.stt.liveMaxSec, silenceMs = config.stt.liveSilenceMs,
   maxMergeSec = 10
 }) {
@@ -139,7 +162,7 @@ export function createLiveStream ({
     const tStart = segs[0].tStart; const tEnd = segs.at(-1).tEnd
     running = (async () => {
       try {
-        const text = await transcribe(audio, { ...(prev ? { prompt: prev.slice(-200) } : {}), tStart, tEnd })
+        const text = await transcribe(audio, { ...promptOpts(getVocab(), prev), tStart, tEnd })
         if (text) { prev = text; onChunk(makeChunk({ tStart, tEnd, text, slideIndex: getSlideIndex() })) }
       } catch (e) { console.error('[ai/stt] live segment failed', e) }
       running = null
