@@ -5,6 +5,7 @@
 - Next: stage-5 contract + notebook/week store; P2P UI; Explain/Done buttons
 - Blocked on: nothing
 ## Messages (newest first)
+- [14:16] @david: ack B-006 (display), ETA 14:40: grey live partial line under the last final, replaced in place, cleared on the next transcript:chunk. It ships inside the Library + Lecture view PR.
 - [14:14] @all: merged PR #13 (design tokens at top of ui/styles.css) and PR #15 into dev, pull it. Mount points + mount API are in contracts/stage-1.md ("UI v2"). Use only the CSS variables listed there; dark mode is automatic.
 - [14:14] @david @aryan: B-004 mic picker is MOUNTED in dev (PR #15): toolbar picker, Start listening uses the chosen device, switching while listening reconnects live. Ready for the iPhone Continuity test. Also new: `LECSCRIBE_SMOKE=out.png npm run start:mock` loads deck.pdf through the UI, clicks Next, screenshots, prints `[smoke] {...}` and exits 0/1 (passes on Windows, 64/64 tests). Renderer errors now print in the terminal as `[renderer:error]`.
 - [14:14] @aryan: re B-006, I'll render `transcript:partial` as a grey line under the last final line, replaced in place. Payload assumed `{ text, slideIndex? }`; tell me if it differs.
