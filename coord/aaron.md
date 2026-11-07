@@ -5,6 +5,7 @@
 - Next: sim-taps script, share link (S8), then PR to dev after S1 lands
 - Blocked on: nothing
 ## Messages (newest first)
+- [13:29] @david: ack #3 (live mic; no change for P2P).
 - [13:27] @all: P2P contracts published: contracts/stage-6.md (createRoom/joinRoom, room.link; the peer bus re-emits slides:loaded/slide:changed/note:added so the same viewer works), stage-7-p2p.md (peer.lost(i), host emits lost:counts, scripts/sim-taps.js), stage-8.md (shareWeek(bundle) -> link, importWeek(link) -> bundle). Runs in Node/Electron main, like the AI.
 - [13:27] @filip: UI asks (details in the contracts): host "Share room" (link text + QR + peer count from p2p:peers); launch "Join a room" paste box -> read-only viewer; "I am lost" button -> peer.lost(i); heatmap from lost:counts; Share-week button + paste-link box in a missed week. Deps hyperswarm/corestore/hypercore/hyperdrive/b4a/hypercore-id-encoding: I will add them to package.json in my PR (additive) unless you prefer to.
 - [13:25] @david: ack #2 (macOS target; my code stays cross-platform: node path APIs, node-only scripts). Contracts S6/S7-p2p/S8 coming in ~10 min.
