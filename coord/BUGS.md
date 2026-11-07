@@ -35,16 +35,6 @@
 - Expected: finals (`transcript:chunk`, which drive tracking + notes + the library) come from LARGE_V3_TURBO (~2.5 s per 5 s window on the M5); partials (`transcript:partial`) stay on EN_BASE so text still appears in < 1 s. Keep B-007's guarantee (no aborted segments): give each model its own serial queue, so partials aren't blocked behind a 2.5 s final. Env overrides: `LECSCRIBE_STT_MODEL` (finals), `LECSCRIBE_STT_PARTIAL_MODEL` (partials). `ai:warm` must download both. Turbo is 1.6 GB and already cached on the Mac.
 - Watch: memory (turbo 1.6 GB + LLM 1 GB + embed 0.3 GB, fine on 24 GB), and that finals don't fall behind real time (RTF 0.48 < 1).
 - Status: ACCURACY VERIFIED (14:32): turbo text clearly better, 0 errors. Latency side effect is tracked in B-011.
-### T-001 [P1 test task] Cross-device P2P: Mac host ↔ Windows peer on venue Wi-Fi (then hotspot)
-- Owner: @aaron (peer) + @david (host, room live on the Mac)
-- Steps: `node src/p2p/scripts/room-demo.js join lecscribe://room/uebob54ojy8umd663tt8oeb9nxfpry7uwwqm334gdqk8b5jgpzxy` from the Windows laptop on venue Wi-Fi; report connect time, slides+images, notes, latency. Then repeat on a phone hotspot.
-- Status: HOTSPOT RUN (14:36): Mac is on the human's phone hotspot (10.187.106.114, public 130.88.226.12, still randomized NAT). NEW room live: `node src/p2p/scripts/room-demo.js join lecscribe://room/c1upkekq5o9tojm9qxe5tj6qh3q3iu56ddew71q1esqzpsnhs8ao`. @aaron: join the SAME hotspot first, then run it.
-### B-009 [P1] Demo step 6 fails on eduroam: Windows peer finds the Mac's room but can't connect (HOLEPUNCH_ABORTED)
-- Stage / owner: s6 / @aaron
-- Repro: Mac host (eduroam 10.205.56.149, public 130.88.226.21, firewalled + randomized NAT) runs `room-demo.js host`; Windows peer (eduroam 10.205.105.2, public 130.88.226.2, firewalled + randomized NAT) runs `room-demo.js join <link>` → lookup finds the host, connect fails HOLEPUNCH_ABORTED, 0 slides / 0 notes (2 attempts, 14:20 and 14:26).
-- Expected: peer receives slides + notes on the venue network, or a reliable fallback.
-- Options: (a) phone hotspot for both devices (spec fallback; test ASAP); (b) code fallback via relays/LAN if the libraries support it (verify in docs); (c) whatever works must be in the stage checklist.
-- Status: HOTSPOT (14:44): both devices get the same public IP 82.132.229.1, consistent NAT. Windows-host → Mac-peer WORKS (1.4 s to slides). Mac-host retest pending with a room restarted after the network switch (stale DHT identity was the cause). Demo rule: start/restart the host AFTER the network is up.
 ### B-010 [P2] Lecture view polish: empty heatmap boxes + badge covers the slide's page number
 - Stage / owner: s9 / @filip
 - Repro: Mac, dev ca0e07e, `LECSCRIBE_SMOKE=… npm run start:mock` → lecture view (screenshot in david's scratchpad).
@@ -56,7 +46,22 @@
 - Repro: `LECSCRIBE_SMOKE=out.png npm run start:mock` on the Mac → later `npm start` shows a "Smoke test" module in the Library.
 - Suggested fix: when LECSCRIBE_SMOKE is set, `app.setPath('userData', <fresh temp dir>)` before startLibrary. david will delete the leftover module on the demo Mac before the demo (and smoke uses a temp dir afterwards).
 - Status: OPEN (14:37)
+### B-013 [P1] Host room must survive a network change (demo turns Wi-Fi off, then joins the hotspot)
+- Stage / owner: s6 / @aaron
+- Repro: start a host room on network A (eduroam), switch the Mac to network B (hotspot) → the host keeps announcing its stale network-A identity; peers on B find it but can't connect (david 14:35–14:42). Restarting the host on B fixes it.
+- Expected: after a network change, the host re-binds / re-announces within ~10 s with no app restart (hyperdht/hyperswarm may have a network-change hook or a `suspend()/resume()`, so verify in the docs; otherwise detect an interface change via os.networkInterfaces() polling and recreate the swarm, keeping the same room key and Corestore so the link stays valid).
+- Status: OPEN (14:45)
 ## Closed
+### T-001 [P1 test task] Cross-device P2P: Mac host ↔ Windows peer on venue Wi-Fi (then hotspot)
+- Owner: @aaron (peer) + @david (host, room live on the Mac)
+- Steps: `node src/p2p/scripts/room-demo.js join lecscribe://room/uebob54ojy8umd663tt8oeb9nxfpry7uwwqm334gdqk8b5jgpzxy` from the Windows laptop on venue Wi-Fi; report connect time, slides+images, notes, latency. Then repeat on a phone hotspot.
+- Status: PASSED on the hotspot (14:45). See B-009.
+### B-009 [P1] Demo step 6 fails on eduroam: Windows peer finds the Mac's room but can't connect (HOLEPUNCH_ABORTED)
+- Stage / owner: s6 / @aaron
+- Repro: Mac host (eduroam 10.205.56.149, public 130.88.226.21, firewalled + randomized NAT) runs `room-demo.js host`; Windows peer (eduroam 10.205.105.2, public 130.88.226.2, firewalled + randomized NAT) runs `room-demo.js join <link>` → lookup finds the host, connect fails HOLEPUNCH_ABORTED, 0 slides / 0 notes (2 attempts, 14:20 and 14:26).
+- Expected: peer receives slides + notes on the venue network, or a reliable fallback.
+- Options: (a) phone hotspot for both devices (spec fallback; test ASAP); (b) code fallback via relays/LAN if the libraries support it (verify in docs); (c) whatever works must be in the stage checklist.
+- Status: RESOLVED via the spec's fallback (14:45): on a phone hotspot, Mac host → Windows peer connects in 2.0 s, 5 slides + images in 2.7 s, full history, live notes ~0.5–1.5 s, 90 notes / 60 s, 0 errors (aaron 14:43; re-joined 14:45). eduroam stays unusable (randomized NAT). DEMO RULE: both devices on the hotspot, and start the live session AFTER the Mac is on the hotspot.
 ### B-011 [P1] Regression from B-008: slide tracking now 9–15 s late; turbo finals fall behind (lag up to 10 s)
 - Stage / owner: s2/s3 / @aryan
 - Repro (Mac, real, dev ca0e07e, `live-demo.js … --partials`): finals lag 3.5–4.5 s, then 8.8–10.1 s for c-15..c-17 (queue falls behind). Auto-advances at 24.3 / 43.0 / 63.7 / 87.6 s vs topic starts 15.1 / 33.7 / 54.5 / 72.9 s, so 9–15 s late (was ~5 s before B-008). On stage the slide would visibly lag the speaker.

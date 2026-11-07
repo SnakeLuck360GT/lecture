@@ -21,7 +21,7 @@ Fixtures (david, `fixtures/`, fixed, same every run):
 | Offline | all | n/a | no outbound network calls during session (models already downloaded) | demo step 2 | pending |
 
 ## Demo smoke checklist (= the exact on-stage click-path; re-run before every release)
-Setup: host Mac (david's) has mic permission granted, models pre-downloaded, the app runs from main, `fixtures/deck.pdf` + `fixtures/lecture.wav` are ready, and a 2nd device has the app installed. Have the backup screen recording ready.
+Setup: host Mac (david's) has mic permission granted, models pre-downloaded (`npm run ai:warm`), BOTH laptops already on the phone hotspot, and the app (re)started AFTER joining the hotspot, the app runs from main, `fixtures/deck.pdf` + `fixtures/lecture.wav` are ready, and a 2nd device has the app installed. Have the backup screen recording ready.
 
 | # | Time | Action | Expected result | Last run |
 |---|---|---|---|---|
@@ -30,7 +30,7 @@ Setup: host Mac (david's) has mic permission granted, models pre-downloaded, the
 | 3 | 0:40 | Click Start listening; presenter reads the script for slides 1→5 into the LIVE MIC (backup: play `lecture.wav`) | Transcript appears within ~5 s; slide auto-advances 1→2→…→5 roughly in time with the narration; manual prev/next still works | n/a |
 | 4 | 1:30 | Watch the margin | ≥ 1 sticky per slide for things said but not written; labelled AI; click one → "saved" state | n/a |
 | 5 | 2:00 | Open notebook → COMP26120 → Week 3 | Saved sticky listed under the right module/week, with its slide | n/a |
-| 6 | 2:20 | Turn Wi-Fi back ON (or use hotspot); 2nd device joins room by key/QR | 2nd device shows the current slide + live notes within ~10 s | n/a |
+| 6 | 2:20 | Mac + Windows peer laptop on the PHONE HOTSPOT (NOT eduroam). Host clicks Live session → Share live session; the peer pastes the link / scans the QR in 'Join a live session' | Peer shows the current slide + notes within ~3 s; new notes arrive within ~1.5 s | 14:45: PASS via room-demo scripts (2.0 s connect, 2.7 s slides). In-app run pending |
 | 7 | 2:45 | (Optional) run `sim-taps`, then click Explain slide | Heatmap darkens on the tapped slide; lecturer note pinned | n/a |
 
 Known on-stage risks: peer discovery on campus Wi-Fi (fallback: phone hotspot), LLM latency (notes may lag 5–20 s, so pause narration if needed).
