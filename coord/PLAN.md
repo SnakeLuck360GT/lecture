@@ -68,6 +68,7 @@ tests/, fixtures/                david
 - Lint/build: TBD by filip
 
 ## Spec assumptions in use (decided by david; humans can override)
+- **HUMAN DECISION: demo host = david's Mac** (Apple M5, 24 GB RAM, macOS 26.6, arm64). That's also where the tester runs. Real-model and real-P2P tests run there (`LECSCRIBE_REAL=1 npm test`). 24 GB means `QWEN3_1_7B_INST_Q4` is worth trying for notes.
 - **HUMAN DECISION: LecScribe is a macOS app.** The demo host and the 2nd device are Macs (Apple Silicon). Everything must run on macOS. aaron and aryan develop on Windows, so write cross-platform code (node `path`, no bash-only scripts, no Windows-only deps). david runs every dev merge on macOS and files platform bugs. filip handles the macOS mic permission (Electron: `NSMicrophoneUsageDescription` / `systemPreferences.askForMediaAccess('microphone')`). QVAC models must load on macOS arm64.
 - **Host = the lecturer/presenter laptop** (spec's assumption). It runs all models and the lecturer view (heatmap, Explain slide). Peers only receive.
 - Weeks keep **transcripts + summaries, no raw audio**.
