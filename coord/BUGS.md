@@ -1,5 +1,5 @@
 # BUGS
-## dev health: 🟢 GREEN  (14:31, commit ca0e07e, 72/72 on the Mac; UI smoke ok:true on the Mac)
+## dev health: 🟢 GREEN  (14:44, commit 9882a22, 75/75 on the Mac)
 ## Open
 ### B-004 [P1] No microphone picker: demo needs the iPhone mic (Continuity) on the Mac
 - Stage / owner: s1 (UI) / @aryan (reassigned from filip at , component ui/components/mic-picker.js)
@@ -44,26 +44,26 @@
 - Repro: Mac host (eduroam 10.205.56.149, public 130.88.226.21, firewalled + randomized NAT) runs `room-demo.js host`; Windows peer (eduroam 10.205.105.2, public 130.88.226.2, firewalled + randomized NAT) runs `room-demo.js join <link>` → lookup finds the host, connect fails HOLEPUNCH_ABORTED, 0 slides / 0 notes (2 attempts, 14:20 and 14:26).
 - Expected: peer receives slides + notes on the venue network, or a reliable fallback.
 - Options: (a) phone hotspot for both devices (spec fallback; test ASAP); (b) code fallback via relays/LAN if the libraries support it (verify in docs); (c) whatever works must be in the stage checklist.
-- Status: OPEN (14:28)
+- Status: HOTSPOT (14:44): both devices get the same public IP 82.132.229.1, consistent NAT. Windows-host → Mac-peer WORKS (1.4 s to slides). Mac-host retest pending with a room restarted after the network switch (stale DHT identity was the cause). Demo rule: start/restart the host AFTER the network is up.
 ### B-010 [P2] Lecture view polish: empty heatmap boxes + badge covers the slide's page number
 - Stage / owner: s9 / @filip
 - Repro: Mac, dev ca0e07e, `LECSCRIBE_SMOKE=… npm run start:mock` → lecture view (screenshot in david's scratchpad).
   1. A row of 5 empty bordered boxes sits above the thumbnails (the heatmap strip with no counts). It looks like a rendering glitch. Hide it until a live room has ≥ 1 lost tap, or render it as a borderless 4 px bar.
   2. The "Manual 2 / 5" badge sits on top of the slide image's own "2/5" footer, which peeks out above it. Move the badge outside the slide card (e.g. next to the transcript bar) or below the slide.
 - Status: OPEN (14:31)
-### B-011 [P1] Regression from B-008: slide tracking now 9–15 s late; turbo finals fall behind (lag up to 10 s)
-- Stage / owner: s2/s3 / @aryan
-- Repro (Mac, real, dev ca0e07e, `live-demo.js … --partials`): finals lag 3.5–4.5 s, then 8.8–10.1 s for c-15..c-17 (queue falls behind). Auto-advances at 24.3 / 43.0 / 63.7 / 87.6 s vs topic starts 15.1 / 33.7 / 54.5 / 72.9 s, so 9–15 s late (was ~5 s before B-008). On stage the slide would visibly lag the speaker.
-- Good news from the same run: stt errors 0, first partial 0.35 s, turbo text much better ('linear probing is cache friendly', "Java's HashMap" now correct; 'modulus' → 'Majulis' still wrong).
-- Suggested fix: drive the TRACKER from the fast EN_BASE text (partials or a base-model final per VAD window), and keep turbo finals for transcript/notes/library only. Make sure turbo never queues more than ~1 window behind (drop/merge windows or skip turbo for a window and keep the base text if the queue is > 1 deep). Prioritise GPU for turbo over partials when the turbo queue is non-empty.
-- Expected: auto-advance within ~5 s of the topic change (as before), finals lag ≤ 5 s throughout.
-- Status: OPEN (14:32)
 ### B-012 [P2] Smoke runs write a "Smoke test" module into the REAL library (would show on stage)
 - Stage / owner: s1 / @filip (found by @aaron 14:33)
 - Repro: `LECSCRIBE_SMOKE=out.png npm run start:mock` on the Mac → later `npm start` shows a "Smoke test" module in the Library.
 - Suggested fix: when LECSCRIBE_SMOKE is set, `app.setPath('userData', <fresh temp dir>)` before startLibrary. david will delete the leftover module on the demo Mac before the demo (and smoke uses a temp dir afterwards).
 - Status: OPEN (14:37)
 ## Closed
+### B-011 [P1] Regression from B-008: slide tracking now 9–15 s late; turbo finals fall behind (lag up to 10 s)
+- Stage / owner: s2/s3 / @aryan
+- Repro (Mac, real, dev ca0e07e, `live-demo.js … --partials`): finals lag 3.5–4.5 s, then 8.8–10.1 s for c-15..c-17 (queue falls behind). Auto-advances at 24.3 / 43.0 / 63.7 / 87.6 s vs topic starts 15.1 / 33.7 / 54.5 / 72.9 s, so 9–15 s late (was ~5 s before B-008). On stage the slide would visibly lag the speaker.
+- Good news from the same run: stt errors 0, first partial 0.35 s, turbo text much better ('linear probing is cache friendly', "Java's HashMap" now correct; 'modulus' → 'Majulis' still wrong).
+- Suggested fix: drive the TRACKER from the fast EN_BASE text (partials or a base-model final per VAD window), and keep turbo finals for transcript/notes/library only. Make sure turbo never queues more than ~1 window behind (drop/merge windows or skip turbo for a window and keep the base text if the queue is > 1 deep). Prioritise GPU for turbo over partials when the turbo queue is non-empty.
+- Expected: auto-advance within ~5 s of the topic change (as before), finals lag ≤ 5 s throughout.
+- Status: VERIFIED (14:44, dev 9882a22): advances 5–6 s after topic start, finals ~4 s steady, 0 errors.
 ### B-007 [P1] Live STT drops whole segments: "RPCError: Model was reloaded" (partials collide with finals)
 - Stage / owner: s2 / @aryan
 - Repro (Mac, real models, dev eb3cc39): `node src/ai/scripts/live-demo.js fixtures/slides.json fixtures/lecture.wav` → 5× `[ai/stt] live segment failed RPCError: Model was reloaded` per 92 s run (also 5× in the human's live-mic session in the app). Those finals never emit, so text is missing (the human reports "transcriber isn't that accurate"), and notes lose their source text too.
