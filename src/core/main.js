@@ -278,6 +278,11 @@ async function runSmoke (pngPath) {
   await writeFile(out.replace(/.png$/i, '') + '-room.png', (await wc.capturePage()).toPNG())
   // Explain slide (stage 7) via the Shift+E demo fallback: expect a lecturer note on the current slide.
   await wc.executeJavaScript("document.body.click()") // close the popover
+  // Shift+L demo fallback: 3 lost taps on the current slide -> Explain button shows "N lost"
+  await wc.executeJavaScript("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'L', shiftKey: true, bubbles: true }))")
+  await new Promise((r) => setTimeout(r, 800))
+  const lostLabel = await wc.executeJavaScript("document.querySelector('#btn-explain .label')?.textContent || ''")
+  await writeFile(out.replace(/.png$/i, '') + '-lost.png', (await wc.capturePage()).toPNG())
   const lecturerNote = new Promise((r) => { const f = (n) => { if (n?.kind === 'lecturer') { bus.off('note:added', f); r(n) } }; bus.on('note:added', f) })
   await wc.executeJavaScript("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'E', shiftKey: true, bubbles: true }))")
   const explainNote = await Promise.race([lecturerNote, new Promise((r) => setTimeout(() => r(null), 30000))])
@@ -296,7 +301,7 @@ async function runSmoke (pngPath) {
   const saved = await wc.executeJavaScript('(async () => { const L = window.__lecscribe; return !!(await L.app.store.getLecture(L.state.lectureId))?.summary })()')
   await writeFile(out.replace(/.png$/i, '') + '-summary.png', (await wc.capturePage()).toPNG())
   const summary = { chars: summaryText.length, saved }
-  const result = { ok: slides.length > 0 && ui.current === 1 && ui.img, explain, summary, slides: slides.length, texts: slides.map((s) => s.text.slice(0, 40)), ui, events: [...new Set(seen)] }
+  const result = { ok: slides.length > 0 && ui.current === 1 && ui.img, lost: lostLabel, explain, summary, slides: slides.length, texts: slides.map((s) => s.text.slice(0, 40)), ui, events: [...new Set(seen)] }
   console.log('[smoke] ' + JSON.stringify(result))
   app.exit(result.ok ? 0 : 1)
 }
