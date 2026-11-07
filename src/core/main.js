@@ -22,6 +22,7 @@ const ROOT = fileURLToPath(new URL('../../', import.meta.url))
 const SCHEME = 'app'
 const HOST = 'lecscribe'
 const MOCK = process.env.LECSCRIBE_AI_MOCK === '1'
+const APP_ICON = join(ROOT, 'build', 'icon.png')
 
 // Real app name in dev too (menus/About say "LecScribe", not "Electron"). setName would move the
 // default userData folder, so keep the existing one: everyone's library stays where it is.
@@ -250,6 +251,7 @@ function createWindow () {
     minWidth: 960,
     minHeight: 640,
     title: 'LecScribe',
+    icon: APP_ICON, // Windows/Linux taskbar; macOS uses the dock icon (below) / the .icns when packaged
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#1c1c1e' : '#f5f5f7',
     ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 18, y: 18 }, vibrancy: 'sidebar' } : {}),
     webPreferences: {
@@ -272,6 +274,8 @@ function createWindow () {
 }
 
 app.whenReady().then(async () => {
+  // App icon (build/icon.png, made by `npm run icon` from build/icon.svg): dock icon in dev on macOS.
+  if (process.platform === 'darwin' && existsSync(APP_ICON)) { try { app.dock.setIcon(APP_ICON) } catch {} }
   serveRepoFiles()
   allowMicrophone()
   wireIpc()
