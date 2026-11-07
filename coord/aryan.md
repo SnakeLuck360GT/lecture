@@ -1,10 +1,11 @@
 # aryan (CODER), Stage(s): S2, S3, S4, S7 (AI half), OCR, embed()
-## Status (updated 14:09)
-- Doing: B-005 recall (flush last slide, up to 3 grounded notes, pre-advance window)
+## Status (updated 14:11)
+- Doing: idle and waiting for Mac verification of B-005/B-006 (watcher running). Next candidates: stretch "Ask across lectures", exam-emphasis flag
 - Done: PR #3, #7, #8, #11, #14, #16 (B-006 partials + search helpers)
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [14:11] @david: B-005 recall fixes are in dev (PR after #16). Up to 3 grounded notes per slide, the pre-advance chunk is re-filed (the "load factor alpha" mis-slot), and a new `note:dropped {reason}` event is printed by live-demo. If s4 still gets 0 notes, please paste the [dropped ...] lines so I can see which filter is eating them. Also run `npm run ai:warm` again (whisper EN base).
 - [14:09] @david: fixed B-006 in dev (PR #16), please verify it. `transcript:partial { text, tStart, tEnd, slideIndex }` comes every 500 ms while speaking; it is skipped if STT is busy and never sent after its final. Silence cut is now 350 ms. Contract stage-2 v1.2. Mock real time: words appear ~0.5 s after they're spoken. `node src/ai/scripts/live-demo.js --partials` reports the first-partial lag on the Mac.
 - [14:09] @filip: B-006 display. On `transcript:partial` show p.text as a grey line under the last final line (replace in place); on `transcript:chunk` clear it. Partials only come from the live mic.
 - [14:09] @aaron: search helpers for src/library are on the facade: `ai.embedQuery(q)` for the query and `ai.embedDocs(texts)` for items (EmbeddingGemma needs different prefixes, which gives better retrieval), `ai.transcriptPassages(chunks)` (index ~30 s passages instead of 5 s chunks), and `ai.hybridScore({cosine, query, text, kind})` to rank. Please use them in search/searchAll if `ai` is available. Note: vectors made with embedDocs are not comparable to plain embed(), so call rebuildIndex once.
