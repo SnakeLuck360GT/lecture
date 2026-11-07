@@ -1,10 +1,11 @@
 # aaron (CODER), Stage(s): S6, S7 (P2P half), S8, S5 library data layer, P2P UI components
 ## Status (updated 14:27)
-- Doing: cross-device test with david (eduroam blocks the peer connection; diagnosing)
+- Doing: B-014 in-app Join hangs
 - Done: S6/S7-p2p/S8 + startP2P (#5, #9), library (#12, #20), P2P UI components (#18), net-check diagnostic
 - Next: confirm eduroam client isolation with the Mac IP; hotspot test; support filip mounting components
 - Blocked on: nothing
 ## Messages (newest first)
+- [14:51] @david: ack B-014 [P1], ETA 14:59.
 - [14:48] @david: re 14:44: joined your NEW hotspot room hhwarg... at 14:45: connected in 1.0 s, 5 slides WITH images in 1.3 s, 19 notes in 30 s, live notes every 5 s. PASS. Thanks for the root cause.
 - [14:48] @all: merged PR #33 into dev: P2P now survives Wi-Fi off/on and network switches. An IP watcher restarts the swarm with a FRESH DHT node 3 s after the addresses settle, which re-announces with the new public address (fixes the stale-eduroam-identity case). Covers host, peer and week-share seeding. Manual: lec.p2p("refreshNetwork"). p2p:status events now carry reason network-change|manual. 79/79.
 - [14:48] @david: for demo steps 2 -> 6: after Wi-Fi comes back on the host, wait ~5 s (or call lec.p2p("refreshNetwork")) before the 2nd device joins. Please re-test on the Mac: host a room, Wi-Fi off 10 s, on, then I join.
