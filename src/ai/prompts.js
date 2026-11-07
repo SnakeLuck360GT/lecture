@@ -1,6 +1,6 @@
 // Prompt builders for the local LLM. Kept short: small models + speed. Owner: aryan.
 
-export function stickyPrompt ({ slideText, transcript, max = 2, already = [] }) {
+export function stickyPrompt ({ slideText, transcript, max = 2, already = [], maxChars = 8000 }) {
   return [
     {
       role: 'system',
@@ -24,7 +24,7 @@ export function stickyPrompt ({ slideText, transcript, max = 2, already = [] }) 
       role: 'user',
       content: `SLIDE TEXT:\n${clip(slideText, 1200) || '(no text)'}\n\n` +
         (already.length ? `NOTES ALREADY WRITTEN (do not repeat):\n- ${already.join('\n- ')}\n\n` : '') +
-        `WHAT THE LECTURER SAID:\n${clip(transcript, 2500)}\n\n` +
+        `WHAT THE LECTURER SAID:\n${clipEnds(transcript, maxChars)}\n\n` + // only THIS slide's transcript
         `Write up to ${max} new notes as a JSON array of strings. Do NOT restate the slide text.`
     }
   ]
@@ -82,4 +82,12 @@ export function lecturePrompt ({ outline, transcript }) {
 function clip (s, n) {
   s = String(s || '').trim()
   return s.length > n ? s.slice(0, n) + '…' : s
+}
+
+/** Like clip, but keeps the START and the END (the newest speech must never be cut off). */
+export function clipEnds (s, n) {
+  s = String(s || '').trim()
+  if (s.length <= n) return s
+  const head = Math.floor(n * 0.3)
+  return s.slice(0, head) + ' … ' + s.slice(s.length - (n - head))
 }
