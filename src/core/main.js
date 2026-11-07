@@ -9,7 +9,7 @@ if (typeof electron === 'string') {
   console.error('LecScribe must run inside Electron, not plain Node. ELECTRON_RUN_AS_NODE is probably set (VS Code sets it for extensions): unset it, then run `npm start`.')
   process.exit(1)
 }
-const { app, BrowserWindow, ipcMain, protocol, session, systemPreferences, shell } = electron
+const { app, BrowserWindow, ipcMain, protocol, session, systemPreferences, shell, nativeTheme } = electron
 import { readFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join, normalize, extname, sep, isAbsolute } from 'node:path'
@@ -237,22 +237,35 @@ app.whenReady().then(async () => {
 
 /**
  * Scripted smoke check (david / CI on macOS): LECSCRIBE_SMOKE=out.png npm run start:mock
- * Loads fixtures/deck.pdf through the real UI, clicks Next, saves a screenshot, prints JSON, quits.
+ * Library -> creates "Smoke test" module + lecture -> opens it -> loads fixtures/deck.pdf -> Next.
+ * Saves <name>-library.png and <name>.png screenshots, prints JSON, quits (exit 0 = pass).
  */
 async function runSmoke (pngPath) {
   const wc = win.webContents
   if (wc.isLoading()) await new Promise((r) => wc.once('did-finish-load', r))
+  const { writeFile } = await import('node:fs/promises')
+  const out = resolvePath(pngPath)
   const seen = []
   bus.tap((name) => seen.push(name))
+  await wc.executeJavaScript('window.__lecscribe.ready')
+  await new Promise((r) => setTimeout(r, 2000))
+  await writeFile(out.replace(/\.png$/i, '') + '-library.png', (await wc.capturePage()).toPNG())
+  await wc.executeJavaScript(`(async () => {
+    const L = window.__lecscribe, s = L.app.store
+    const m = await s.createModule({ name: 'Smoke test' })
+    const l = await s.createLecture(m.id, { title: 'Week 3 · Hash Tables' })
+    await L.openLecture(l.id)
+  })()`)
   const loaded = new Promise((r) => bus.once('slides:loaded', r))
-  await wc.executeJavaScript("document.getElementById('btn-demo-deck').click()")
+  await wc.executeJavaScript('window.__lecscribe.loadDemoDeck()')
   const slides = await Promise.race([loaded, new Promise((_, rej) => setTimeout(() => rej(new Error('slides:loaded timeout (30 s)')), 30000))])
   await wc.executeJavaScript("document.getElementById('btn-next').click()")
   await new Promise((r) => setTimeout(r, 800))
   const ui = await wc.executeJavaScript('({ current: window.__lecscribe.state.current, n: window.__lecscribe.state.slides.length, img: !document.getElementById("slide-img").hidden, micPicker: !!document.querySelector("#mount-mic-picker.lec-mic-picker") })')
-  const img = await wc.capturePage()
-  const { writeFile } = await import('node:fs/promises')
-  await writeFile(resolvePath(pngPath), img.toPNG())
+  await writeFile(out, (await wc.capturePage()).toPNG())
+  await wc.executeJavaScript("document.getElementById('btn-room-pop')?.click()")
+  await new Promise((r) => setTimeout(r, 1500))
+  await writeFile(out.replace(/.png$/i, '') + '-room.png', (await wc.capturePage()).toPNG())
   const result = { ok: slides.length > 0 && ui.current === 1 && ui.img, slides: slides.length, texts: slides.map((s) => s.text.slice(0, 40)), ui, events: [...new Set(seen)] }
   console.log('[smoke] ' + JSON.stringify(result))
   app.exit(result.ok ? 0 : 1)

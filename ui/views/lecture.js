@@ -113,13 +113,19 @@ export function createLectureView (app) {
       jobs.push(mountComponent('share-lecture', $('mount-share-lecture'), deps({ mode: 'share', lectureId: state.lectureId, onImported: () => {} })))
     }
     if (host) {
-      jobs.push(mountComponent('room-panel', $('mount-room-panel'), deps(), fallbackRoomPanel))
-      jobs.push(mountComponent('heatmap', $('mount-heatmap'), deps()).then((h) => { state.heatmapMounted = !!h; updateThumbBadges(); return h }))
+      jobs.push(mountComponent('room-panel', $('mount-room-panel'), deps({
+        getRoomOptions: () => ({ title: $('crumb-lecture').textContent || 'Lecture', moduleId: state.moduleId, weekId: state.lectureId })
+      }), fallbackRoomPanel))
+      jobs.push(mountComponent('heatmap', $('mount-heatmap'), deps({
+        onSelect: (i) => go(i),
+        slideCount: state.slides.length,
+        showHeader: false
+      })).then((h) => { state.heatmapMounted = !!h; updateThumbBadges(); return h }))
       try {
         micPicker = app.mountMicPicker?.($('mount-mic-picker'), { onChange: () => switchMic(), toast: (m) => toast(m) }) || null
       } catch (e) { console.error('mic picker failed to mount', e); micPicker = null }
     } else {
-      jobs.push(mountComponent('lost-button', $('mount-lost-button'), deps(), fallbackLostButton))
+      jobs.push(mountComponent('lost-button', $('mount-lost-button'), deps({ getSlideIndex: () => state.current }), fallbackLostButton))
     }
     handles = (await Promise.all(jobs)).filter(Boolean)
   }
@@ -367,12 +373,20 @@ export function createLectureView (app) {
   function onChunk (c) {
     if (!state.active) return
     addLine(c, true)
-    $('t-partial').textContent = ''
+    // B-008: a final for segment N can arrive after segment N+1's partials began. Only clear the
+    // grey line if the partial belongs to this (or an earlier) segment.
+    const p = lastPartial
+    if (!p || typeof p.tStart !== 'number' || typeof c?.tEnd !== 'number' || p.tStart < c.tEnd) {
+      $('t-partial').textContent = ''
+      lastPartial = null
+    }
     renderTranscript()
   }
 
+  let lastPartial = null
   function onPartial (p) {
     if (!state.active) return
+    lastPartial = typeof p === 'object' ? p : null
     const text = typeof p === 'string' ? p : p?.text
     $('t-partial').textContent = text || ''
     if (text) $('t-last').textContent = text
@@ -577,6 +591,29 @@ export function createLectureView (app) {
     $('transcript-toggle').setAttribute('aria-expanded', String(open))
     if (open) $('transcript-body').scrollTop = $('transcript-body').scrollHeight
   })
+  // header popovers: Share notes (aaron's share-lecture) and Live session (aaron's room-panel)
+  const pops = [['btn-share-pop', 'pop-share'], ['btn-room-pop', 'pop-room']]
+  const closePops = (except) => {
+    for (const [b, p] of pops) if (p !== except) { $(p).hidden = true; $(b).setAttribute('aria-expanded', 'false') }
+  }
+  for (const [b, p] of pops) {
+    $(b).addEventListener('click', (e) => {
+      e.stopPropagation()
+      const opening = $(p).hidden
+      closePops(p)
+      $(p).hidden = !opening
+      $(b).setAttribute('aria-expanded', String(opening))
+    })
+    $(p).addEventListener('click', (e) => e.stopPropagation())
+  }
+  document.addEventListener('click', () => closePops())
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePops() })
+  lec.on('p2p:status', (s) => { if (s?.role === 'host') $('room-live-dot').classList.toggle('on', s.state === 'open') })
+  lec.on('p2p:peers', (p) => {
+    const n = Number(p?.count) || 0
+    $('btn-room-pop').lastChild.textContent = n ? `Live · ${n} ${n === 1 ? 'peer' : 'peers'}` : 'Live session'
+  })
+
   $('search-input').addEventListener('input', runSearch)
   $('search-input').addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.target.value = ''; $('search-results').hidden = true } })
   document.addEventListener('click', (e) => { if (!$('search-box').contains(e.target)) $('search-results').hidden = true })

@@ -66,8 +66,14 @@
             <input id="search-input" type="search" placeholder="Search this lecture" autocomplete="off">
             <div class="search-results" id="search-results" hidden></div>
           </div>
-          <div id="mount-share-lecture"></div>
-          <div id="mount-room-panel" class="host-only"></div>
+          <div class="pop-anchor">
+            <button class="btn small" id="btn-share-pop" type="button" aria-expanded="false" aria-controls="pop-share"><span data-icon="link"></span>Share notes</button>
+            <div class="popover" id="pop-share" hidden><div id="mount-share-lecture"></div></div>
+          </div>
+          <div class="pop-anchor host-only">
+            <button class="btn small" id="btn-room-pop" type="button" aria-expanded="false" aria-controls="pop-room"><span class="live-dot" id="room-live-dot"></span>Live session</button>
+            <div class="popover" id="pop-room" hidden><div id="mount-room-panel"></div></div>
+          </div>
         </div>
       </header>
 

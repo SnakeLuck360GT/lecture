@@ -98,7 +98,7 @@ async function boot () {
   $('btn-back').addEventListener('click', () => openLibrary())
   lec.on('library:changed', () => app.libraryChanged())
 
-  await mountComponent('join-room', $('mount-join-room'), { ...app.deps(), onJoined }, fallbackJoinRoom)
+  await mountComponent('join-room', $('mount-join-room'), { ...app.deps(), onJoined, onLeft: () => openLibrary() }, fallbackJoinRoom)
   hydrateIcons()
   show('library')
   await library.show()
