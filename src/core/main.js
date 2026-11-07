@@ -150,8 +150,9 @@ async function startLibrary () {
 }
 
 // Renderer -> AI. pushAudio/pushExplainAudio come in fire-and-forget ('ai:push'), the rest via invoke.
-const AI_METHODS = new Set(['playClip', 'stopClip', 'pushAudio', 'flushAudio', 'pushExplainAudio', 'embed', 'ocr', 'summariseLecture'])
-const PATH_ARG_METHODS = new Set(['playClip'])
+const AI_METHODS = new Set(['playClip', 'stopClip', 'pushAudio', 'flushAudio', 'pushExplainAudio', 'explainFromFile', 'embed', 'ocr', 'summariseLecture'])
+// method -> index of the argument that is a (possibly repo-relative) file path
+const PATH_ARG_METHODS = new Map([['playClip', 0], ['explainFromFile', 1]])
 
 function wireIpc () {
   ipcMain.on('bus:emit', (_e, name, payload) => {
@@ -167,7 +168,7 @@ function wireIpc () {
     if (!AI_METHODS.has(method)) throw new Error(`ai.${method} is not allowed from the renderer`)
     if (!ai) throw new Error('AI is not loaded (src/ai missing or failed to start)')
     if (typeof ai[method] !== 'function') throw new Error(`ai.${method} is not implemented`)
-    if (PATH_ARG_METHODS.has(method)) args[0] = resolvePath(args[0])
+    if (PATH_ARG_METHODS.has(method)) { const i = PATH_ARG_METHODS.get(method); args[i] = resolvePath(args[i]) }
     return ai[method](...args)
   })
 
@@ -275,7 +276,15 @@ async function runSmoke (pngPath) {
   await wc.executeJavaScript("document.getElementById('btn-room-pop')?.click()")
   await new Promise((r) => setTimeout(r, 1500))
   await writeFile(out.replace(/.png$/i, '') + '-room.png', (await wc.capturePage()).toPNG())
-  const result = { ok: slides.length > 0 && ui.current === 1 && ui.img, slides: slides.length, texts: slides.map((s) => s.text.slice(0, 40)), ui, events: [...new Set(seen)] }
+  // Explain slide (stage 7) via the Shift+E demo fallback: expect a lecturer note on the current slide.
+  await wc.executeJavaScript("document.body.click()") // close the popover
+  const lecturerNote = new Promise((r) => { const f = (n) => { if (n?.kind === 'lecturer') { bus.off('note:added', f); r(n) } }; bus.on('note:added', f) })
+  await wc.executeJavaScript("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'E', shiftKey: true, bubbles: true }))")
+  const explainNote = await Promise.race([lecturerNote, new Promise((r) => setTimeout(() => r(null), 30000))])
+  await new Promise((r) => setTimeout(r, 800))
+  await writeFile(out.replace(/.png$/i, '') + '-explain.png', (await wc.capturePage()).toPNG())
+  const explain = explainNote ? { slideIndex: explainNote.slideIndex, text: String(explainNote.text).slice(0, 60) } : null
+  const result = { ok: slides.length > 0 && ui.current === 1 && ui.img, explain, slides: slides.length, texts: slides.map((s) => s.text.slice(0, 40)), ui, events: [...new Set(seen)] }
   console.log('[smoke] ' + JSON.stringify(result))
   app.exit(result.ok ? 0 : 1)
 }

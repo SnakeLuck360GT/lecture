@@ -64,6 +64,9 @@ export function createLectureView (app) {
 
   async function close () {
     if (!state.active) return
+    if (explain.recording) await stopExplain(true)
+    explain.busy = false
+    setExplainStatus('')
     if (state.listening) await toggleListen()
     if (state.clipPlaying) await toggleClip()
     await flushTranscript()
@@ -185,6 +188,7 @@ export function createLectureView (app) {
     renderStrip()
     renderSlide()
     renderNotes()
+    refreshExplain()
     if (state.persistSlides && state.lectureId) {
       state.persistSlides = false
       app.store.saveSlides(state.lectureId, slides).then(() => app.libraryChanged()).catch((e) => console.warn('saveSlides failed', e))
@@ -204,6 +208,7 @@ export function createLectureView (app) {
 
   function onSlideChanged ({ index, source, confidence } = {}) {
     if (!state.active || !Number.isInteger(index) || !state.slides[index]) return
+    if (explain.recording && index !== explain.slide) stopExplain(false) // spec: moving on ends the recording
     state.current = index
     const b = $('track-badge')
     b.hidden = false
@@ -214,6 +219,7 @@ export function createLectureView (app) {
     renderSlide()
     renderNotes()
     markActiveThumb()
+    refreshExplain()
   }
 
   function renderSlide () {
@@ -426,10 +432,99 @@ export function createLectureView (app) {
 
   // ---------- listening (live mic) ----------
   async function openMic () {
-    state.mic = await startMic((f32) => lec.ai('pushAudio', f32), {
+    // While an explanation is recording, the live mic feeds the separate explain buffer instead.
+    state.mic = await startMic((f32) => lec.ai(explain.recording ? 'pushExplainAudio' : 'pushAudio', f32), {
       deviceId: micPicker?.getDeviceId?.() || undefined,
       onLevel: (rms) => micPicker?.setLevel?.(rms)
     })
+  }
+
+  // ---------- Explain slide (stage 7, aryan's contract stage-7-ai.md) ----------
+  const explain = { recording: false, slide: null, ownMic: null, busy: false }
+
+  function refreshExplain () {
+    const bar = $('explain-bar')
+    bar.hidden = state.role === 'peer' || !state.slides.length
+    const btn = $('btn-explain')
+    const lost = Number(state.lost?.[state.current]) || 0
+    btn.classList.toggle('recording', explain.recording)
+    btn.classList.toggle('hot', !explain.recording && lost > 0)
+    btn.disabled = explain.busy && !explain.recording
+    btn.querySelector('.label').textContent = explain.recording
+      ? 'Done'
+      : lost > 0 ? `Explain slide · ${lost} lost` : 'Explain slide'
+  }
+
+  function setExplainStatus (text, busy = false) {
+    const s = $('explain-status')
+    s.hidden = !text
+    s.textContent = text || ''
+    s.classList.toggle('busy', busy)
+  }
+
+  async function startExplain () {
+    if (explain.recording || explain.busy || state.role === 'peer' || !state.slides.length) return
+    try {
+      const perm = await lec.requestMic()
+      if (!perm.granted) { toast(perm.hint || 'Microphone access was denied.', { error: true, ms: 8000 }); return }
+      explain.recording = true
+      explain.slide = state.current
+      lec.emit('explain:start', { slideIndex: explain.slide })
+      // Not listening? Open a mic just for the explanation (otherwise the live mic is rerouted).
+      if (!state.listening) {
+        explain.ownMic = await startMic((f32) => lec.ai('pushExplainAudio', f32), {
+          deviceId: micPicker?.getDeviceId?.() || undefined,
+          onLevel: (rms) => micPicker?.setLevel?.(rms)
+        })
+      }
+      setExplainStatus(`Recording an explanation for slide ${explain.slide + 1}…`)
+    } catch (e) {
+      explain.recording = false
+      toast(`Could not start recording: ${e.message || e}`, { error: true })
+      setExplainStatus('')
+    }
+    refreshExplain()
+  }
+
+  /** @param {boolean} emitDone  false when the slide changed (the AI stops on slide:changed by itself) */
+  async function stopExplain (emitDone = true) {
+    if (!explain.recording) return
+    explain.recording = false
+    explain.busy = true
+    const slideIndex = explain.slide
+    try { await explain.ownMic?.stop() } catch {}
+    explain.ownMic = null
+    if (emitDone) lec.emit('explain:done', { slideIndex })
+    setExplainStatus('Transcribing the explanation…', true)
+    refreshExplain()
+  }
+
+  function onExplainStatus ({ slideIndex, state: st, error } = {}) {
+    if (!state.active) return
+    const n = (Number.isInteger(slideIndex) ? slideIndex : explain.slide ?? state.current) + 1
+    if (st === 'recording') { setExplainStatus(`Recording an explanation for slide ${n}…`); return }
+    if (st === 'transcribing') { explain.busy = true; setExplainStatus('Transcribing the explanation…', true) }
+    if (st === 'summarising') { explain.busy = true; setExplainStatus('Summarising in plain language…', true) }
+    if (st === 'done') { explain.busy = false; setExplainStatus(''); toast(`Lecturer explanation pinned to slide ${n}`) }
+    if (st === 'error') { explain.busy = false; explain.recording = false; setExplainStatus(''); toast(`Explain slide failed: ${error || 'unknown error'}`, { error: true, ms: 7000 }) }
+    refreshExplain()
+  }
+
+  /** Demo fallback (Shift+E): explain the current slide from fixtures/explain.wav. */
+  async function explainFromFile () {
+    if (state.role === 'peer' || !state.slides.length || explain.busy || explain.recording) return
+    explain.busy = true
+    explain.slide = state.current
+    setExplainStatus('Transcribing the explanation…', true)
+    refreshExplain()
+    try {
+      await lec.ai('explainFromFile', state.current, 'fixtures/explain.wav')
+    } catch (e) {
+      explain.busy = false
+      setExplainStatus('')
+      toast(`Explain from file failed: ${e.message || e}`, { error: true })
+      refreshExplain()
+    }
   }
 
   async function switchMic () {
@@ -578,8 +673,20 @@ export function createLectureView (app) {
   lec.on('lost:counts', (counts) => {
     state.lost = counts || {}
     document.querySelector('.strip-wrap')?.classList.toggle('has-heat', Object.values(state.lost).some((n) => Number(n) > 0))
-    if (state.active) updateThumbBadges()
+    if (state.active) { updateThumbBadges(); refreshExplain() }
   })
+  lec.on('explain:status', onExplainStatus)
+  $('btn-explain').addEventListener('click', () => (explain.recording ? stopExplain(true) : startExplain()))
+  // aaron PR #33: show reconnecting while the swarm restarts after a network change
+  lec.on('p2p:status', (s) => {
+    if (s?.role !== 'host') return
+    const btn = $('btn-room-pop')
+    const reconnecting = (s.state === 'starting' || s.state === 'connecting') && !!s.reason
+    btn.classList.toggle('reconnecting', reconnecting)
+    if (reconnecting) btn.lastChild.textContent = 'Reconnecting…'
+    else if (btn.lastChild.textContent === 'Reconnecting…') btn.lastChild.textContent = 'Live session'
+  })
+  window.addEventListener('online', () => { lec.p2p('refreshNetwork').catch(() => {}) })
   lec.on('clip:ended', () => setClip(false))
   lec.on('room:ended', () => { if (state.role === 'peer') toast('The host ended the room') })
 
@@ -631,6 +738,7 @@ export function createLectureView (app) {
     if (!state.active || e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
     if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); go(state.current + 1) }
     if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(state.current - 1) }
+    if (e.key === 'E' && e.shiftKey && !e.metaKey && !e.ctrlKey) { e.preventDefault(); explainFromFile() } // demo fallback
   })
 
   return { open, close, go, openPdf, loadDemoDeck }
