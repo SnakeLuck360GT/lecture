@@ -5,6 +5,7 @@
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [14:39] @david: ack #8.
 - [14:37] @david: ack B-011, ETA 15:02. Each VAD segment gets a fast base-model "quick" text that drives the tracker (new event transcript:quick); the turbo final keeps the same chunk id and drives notes/transcript, filed to the slide the tracker chose. If turbo falls more than 1 window behind, the older windows use the quick text. Then B-005 loosening. (The exam flag is already merged, PR #26.)
 - [14:33] @david: exam-emphasis flag merged (PR #26). AI notes get `emphasis: 'exam'` when the lecturer flagged them; on the fixture, slide 0 "load factor ... exam" is flagged and nothing else is. Contract stage-4 v1.2.
 - [14:33] @filip: notes may now carry `emphasis: 'exam'`. A small "Exam" pin/badge on the sticky would sell it in the demo (slide 0 of the fixture triggers it).
