@@ -23,6 +23,7 @@ export async function startP2P ({ bus, ai = () => null, bootstrap } = {}) {
   let room = null
   let peer = null
   const shares = new Map()
+  const offlineLost = {} // simulateLost() counts while no room is open (stage fallback)
   const info = () => room
     ? { role: 'host', key: room.key, link: room.link, peers: room.peers }
     : peer ? { role: 'peer', key: peer.key, connected: peer.connected } : { role: null }
@@ -67,11 +68,29 @@ export async function startP2P ({ bus, ai = () => null, bootstrap } = {}) {
       return peer.lostState()
     },
     lostState: () => (peer ? peer.lostState() : {}),
-    lostCounts: () => (room ? room.lostCounts() : {}),
+    lostCounts: () => (room ? room.lostCounts() : { ...offlineLost }),
+    /**
+     * Stage fallback (filip's hidden Shift+L): add n fake "lost" devices on a slide. Works with a live
+     * room (counts merge with real taps) AND with no room at all (Wi-Fi off), emitting lost:counts locally.
+     */
     simulateLost (slideIndex, n = 1) {
-      if (!room) throw new Error('simulateLost(): no room open on this device')
-      room.simulateLost(slideIndex, n)
-      return room.lostCounts()
+      const i = Number(slideIndex)
+      const k = Math.max(1, Number(n) || 1)
+      if (!Number.isInteger(i) || i < 0) throw new Error('simulateLost(slideIndex, n): bad slide index')
+      if (room) {
+        room.simulateLost(i, k)
+        return room.lostCounts()
+      }
+      offlineLost[i] = (offlineLost[i] || 0) + k
+      const counts = { ...offlineLost }
+      bus.emit('lost:counts', counts)
+      return counts
+    },
+    /** Clear the offline fake taps (e.g. between rehearsals). */
+    resetSimulatedLost () {
+      for (const key of Object.keys(offlineLost)) delete offlineLost[key]
+      if (!room) bus.emit('lost:counts', {})
+      return room ? room.lostCounts() : {}
     },
 
     // ---- S8 share link
