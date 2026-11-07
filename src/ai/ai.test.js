@@ -310,3 +310,10 @@ test('B-007: serialSTT never runs two STT calls at once and survives a failing c
   assert.equal(sttBusy(), false)
   assert.deepEqual(promptOpts('Hash, Tables', 'previous tail text'), { prompt: 'Hash, Tables' }, 'prompt is vocabulary only (stable)')
 })
+
+test('B-005: synonym paraphrase of a slide bullet is dropped (Mac run 14:07)', () => {
+  assert.equal(isOnSlide('Allocate array twice the size when load factor is too high', SLIDE4), true)
+  assert.equal(isOnSlide('Every key must be reinserted because its index depends on m', SLIDE4), false)
+  assert.equal(isOnSlide("Thursday's lab implements resizing", SLIDE4), false)
+})
+const SLIDE4 = 'Resizing\nDouble the array when the load factor is too high\nRehash every key\nInsert is amortised O(1)'
