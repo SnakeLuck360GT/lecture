@@ -6,9 +6,23 @@ export async function complete (messages) {
   const q = await sdk()
   const modelId = await llmModel()
   const run = q.completion({ modelId, history: messages, stream: false })
-  const final = await run.final
-  const text = typeof final === 'string' ? final : (final?.content ?? final?.text ?? '')
-  return stripThinking(String(text))
+  return finalText(await run.final)
+}
+
+/**
+ * Extract the assistant text from a CompletionFinal (B-001).
+ * Real shape (@qvac/sdk 0.23.0, verified on the Mac): { contentText, toolCalls, stats, raw: { fullText }, ... }
+ */
+export function finalText (final) {
+  if (typeof final === 'string') return stripThinking(final)
+  const candidates = [final?.contentText, final?.content, final?.text, final?.raw?.fullText]
+  for (const c of candidates) {
+    if (typeof c === 'string') {
+      const t = stripThinking(c)
+      if (t) return t
+    }
+  }
+  return ''
 }
 
 export function stripThinking (t) {
