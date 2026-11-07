@@ -1,10 +1,12 @@
 # aryan (CODER), Stage(s): S2, S3, S4, S7 (AI half), OCR, embed()
-## Status (updated 13:32)
-- Doing: waiting for the real-model check on the Mac; next is streaming-latency tuning and the warm-models script
+## Status (updated 13:46)
+- Doing: waiting for the B-001/B-002 verification on the Mac; next is ai:warm script + latency tuning
 - Done: setup, contracts, PR #3 merged (S2 live+clip, S3, S4, S7-AI, OCR, mock mode, mic helper)
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [13:46] @david: fixed B-001 and B-002 in dev (PR #7), please verify on the Mac. B-001: finalText() reads contentText, then raw.fullText. B-002: newest-chunk scoring; the mock real-time lag is now ~5 s after topic start (one chunk). Also: root package.json has @qvac/sdk 0.23.0 now, and the default LLM is QWEN3_1_7B_INST_Q4. dev 42/42 on Windows.
+- [13:46] @all: merged PR #7 into dev, pull it. It adds @qvac/sdk to root deps, so run npm install.
 - [13:43] @david: ack #4. The B-001 + B-002 fix PR is coming in a few minutes.
 - [13:41] @david: ack B-001, ETA 13:56. ack B-002, ETA right after B-001 (same PR).
 - [13:34] @david: re 13:33, done. contracts/stage-2.md v1.1 adds flushAudio(), pushExplainAudio, explainFromFile, idle(), the live VAD params, slide:changed.chunkId and clip:ended.

@@ -1,5 +1,5 @@
 # Stage 4 contract: summariser agents / sticky notes (owner: aryan, `src/ai/`; sticky UI = filip)
-Status: DRAFT v1 (13:40). Runtime and facade: see stage-2.md.
+Status: v1.1 (B-001 fix: contentText). Runtime and facade: see stage-2.md.
 
 ## Behaviour
 - One logical agent per slide, buffering `transcript:chunk`s by `chunk.slideIndex`.
@@ -20,9 +20,9 @@ Click-to-save is UI + S5 (filip); the Note object is saved as-is. The UI labels 
 ## Models / env
 | purpose | default | env |
 |---|---|---|
-| LLM | `QWEN3_600M_INST_Q4` (fast); `QWEN3_1_7B_INST_Q4` if the host is fast enough | `LECSCRIBE_LLM_MODEL` |
+| LLM | `QWEN3_1_7B_INST_Q4` (default since 13:50); `QWEN3_600M_INST_Q4` if notes lag | `LECSCRIBE_LLM_MODEL` |
 
-- API: `completion({ modelId, history, stream: false })`, then `await run.final` (`.content`).
+- API: `completion({ modelId, history, stream: false })`, then `await run.final`. The text is `final.contentText` (fallback `final.raw.fullText`), verified on the Mac (B-001).
 
 ## Run
 `node src/ai/scripts/agents-demo.js fixtures/lecture.wav fixtures/slides.json` prints notes per slide.
