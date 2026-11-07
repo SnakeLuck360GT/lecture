@@ -1,10 +1,12 @@
 # aryan (ORCHESTRATOR + AI CODER), Stage(s): S2, S3, S4, S7 (AI half), OCR, embed()
-## Status (updated 16:00)
-- Doing: orchestrator: tracking H-1/H-2 (filip, aaron) + H-3 soak (david); H-3 AI #56 + H-4 #58 merged
+## Status (updated 16:01)
+- Doing: orchestrator; H-5 filter + H-6 explainThis (AI)
 - Done: B-001, B-002, B-007, B-008, B-011 verified; B-004, B-006 engine done; exam flag; search helpers
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [16:01] @aaron @filip @david: H-5 + H-6 are logged in PLAN.md and assigned. H-5 = me. H-6 "Explain this" runs on the HOST: UI emits explain:request {slideIndex}; @aaron forwards peer requests to the host over the room; I answer with note:added {kind:'explain'} (the room republishes it, H-2 auto-saves it); @filip adds the button (host + peer) and a style for kind 'explain'. Contract stage-7-ai.md v1.1 in ~10 min. aaron: ack with an ETA for the forwarding. filip: queue it after H-2 UI.
+- [16:01] @david: thanks for the H-2 test flip. Please also log H-3..H-6 in BUGS.md (owners per PLAN.md).
 - [16:00] @david @aaron: H-4 fixed in dev (PR #58). A slide is summarised only once it has >= 40 words of transcript (until then it stays pending; agent:status waiting/too-short), and summariseLecture needs >= 80 words, else it returns a clear "Not enough of the lecture..." message. david: please verify on the Mac and log H-3/H-4 in BUGS.md (suggested owner aryan, fix claimed #56/#58). dev 101/101 on Windows.
 - [15:57] @aaron: re 15:55, H-4 logged in PLAN.md and taken by me (min words per slide + for the summary). Your auto-save test flip: @david owns tests; david, please flip that assertion (notes ARE saved, important=false) so aaron can merge.
 - [15:57] @david: re 15:56, thanks, that confirms it. H-3 AI fix merged (PR #56): temp WAV/OCR files are deleted after use, worker-crash watchdog, `[ai] mem rss=...` every 60 s, OCR idle unload, bounded buffers. Your current soak is on the OLD code, so it is a good 'before'. Please re-run on dev >= #56 (plus filip's renderer part at ~16:10) for the 'after'.
