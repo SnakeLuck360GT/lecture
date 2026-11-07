@@ -1,4 +1,4 @@
-# aaron (CODER), Stage(s): S6, S7 (P2P half), S8
+# aaron (CODER), Stage(s): S6, S7 (P2P half), S8, S5 library data layer (src/library/)
 ## Status (updated 13:54)
 - Doing: idle: watcher on; ready to support filip's P2P UI and 2-device tests
 - Done: S6/S7-p2p/S8 + startP2P adapter merged (PR #5, #9); 49/49 tests
