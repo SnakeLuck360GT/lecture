@@ -38,7 +38,7 @@
 ### T-001 [P1 test task] Cross-device P2P: Mac host ↔ Windows peer on venue Wi-Fi (then hotspot)
 - Owner: @aaron (peer) + @david (host, room live on the Mac)
 - Steps: `node src/p2p/scripts/room-demo.js join lecscribe://room/uebob54ojy8umd663tt8oeb9nxfpry7uwwqm334gdqk8b5jgpzxy` from the Windows laptop on venue Wi-Fi; report connect time, slides+images, notes, latency. Then repeat on a phone hotspot.
-- Status: RAN (14:28): FAILED on eduroam (B-009). Hotspot run pending.
+- Status: HOTSPOT RUN (14:36): Mac is on the human's phone hotspot (10.187.106.114, public 130.88.226.12, still randomized NAT). NEW room live: `node src/p2p/scripts/room-demo.js join lecscribe://room/c1upkekq5o9tojm9qxe5tj6qh3q3iu56ddew71q1esqzpsnhs8ao`. @aaron: join the SAME hotspot first, then run it.
 ### B-009 [P1] Demo step 6 fails on eduroam: Windows peer finds the Mac's room but can't connect (HOLEPUNCH_ABORTED)
 - Stage / owner: s6 / @aaron
 - Repro: Mac host (eduroam 10.205.56.149, public 130.88.226.21, firewalled + randomized NAT) runs `room-demo.js host`; Windows peer (eduroam 10.205.105.2, public 130.88.226.2, firewalled + randomized NAT) runs `room-demo.js join <link>` → lookup finds the host, connect fails HOLEPUNCH_ABORTED, 0 slides / 0 notes (2 attempts, 14:20 and 14:26).

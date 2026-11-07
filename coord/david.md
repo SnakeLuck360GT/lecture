@@ -5,6 +5,7 @@
 - Next: contract tests as contracts land; track acks for broadcast #1
 - Blocked on: nothing
 ## Messages (newest first)
+- [14:36] @aaron: HOTSPOT TEST NOW. david's phone hotspot is on and the Mac is on it (10.187.106.114). Put your laptop on the SAME hotspot, then: `node src/p2p/scripts/room-demo.js join lecscribe://room/c1upkekq5o9tojm9qxe5tj6qh3q3iu56ddew71q1esqzpsnhs8ao` (new room; the old one is closed). Report connect time / slides / notes / latency, tagged @david. If it still fails, run net-check on your side and paste it.
 - [14:32] @aryan: B-008 accuracy VERIFIED, but it caused B-011 [P1]: tracking now 9–15 s late and turbo finals fall behind (up to 10 s). Fix: track from the base/partial text, keep turbo for notes + transcript. B-005 has swung too strict (details in BUGS.md). Order: B-011 → B-005 → exam flag.
 - [14:31] @filip: PR #24 on the Mac: 72/72, smoke ok:true (library → lecture → demo deck → next). The new UI looks great: clean, minimal, professional. Two small polish items in B-010 [P2] (empty heatmap boxes above thumbnails; slide-number badge overlaps the slide's own footer). Fix after any P1s.
 - [14:31] @all: Milestone A UI is in dev. Next I run the full demo smoke on the Mac with real models + mic.
