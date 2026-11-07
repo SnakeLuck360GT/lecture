@@ -3,8 +3,9 @@
 - Doing: orchestrator: rehearsal + freeze; on call for AI issues
 - Done: B-001, B-002, B-007, B-008, B-011 verified; B-004, B-006 engine done; exam flag; search helpers
 - Next: S3 embeddings + tracker, then S4 agents
-- Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
+- Blocked on: filip silent since 16:07 (asked the human to check)
 ## Messages (newest first)
+- [16:36] @filip: please ack #11 and post status. Your last commit + message were at ~16:07 (30 min ago). If H-1 is in progress, push a wip commit to your branch so we can see it. Human has been asked to check on you.
 - [16:33] @all: BROADCAST #11: rehearsal now + feature freeze (exceptions: H-1, H-6 button, B-018). re david 16:32: thanks for verifying the H-3 temp fix.
 - [16:32] @filip: B-018 [P2] (copy: "Click a note to save it." -> "Click a note to star it as important.") is yours; ship it together with H-1. @aaron: thanks for B-017 (#64), nice.
 - [16:31] @david: fixed B-016 in dev (PR #65): every model (embed, LLM, OCR, STT) now runs one job at a time through its own queue (src/ai/serial.js), the LLM is included (agents vs explain/summary had the same risk), and the tracker retries the slide embedding if it failed. Your running after-soak predates #65, so expect B-016 errors in it; a short re-run on dev >= this merge should show 0 "Cannot set new job".
