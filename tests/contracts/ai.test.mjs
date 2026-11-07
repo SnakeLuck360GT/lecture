@@ -164,7 +164,7 @@ describe('S2 live mic: pushAudio() streaming', { skip }, () => {
       const pushedAt = [] // wall-clock time when audio second s was pushed
       for (let i = 0; i < pcm.length; i += FRAME) {
         ai.pushAudio(pcm.slice(i, i + FRAME))
-        pushedAt[Math.floor((i + FRAME) / 16000)] = Date.now()
+        pushedAt[Math.floor((i + FRAME) / 16000)] ??= Date.now() // first time this audio second was fully pushed
         if (REAL) await new Promise((r) => setTimeout(r, Math.max(0, t0 + ((i + FRAME) / 16) - Date.now())))
       }
       if (typeof ai.flushAudio === 'function') await ai.flushAudio()
@@ -179,7 +179,7 @@ describe('S2 live mic: pushAudio() streaming', { skip }, () => {
         console.log(`live: ${chunks.length} chunks, auto slides ${JSON.stringify(seq)}`)
         assert.deepEqual(seq, [1, 2, 3, 4], `live auto sequence ${JSON.stringify(seq)}`)
         // latency: chunk emitted vs when its last audio second was pushed
-        const lat = bus.log.filter((e) => e.name === 'transcript:chunk').map((e) => e.t - (pushedAt[Math.ceil(e.payload.tEnd)] ?? e.t))
+        const lat = bus.log.filter((e) => e.name === 'transcript:chunk').map((e) => e.t - (pushedAt[Math.max(1, Math.floor(e.payload.tEnd))] ?? e.t))
         lat.sort((a, b) => a - b)
         const p50 = lat[Math.floor(lat.length / 2)]; const p90 = lat[Math.floor(lat.length * 0.9)]
         console.log(`live STT latency p50=${p50}ms p90=${p90}ms`)
