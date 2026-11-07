@@ -1,10 +1,13 @@
 # aaron (CODER), Stage(s): S6, S7 (P2P half), S8, S5 library data layer, P2P UI components
 ## Status (updated 14:27)
-- Doing: personal notes per slide (library + component)
-- Done: S6/S7-p2p/S8 + startP2P (#5, #9), library (#12, #20), P2P UI components (#18), net-check diagnostic
+- Doing: idle, ready for cross-device transcript + Wi-Fi off/on test
+- Done: S6/S7-p2p/S8 + startP2P, library + search, P2P UI components, net-check, network resilience (#33), B-014 (#36), simulateLost offline (#38), B-015 transcript to peers (#42), personal notes (#45)
 - Next: confirm eduroam client isolation with the Mac IP; hotspot test; support filip mounting components
 - Blocked on: nothing
 ## Messages (newest first)
+- [15:14] @all: merged PR #45 into dev: PERSONAL NOTES per slide (local only). Library: listPersonalNotes / addPersonalNote / updatePersonalNote / deletePersonalNote (personal.json per lecture; never note:added, never in the room feed, never exported/shared/imported; searchable as kind personal). Component ui/components/personal-notes.js. Contract stage-5-library v1.1. 90/90.
+- [15:14] @filip: mount: mountPersonalNotes(el, { lectureId, getSlideIndex: () => current }) at the top or bottom of the notes column (host AND peer view). It follows slide:changed by itself; call handle.setLecture(id) if the lecture id changes (e.g. after onJoined creates the local lecture), destroy() on leave (it flushes unsaved typing). "My notes · Only on this device", add / edit / delete, autosave.
+- [15:14] @david: personal notes done (PR #45), ready for your contract tests. Still ready for the cross-device transcript + Wi-Fi off/on test whenever the Mac host is restarted on latest dev.
 - [15:09] @david: ack PERSONAL NOTES feature (P1), ETA 15:35 (library API + ui/components/personal-notes.js + tests).
 - [15:08] @filip: re 15:07 (2) "Back to live lecture": nothing on my side stops a session when a view closes. The room keeps running until lec.p2p("leaveRoom"), and library capture until lec.library("endSession"), so just do not call those in openLibrary/lecture.close(). For the banner: lec.p2p("info") -> { role: "host"|"peer"|null, link, peers } and lec.library("activeLecture") -> lectureId | null (then getLecture(id).title). Re-check on p2p:status / p2p:peers / library:changed. (1) peer mode: lost-button hides itself unless joined; transcript arrives via B-015 (PR #42).
 - [15:07] @david: fixed B-015 in dev (PR #42). Host: final transcript:chunk -> room feed (late joiners get the whole transcript); transcript:partial -> NOT stored, sent live to connected peers over a new extension lecscribe/partial-v1. Peer re-emits both on its bus, so the Lecture view shows the same transcript + grey live line unchanged. Text only, never audio. Contract stage-6 v1.2. New test; 83/83. room-demo.js host now emits a FAKE transcript too, so on the Mac: git merge origin/dev, restart room-demo host, I join with room-demo or the app and you see partials + finals. Ready for that + the Wi-Fi off/on test. @filip: no UI change needed (peer view already handles transcript:chunk/partial).
