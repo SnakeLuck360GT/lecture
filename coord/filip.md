@@ -1,10 +1,13 @@
 # filip (CODER), Stage(s): S1, S5, S9 (+ UI of S4, S6, S7, S8)
-## Status (updated 13:49)
-- Doing: contracts/stage-1.md, then wiring aaron's room UI (Share room / Join / I'm lost) + S5 notebook
-- Done: S1 merged into dev (PR #6): Electron shell, bus + IPC bridge, PDF viewer, stickies, live mic toggle
+## Status (updated 14:14)
+- Doing: Library screen + Lecture view (new layout, mounting aaron's components)
+- Done: S1 (PR #6), tokens (PR #13), mic picker mounted + smoke mode (PR #15)
 - Next: stage-5 contract + notebook/week store; P2P UI; Explain/Done buttons
 - Blocked on: nothing
 ## Messages (newest first)
+- [14:14] @all: merged PR #13 (design tokens at top of ui/styles.css) and PR #15 into dev, pull it. Mount points + mount API are in contracts/stage-1.md ("UI v2"). Use only the CSS variables listed there; dark mode is automatic.
+- [14:14] @david @aryan: B-004 mic picker is MOUNTED in dev (PR #15): toolbar picker, Start listening uses the chosen device, switching while listening reconnects live. Ready for the iPhone Continuity test. Also new: `LECSCRIBE_SMOKE=out.png npm run start:mock` loads deck.pdf through the UI, clicks Next, screenshots, prints `[smoke] {...}` and exits 0/1 (passes on Windows, 64/64 tests). Renderer errors now print in the terminal as `[renderer:error]`.
+- [14:14] @aryan: re B-006, I'll render `transcript:partial` as a grey line under the last final line, replaced in place. Payload assumed `{ text, slideIndex? }`; tell me if it differs.
 - [14:05] @david: ack #5, #6, #7 (sorry, missed #5/#6 while heads-down). Following the SPLIT: design tokens + mount-point ids FIRST (ETA 14:15, in ui/styles.css + contracts/stage-1.md, PR'd to dev), then Library screen + Lecture view + mounting components. B-003 is already fixed in dev (main exits with a clear message if ELECTRON_RUN_AS_NODE is set; start:mock strips it). Dropping mic picker + P2P panels per #7. B-006 partial line: will render `transcript:partial` as a grey line in the Lecture view.
 - [13:49] @all: merged S1 (PR #6) into dev, pull it + `npm install`. Run: `npm run start:mock` (AI mock) or `npm start`. 47/47 tests on Windows. Renderer API is `window.lec` (emit/on/ai/p2p/processSlides/requestMic/info). Main auto-loads `src/ai/index.js` (startAI) and `src/p2p/index.js` if it exports `startP2P({ bus, ai })` (or default). TIP for Claudes inside VS Code: your shell has `ELECTRON_RUN_AS_NODE=1`, so `npm start` launched from your tool crashes. `npm run start:mock` strips it; for `npm start`, run `env -u ELECTRON_RUN_AS_NODE npm start`.
 - [13:49] @david: re 13:30/13:33/13:45. ack #4. Skeleton shipped as full S1 in PR #6 (merged 8d515d2). Git identity switched in BOTH folders to `Filip <152434470+Filip5011@users.noreply.github.com>` (repo-local config; earlier commits not rewritten). Smoke on the Mac: `npm install`, `npm run start:mock`, click "Demo deck", arrows/thumbnails, "Start listening" (macOS should prompt for the mic). Note: npm 11 blocks electron's postinstall; package.json has `allowScripts` for electron@33.4.11.
