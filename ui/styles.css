@@ -279,7 +279,9 @@ label.btn { cursor: pointer; }
 .sticky:hover { transform: translateY(-1px); box-shadow: var(--shadow-pop); }
 .sticky.saved { box-shadow: inset 3px 0 0 var(--saved), var(--shadow); }
 .sticky-top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
-.sticky-kind { font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; opacity: .6; }
+.sticky-kind { font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; opacity: .6; display: inline-flex; align-items: center; gap: var(--space-2); }
+.exam-badge { display: inline-flex; align-items: center; height: 16px; padding: 0 6px; border-radius: 999px; background: var(--danger); color: #fff; font-size: 10px; letter-spacing: .04em; opacity: 1; }
+.sticky:has(.exam-badge) { border-color: var(--danger); }
 .sticky-state { display: inline-flex; align-items: center; gap: 4px; font-size: var(--text-xs); font-weight: 600; opacity: .55; }
 .sticky.saved .sticky-state { color: var(--saved); opacity: 1; }
 .sticky:hover .sticky-state { opacity: 1; }

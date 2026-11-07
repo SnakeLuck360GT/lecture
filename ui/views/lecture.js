@@ -314,7 +314,13 @@ export function createLectureView (app) {
     d.type = 'button'
     d.title = saved ? 'Saved. Click to remove from your notes.' : 'Click to save to your notes'
     const top = el('div', 'sticky-top')
-    top.append(el('span', 'sticky-kind', n.kind === 'lecturer' ? 'Lecturer explanation' : 'AI-generated'))
+    const kind = el('span', 'sticky-kind', n.kind === 'lecturer' ? 'Lecturer explanation' : 'AI-generated')
+    if (n.emphasis === 'exam') {
+      const b = el('span', 'exam-badge', 'Exam')
+      b.title = 'The lecturer flagged this as likely to come up in the exam'
+      kind.append(b)
+    }
+    top.append(kind)
     const st = el('span', 'sticky-state')
     st.innerHTML = saved ? `${iconSvg('check', 12)}<span>Saved</span>` : `${iconSvg('bookmark', 12)}<span>Save</span>`
     top.append(st)
