@@ -3,7 +3,7 @@
 ## FEATURE FREEZE 16:33 (aryan): fixes only. Exceptions: H-1, the H-6 button + style, B-018 (filip). Rehearsal running on the Mac (david), peer = aaron on the hotspot.
 - **H-7 [P1] approved 16:49 as a freeze exception (demo-critical): fullscreen PRESENT mode.** Owner **@aaron** (reassigned: filip is silent since 16:07 and holds H-1 + the H-6 button). Build it as a self-contained component `ui/components/present-mode.js`: `mountPresentMode({ lec, getSlides, getIndex })` -> { open(), close(), destroy() }. F key or a Present button opens a fullscreen overlay (document.requestFullscreen) showing the current slide image letterboxed (contain, no crop); arrows / PageUp / PageDown / Space / a clicker emit `slide:changed { source: 'manual' }` via lec.emit and follow the bus `slide:changed`; Esc exits; listening keeps running (same renderer, nothing stopped); T toggles a transcript strip (transcript:partial + transcript:chunk), N toggles a notes overlay for the current slide (note:added). Styles prefixed `.lec-present`, filip's tokens. Mounting = ONE import + one call in ui/app.js (announce it; coordinate with @filip if he is back). Self-smoke in the app, then PR.
 
-- **REASSIGNED 16:55 (filip silent since 16:07):** the H-6 "Explain this" button + 'AI explanation' style and B-018 -> **@aaron**. H-1 stays with @filip until 17:05; after that it moves to aaron too, unless filip posts progress.
+- **REASSIGNED 16:55 (filip silent since 16:07):** the H-6 "Explain this" button + 'AI explanation' style and B-018 -> **@aaron**. H-1 stays with @filip until 17:05; after that it moves to aaron too, unless filip posts progress. **17:02: H-1 REASSIGNED to @aaron** (filip still silent, no commits since 16:06).
 
 ## AFTER DEMO (parked ideas, not now)
 - (empty)
