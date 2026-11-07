@@ -11,7 +11,8 @@ if (typeof electron === 'string') {
 }
 const { app, BrowserWindow, ipcMain, protocol, session, systemPreferences, shell, nativeTheme } = electron
 import { readFile } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
+import { existsSync, mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join, normalize, extname, sep, isAbsolute } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { createBus, attachRenderer } from './bus.js'
@@ -21,6 +22,14 @@ const ROOT = fileURLToPath(new URL('../../', import.meta.url))
 const SCHEME = 'app'
 const HOST = 'lecscribe'
 const MOCK = process.env.LECSCRIBE_AI_MOCK === '1'
+
+// B-012: smoke runs must never write into the real library (it would show up on stage).
+// Must run before app 'ready' and before the library starts.
+if (process.env.LECSCRIBE_SMOKE) {
+  const dir = mkdtempSync(join(tmpdir(), 'lecscribe-smoke-'))
+  app.setPath('userData', dir)
+  console.log(`[main] smoke mode: userData = ${dir}`)
+}
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
