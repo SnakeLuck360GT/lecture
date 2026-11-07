@@ -12,6 +12,7 @@ import { parseNotes, stripThinking } from './llm.js'
 import { isOnSlide, createSummariser } from './agents.js'
 import { createExplainer } from './explain.js'
 import { mockEmbed, mockComplete } from './mock.js'
+import { cosine } from './embed.js'
 import { blocksToText } from './ocr.js'
 import { startAI } from './index.js'
 
@@ -216,4 +217,31 @@ test('B-005: filters keep every notOnSlide fact and drop slide paraphrases (fixt
     [4, 'Resizing doubles the array when the load factor is too high'], [4, 'Resizing requires rehashing every key']]
   for (const [i, c] of copies) assert.equal(isOnSlide(c, slides[i].text), true, `dropped: ${c}`)
   assert.equal(tidyNote('The lecturer explained that linear probing is cache friendly'), 'Linear probing is cache friendly')
+})
+
+test('search: passages merge chunks per slide; hybrid ranks the right passage first (mock embed)', async () => {
+  const { transcriptPassages, hybridScore, searchEmbedder } = await import('./search.js')
+  const { readFile } = await import('node:fs/promises')
+  const script = JSON.parse(await readFile(new URL('../../fixtures/lecture.script.json', import.meta.url), 'utf8'))
+  // simulate ~5 s live chunks from the script
+  const chunks = []
+  let n = 0
+  for (const seg of script.segments) {
+    const w = seg.text.split(' ')
+    for (let i = 0; i < w.length; i += 12) chunks.push({ id: `c${++n}`, slideIndex: seg.slideIndex, tStart: seg.tStart + i / 3, tEnd: seg.tStart + (i + 12) / 3, text: w.slice(i, i + 12).join(' ') })
+  }
+  const ps = transcriptPassages(chunks)
+  assert.ok(ps.length >= 5 && ps.length < chunks.length)
+  assert.ok(ps.every((p) => p.chunkIds.length >= 1 && p.tEnd - p.tStart <= 30.5))
+  const se = searchEmbedder(mockEmbed)
+  const vecs = await se.docs(ps.map((p) => p.text))
+  const ask = async (q) => {
+    const qv = await se.query(q)
+    return ps.map((p, i) => ({ p, s: hybridScore({ cosine: cosine(qv, vecs[i]), query: q, text: p.text, kind: 'transcript' }) }))
+      .sort((a, b) => b.s - a.s)[0].p.slideIndex
+  }
+  assert.equal(await ask('at what load factor alpha does the HashMap resize'), 3)
+  assert.equal(await ask('why choose a prime table size'), 1)
+  assert.equal(await ask('what is primary clustering'), 2)
+  assert.equal(await ask('what is in Thursday lab'), 4)
 })
