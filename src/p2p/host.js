@@ -12,13 +12,15 @@ export async function startP2P ({ bus, ai = () => null, bootstrap } = {}) {
   if (!bus) throw new Error('startP2P: bus is required')
 
   // Remember the session so a room opened mid-lecture still publishes what already happened.
-  const history = { slides: null, slideIndex: null, notes: [] }
-  const onSlides = (s) => { history.slides = s; history.slideIndex = 0; history.notes = [] }
+  const history = { slides: null, slideIndex: null, notes: [], chunks: [] }
+  const onSlides = (s) => { history.slides = s; history.slideIndex = 0; history.notes = []; history.chunks = [] }
+  const onChunk = (c) => { if (c?.id && !history.chunks.some((x) => x.id === c.id)) history.chunks.push(c) }
   const onSlide = (e) => { if (Number.isInteger(e?.index)) history.slideIndex = e.index }
   const onNote = (n) => { if (n?.id && !history.notes.some((x) => x.id === n.id)) history.notes.push(n) }
   bus.on('slides:loaded', onSlides)
   bus.on('slide:changed', onSlide)
   bus.on('note:added', onNote)
+  bus.on('transcript:chunk', onChunk)
 
   let room = null
   let peer = null
@@ -115,6 +117,7 @@ export async function startP2P ({ bus, ai = () => null, bootstrap } = {}) {
       bus.off('slides:loaded', onSlides)
       bus.off('slide:changed', onSlide)
       bus.off('note:added', onNote)
+      bus.off('transcript:chunk', onChunk)
       try { await room?.close() } catch {}
       try { await peer?.close() } catch {}
       for (const s of shares.values()) await s.stop().catch(() => {})
