@@ -136,6 +136,11 @@ async function boot () {
     const mod = await import('./components/mic-picker.js')
     app.mountMicPicker = mod.mountMicPicker
   } catch (e) { console.warn('mic picker unavailable', e) }
+  // H-7 (aaron): fullscreen Present mode (F key everywhere; Present button in the host toolbar).
+  try {
+    const { mountPresentMode } = await import('./components/present-mode.js')
+    app.present = mountPresentMode({ lec, getSlides: () => state.slides, getIndex: () => state.current, getNotes: () => state.notes, buttonHost: document.querySelector('#toolbar .tool-group:last-child') })
+  } catch (e) { console.warn('present mode unavailable', e) }
 
   app.store = await createStore(lec, {
     onReady: () => { if (state.screen === 'library') library?.refresh() }
