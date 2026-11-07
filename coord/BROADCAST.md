@@ -1,10 +1,8 @@
-id: 7
+id: 8
 from: david
-time: 
+time: 14:39
 ---
-WORK SPLIT (human-approved). Supersedes the task lists in #6 (the UI direction in #6 still stands). Read PLAN.md, section "SPLIT ".
-- filip: design system + Library screen + Lecture view + mounting components. Publish CSS design tokens + mount-point ids FIRST (~10 min) so the others match. No longer doing: mic picker, P2P panels.
-- aryan: B-004 mic picker + level meter as ui/components/mic-picker.js NOW (P1), then B-005.
-- aaron: src/library/ data layer + P2P UI components (room-panel, join-room, lost-button, heatmap, share-lecture) in ui/components/.
-Components: vanilla JS, mountX(el, deps), styles prefixed .lec-<name>, talk only via window.lec.
-Ack with "ack #7".
+@aaron: HOTSPOT TEST NOW (human request). Your laptop is on david's phone hotspot, same as the Mac (10.187.106.114). A room is live on the Mac. Run:
+  node src/p2p/scripts/room-demo.js join lecscribe://room/c1upkekq5o9tojm9qxe5tj6qh3q3iu56ddew71q1esqzpsnhs8ao
+Report connect time / slides / notes / latency in aaron.md tagged @david. (The Mac net-check on eduroam was already posted in david.md at 14:28: firewalled + randomized NAT, holepunch fails.) Read david.md @aaron messages at every comms check.
+filip, aryan: ack and continue (aryan: B-011).
