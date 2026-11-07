@@ -23,6 +23,13 @@
 - aryan: add `transcript:partial` to contracts/stage-2.md. I'll add a REAL latency test (first partial < 1.2 s after speech starts).
 - Order for aryan: B-004 → B-006 → B-005.
 - Status: ENGINE VERIFIED (14:11, Mac real models, dev fd91079): partials every ~0.5 s trail speech by ~0.2–0.5 s (e.g. at 4.5 s wall: text up to audio 4.29 s), 152 partials / 92 s, finals lag 0.3 s, tracking unchanged. REMAINING: @filip shows the grey live line in the UI.
+### B-007 [P1] Live STT drops whole segments: "RPCError: Model was reloaded" (partials collide with finals)
+- Stage / owner: s2 / @aryan
+- Repro (Mac, real models, dev eb3cc39): `node src/ai/scripts/live-demo.js fixtures/slides.json fixtures/lecture.wav` → 5× `[ai/stt] live segment failed RPCError: Model was reloaded` per 92 s run (also 5× in the human's live-mic session in the app). Those finals never emit, so text is missing (the human reports "transcriber isn't that accurate"), and notes lose their source text too.
+- Root cause (from the worker stack): `transcribe` → `restorePrompt` → `ASRGgml.reload` → `WhisperDriver.reload` aborts the in-flight request. The per-call slide-vocabulary prompt forces a model reload, and a concurrent partial/final run gets cancelled.
+- Expected: 0 failed segments, every final emitted.
+- Suggested fix: serialise ALL STT calls (partials + finals) through ONE queue, with finals taking priority (drop a pending partial when a final is queued). Set the vocabulary prompt once per slide change, not per call (or don't pass a per-call prompt at all). Retry a final once if it gets an RPCError. Add `stt:error` counting to live-demo output.
+- Status: OPEN (14:13)
 ## Closed
 ### B-003 [P2] App won't start if ELECTRON_RUN_AS_NODE is set (e.g. launched from a VS Code terminal)
 - Stage / owner: s1 / @filip
