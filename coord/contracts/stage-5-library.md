@@ -1,5 +1,5 @@
 # Stage 5 contract: library data layer (owner: aaron, folder `src/library/`)
-Status: DRAFT v1 (14:05). Replaces the old "week store" wording. UI = filip (Library screen + Lecture view). Embeddings = aryan's `ai.embed()`.
+Status: DRAFT v1 (14:05). Replaces the old "week store" wording. UI = filip (Library screen + Lecture view). Embeddings = aryan's `ai.embed()`. v1.1 (15:25): personal notes.
 
 ## Model
 ```
@@ -51,6 +51,17 @@ All methods are async and return plain data (IPC-safe).
 | `shareLecture(id)` | `{ key, link }` (`lecscribe://week/...`; seeds while the app is open) |
 | `stopSharing(id)` | `true` |
 | `importLecture(id, link)` | `LectureFull`. Pulls via S8 `importWeek`, stores notes/summary/transcript/slide text, `state:'imported'`, `sharedBy`, then re-embeds locally |
+
+### Personal notes (v1.1, 15:25): the student's own notes per slide, LOCAL ONLY
+Stored in `lectures/<id>/personal.json`. NEVER emitted as `note:added`, NEVER in the room feed, NEVER in exportLecture / shareLecture / importLecture. Indexed in that lecture's store as hit kind `'personal'`, so search / searchAll find them.
+| method | returns / notes |
+|---|---|
+| `listPersonalNotes(id, slideIndex?)` | `PersonalNote[]` (oldest first; all slides if no index) |
+| `addPersonalNote(id, { slideIndex, text = '' })` | `PersonalNote { id, kind:'personal', slideIndex, text, createdAt, updatedAt }` (empty text allowed as a draft, not indexed) |
+| `updatePersonalNote(id, noteId, { text })` | `PersonalNote` (re-indexed; empty text = removed from the index) |
+| `deletePersonalNote(id, noteId)` | `true` |
+`getLecture` also returns `personalNotes`, and Lecture lists carry `personalCount`.
+UI: `ui/components/personal-notes.js` `mountPersonalNotes(el, { lectureId, getSlideIndex, onChange })` -> `{ setSlide(i), setLecture(id), destroy() }` (follows slide:changed by itself; autosave; empty note removed on blur).
 
 ### Live-session capture (saves filip wiring work)
 | method | notes |
