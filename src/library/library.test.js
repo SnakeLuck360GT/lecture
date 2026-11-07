@@ -163,3 +163,35 @@ test('share -> import a lecture between two libraries; imported notes tagged sha
   await alice.close()
   await bob.close()
 })
+
+test('with aryan search helpers: transcript indexed as passages, hybrid ranking, store rebuilt when embedder changes', async () => {
+  const { searchEmbedder, transcriptPassages, hybridScore } = await import('../ai/search.js')
+  const dir = tmp()
+  // 1) a store made by the plain embedder...
+  const plain = await createLibrary({ dir, embed: fakeEmbed })
+  const m = await plain.createModule({ name: 'M' })
+  const l = await plain.createLecture(m.id, { title: 'L' })
+  await plain.saveNote(l.id, note('n1', 1, 'open addressing probes for a free slot'))
+  // 2) ...opened with the helpers: first search rebuilds it with embedDocs
+  const se = searchEmbedder(fakeEmbed)
+  let docCalls = 0
+  const lib = await createLibrary({ dir, embed: fakeEmbed, embedQuery: se.query, embedDocs: (t) => { docCalls++; return se.docs(t) }, passages: transcriptPassages, score: hybridScore })
+  const chunks = [
+    { id: 'c-1', slideIndex: 0, tStart: 0, tEnd: 5, text: 'welcome to hash tables' },
+    { id: 'c-2', slideIndex: 0, tStart: 5, tEnd: 10, text: 'a hash function maps keys to buckets' },
+    { id: 'c-3', slideIndex: 1, tStart: 10, tEnd: 15, text: 'collisions happen when two keys share a bucket' }
+  ]
+  for (const c of chunks) await lib.appendTranscript(l.id, [c])
+  const hits = await lib.search(l.id, 'probes free slot', 5)
+  assert.equal(hits[0].refId, 'n1')
+  const tx = await lib.search(l.id, 'hash function buckets', 5)
+  const passage = tx.find((h) => h.kind === 'transcript')
+  assert.ok(passage, 'transcript passage is searchable')
+  assert.deepEqual(passage.chunkIds, ['c-1', 'c-2'], 'chunks of the same slide merged into one passage')
+  assert.equal(passage.slideIndex, 0)
+  const { readFileSync } = await import('node:fs')
+  const store = JSON.parse(readFileSync(join(dir, 'lectures', l.id, 'vectors.json'), 'utf8'))
+  assert.equal(store.embedder, 'docs-v1')
+  assert.equal(store.items.filter((it) => it.kind === 'transcript').length, 2)
+  assert.ok(docCalls > 0)
+})
