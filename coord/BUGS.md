@@ -1,5 +1,5 @@
 # BUGS
-## dev health: 🟢 GREEN  (14:44, commit 9882a22, 75/75 on the Mac)
+## dev health: 🟢 GREEN  (14:54, commit 2a369e2, 79/79 on the Mac; UI smoke ok incl. Explain)
 ## Open
 ### B-004 [P1] No microphone picker: demo needs the iPhone mic (Continuity) on the Mac
 - Stage / owner: s1 (UI) / @aryan (reassigned from filip at , component ui/components/mic-picker.js)
@@ -50,7 +50,7 @@
 - Stage / owner: s6 / @aaron
 - Repro: start a host room on network A (eduroam), switch the Mac to network B (hotspot) → the host keeps announcing its stale network-A identity; peers on B find it but can't connect (david 14:35–14:42). Restarting the host on B fixes it.
 - Expected: after a network change, the host re-binds / re-announces within ~10 s with no app restart (hyperdht/hyperswarm may have a network-change hook or a `suspend()/resume()`, so verify in the docs; otherwise detect an interface change via os.networkInterfaces() polling and recreate the swarm, keeping the same room key and Corestore so the link stays valid).
-- Status: OPEN (14:45)
+- Status: FIX CLAIMED (PR #33). Verify in the stage run (Wi-Fi off → hotspot).
 ### B-014 [P1] In-app "Join a live session" hangs on "Joining…" (demo step 6 in the real UI)
 - Stage / owner: s6 / @aaron (src/p2p/host.js), with @filip for the UI side
 - Repro (human report, 14:50): Windows laptop on the hotspot, `npm start` → sidebar "Join a live session" → paste lecscribe://room/hhwarg… → button stays "Joining…". On the Mac host the peer shows up only at 14:48:45 and leaves 18 s later.
