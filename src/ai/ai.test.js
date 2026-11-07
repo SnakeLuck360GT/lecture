@@ -414,3 +414,12 @@ test('B-005: genuine on-topic note is not dropped by a short title line (Mac run
   assert.equal(isOnSlide("Hash tables are used in Python and Java's dictionaries", slides[0].text), false)
   assert.equal(isOnSlide('Resizing requires rehashing every key', slides[4].text), true, 'still drops 3-word line paraphrase')
 })
+
+test('B-005: STT vocab puts spoken forms of slide shorthand first (mod -> modulus, α -> alpha)', async () => {
+  const { slideVocab, promptOpts } = await import('./stt.js')
+  const v = slideVocab('Hash functions\nh(k) = k mod m', 'Load factor\nα = n / m\nLookup is O(1) on average')
+  assert.ok(v.startsWith('modulus'), v)
+  assert.ok(v.includes('alpha') && v.includes('constant time'))
+  assert.ok(promptOpts(v).prompt.includes('modulus'))
+  assert.ok(!slideVocab('A modern model').includes('modulus'), 'whole-word match only')
+})

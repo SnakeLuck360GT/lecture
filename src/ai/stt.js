@@ -75,16 +75,30 @@ export function promptOpts (vocab, prev) { // eslint-disable-line no-unused-vars
 }
 
 /** Distinct, informative words of slide text, for the STT prompt. */
+// Slides use shorthand the lecturer SAYS in full: put the spoken form first in the prompt
+// (Mac run 14:44: "k mod m" was spoken "modulus" and heard as "Majulis").
+const SPOKEN = {
+  mod: 'modulus', '%': 'modulo', 'α': 'alpha', 'β': 'beta', 'λ': 'lambda', 'θ': 'theta', 'Σ': 'sum',
+  'O(1)': 'constant time', 'O(n)': 'linear time', 'O(log': 'logarithmic', 'avg': 'average',
+  'e.g.': 'for example', 'i.e.': 'that is', 'approx': 'approximately', 'w.r.t.': 'with respect to'
+}
+
 export function slideVocab (...texts) {
-  const seen = new Set(); const out = []
+  const seen = new Set(); const spoken = []; const out = []
+  const add = (list, w) => { const k = w.toLowerCase(); if (!seen.has(k)) { seen.add(k); list.push(w) } }
   for (const t of texts) {
-    for (const w of String(t || '').split(/[\s,;:()\[\]•\-–]+/)) {
+    const str = String(t || '')
+    for (const [short, full] of Object.entries(SPOKEN)) {
+      const re = /^[a-z]+$/i.test(short) ? new RegExp(`\\b${short}\\b`, 'i') : null
+      if (re ? re.test(str) : str.includes(short)) add(spoken, full)
+    }
+    for (const w of str.split(/[\s,;:()\[\]•\-–]+/)) {
       const k = w.toLowerCase().replace(/[^a-z0-9'.]/g, '')
       if (k.length < 3 || seen.has(k)) continue
-      seen.add(k); out.push(w.replace(/[.]+$/, ''))
+      add(out, w.replace(/[.]+$/, ''))
     }
   }
-  return out.join(', ')
+  return [...spoken, ...out].join(', ')
 }
 
 let chunkN = 0
