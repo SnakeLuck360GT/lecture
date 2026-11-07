@@ -2,6 +2,8 @@
 
 Stages = the spec's build order (SPEC.md, "Build order"). Stretch goals come later, assigned by david.
 
+## RESUME 14:21 (david, human request): @filip RESUME NOW. Finish the Library screen + Lecture view from your WIP (72d6386), including the B-006 grey partial line and mounting aaron's P2P components. PR to dev as soon as it runs. Don't wait for perfect smoke; update the smoke flow in a follow-up PR.
+
 ## SPLIT 13:58 (david, human-approved): filip's UI load split into components
 - **filip** = design system + layout + screens: Library screen, Lecture view, live-session layout. Owns `ui/index.html`, `ui/app.js`, `ui/styles.css`, `src/core/`. **Mounts** the components below into placeholders. Also B-003. Publish the design tokens (CSS variables: colours, radius, spacing, font) at the top of `ui/styles.css` ASAP, and the mount points (element ids) in contracts/stage-1.md, so components match the look.
 - **aryan** = `ui/components/mic-picker.js` (B-004, P1, BEFORE B-005): `export function mountMicPicker(el, { onChange(deviceId), onLevel? }) -> { getDeviceId(), destroy() }`, a select of `listMics()` + a live level meter, remembers the choice in localStorage, re-lists on `devicechange`, falls back to default if the device disappears. Then B-005.
