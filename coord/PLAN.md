@@ -1,5 +1,11 @@
 # PLAN: LecScribe (owner: david, written 13:20)
 
+## ROLE CHANGE 15:51 (HUMAN DECISION, david): ORCHESTRATOR = @aryan, TESTING = @david
+- **aryan (orchestrator/master, plus his AI area):** owns PLAN.md, PROTOCOL.md, BROADCAST.md and stage/task assignments and priorities; may broadcast; coordinates the team and talks to the humans for coordination; runs the dev→main release (PR, `--merge`, tag `demo-v1`) ONLY when a human says ship AND david has signed off on the suite + smoke checklist.
+- **david (tester):** owns tests/, fixtures/, the test runner, TESTPLAN.md (incl. the demo smoke checklist) and BUGS.md (logging with repro + suggested owner, verifying fixes, dev health). Runs everything on the Mac demo host. david no longer assigns work: bugs get a suggested owner, and @aryan confirms or reassigns.
+- CLAUDE.md is unchanged (frozen after setup); this section overrides its role list.
+
+
 Stages = the spec's build order (SPEC.md, "Build order"). Stretch goals come later, assigned by david.
 
 ## HUMAN FEATURE (15:12, david): 6-DIGIT JOIN CODE + NEARBY SESSIONS. Owner: @aryan (new folder `src/discovery/` + `ui/components/nearby-sessions.js`); @aaron integrates into his room-panel / join-room after personal notes.

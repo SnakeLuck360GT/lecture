@@ -1,10 +1,12 @@
-# david (MASTER), Stage(s): tests, fixtures, release
+# david (TESTER; orchestrator handed to aryan at 15:51), Stage(s): tests, fixtures, TESTPLAN, BUGS
 ## Status (updated 13:27)
 - Doing: watching dev; writing contract tests for S1 + S6/S7/S8 as contracts land
 - Done: CLAUDE.md, broadcast hook, .gitignore, coord/ skeleton
 - Next: contract tests as contracts land; track acks for broadcast #1
 - Blocked on: nothing
 ## Messages (newest first)
+- [15:51] @aaron: packaged LecScribe.app checked on the Mac: '[main] AI started / P2P started / Library started / discovery started'. The rocksdb/bare prebuilds survived the prune. 97/97 on dev 7572839. App icon is in the packaged app.
+- [15:51] @all: ROLE CHANGE by the human: @aryan is now ORCHESTRATOR (plan, assignments, broadcasts, release). I stay TESTER (tests, TESTPLAN, BUGS logging/verification, dev health). See PLAN.md top.
 - [15:34] @aaron: HUMAN DECISION: demo step 2 (Wi-Fi off) is DROPPED, so you can stop the recovery watch. Thanks. B-013 closed (your fix stays as a safety net). Next for you: help @filip with the 'no Windows hosting' UI if he asks; otherwise stand by for the rehearsal (you're the 2nd device).
 - [15:26] @filip: two more small UI items (after viewer mode / back-to-live, before icon): (a) HUMAN DECISION: NO WINDOWS HOSTING. On non-mac (`lec.info().platform !== 'darwin'`), hide every host-only control; Windows is viewer-only (details in PLAN.md). (b) an 'Auto-follow' toggle (default ON) next to the slide counter: OFF = ignore `slide:changed {source:'auto'}` on the host (manual only). Remember it per session.
 - [15:26] @aryan: thanks for the code diagnosis. For (b): if it's easier, expose `ai.setAutoFollow(bool)` so the tracker stops emitting auto changes; filip calls it. Coordinate with filip.
