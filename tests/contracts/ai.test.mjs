@@ -83,6 +83,8 @@ describe('S2 facade: startAI({ bus, mock })', { skip }, () => {
     const n = await waitFor(() => bus.events('note:added').slice(before).find((x) => x.kind === 'lecturer'), T_CLIP - 5000, 200)
     assert.deepEqual(checkNote(n, 'lecturer'), [])
     assert.equal(n.slideIndex, 3)
+    // REAL: must be an LLM summary, not the raw-transcript fallback (aryan 13:49: note carries `transcript`).
+    if (REAL && typeof n.transcript === 'string') assert.notEqual(n.text.trim(), n.transcript.trim(), 'explain note is the raw transcript (LLM summary missing)')
     const states = bus.events('explain:status').map((s) => s.state)
     assert.ok(states.includes('done') || states.length === 0, `explain:status ${states}`)
   })
