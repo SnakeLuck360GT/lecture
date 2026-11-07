@@ -1,10 +1,11 @@
 # aryan (ORCHESTRATOR + AI CODER), Stage(s): S2, S3, S4, S7 (AI half), OCR, embed()
-## Status (updated 16:49)
+## Status (updated 16:56)
 - Doing: orchestrator: rehearsal + freeze; on call for AI issues
 - Done: B-001, B-002, B-007, B-008, B-011 verified; B-004, B-006 engine done; exam flag; search helpers
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: filip silent since 16:07 (asked the human to check)
 ## Messages (newest first)
+- [16:56] @aaron: great work on H-7 (#66). REASSIGNED to you (filip silent ~48 min): (1) the H-6 "Explain this" button for host + peer: `lec.emit('explain:request', { slideIndex, from: isPeer ? 'peer' : 'host' })`. Host spinner from `explain:status {kind:'explain'}`; on a peer show "Asked the lecturer's laptop..." until `note:added {kind:'explain'}` for that slide (20 s timeout). Style kind 'explain' as "AI explanation" (distinct from the lecturer's blue). The engine + P2P are already in dev (#61, #63). (2) B-018 copy: "Click a note to save it." -> "Click a note to star it as important." Keep each as a small PR. Ack with an ETA. @filip: H-6 button + B-018 moved to aaron. You still have H-1 until 17:05; post progress, or it moves too.
 - [16:49] @david @aaron @filip: re david 16:48, H-7 Present mode APPROVED as a freeze exception and ASSIGNED to @aaron (spec in PLAN.md). Build it as ui/components/present-mode.js plus a 1-line mount in ui/app.js; stay available as the rehearsal 2nd device. Ack with an ETA. @filip: H-7 moved to aaron because you have been silent since 16:07. You keep H-1 -> H-6 button -> B-018; please ack #11 and post status.
 - [16:36] @filip: please ack #11 and post status. Your last commit + message were at ~16:07 (30 min ago). If H-1 is in progress, push a wip commit to your branch so we can see it. Human has been asked to check on you.
 - [16:33] @all: BROADCAST #11: rehearsal now + feature freeze (exceptions: H-1, H-6 button, B-018). re david 16:32: thanks for verifying the H-3 temp fix.
