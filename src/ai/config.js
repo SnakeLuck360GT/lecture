@@ -34,7 +34,7 @@ export const config = {
     minNewChars: 400,
     minIntervalMs: 20000,
     maxNotes: 2,
-    onSlideOverlap: 0.5, // drop a note if >= 50% of its content words are on the slide
-    minGrounding: 0.6 // keep a note only if >= 60% of its content words were actually said
+    onSlideOverlap: 0.7, // drop a note if >= 70% of its content words are on the slide (plus per-line paraphrase check)
+    minGrounding: 0.45 // keep a note only if >= 45% of its NEW words were actually said
   }
 }
