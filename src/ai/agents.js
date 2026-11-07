@@ -7,6 +7,7 @@ import { parseNotes } from './llm.js'
 import { examEmphasis } from './emphasis.js'
 
 let noteN = 0
+export const wordCount = (chunks) => chunks.reduce((n, c) => n + (String(c.text || '').match(/\S+/g) || []).length, 0)
 export const newNoteId = () => `n-${Date.now().toString(36)}-${++noteN}`
 
 /**
@@ -39,6 +40,12 @@ export function createSummariser ({ bus, complete, opts = {} }) {
       a.queued = false
       if (gen !== generation) return
       const fresh = a.pending.splice(0)
+      // H-4: not enough context yet -> keep it pending (more speech, or a return to this slide, adds to it)
+      if (wordCount([...a.seen, ...fresh]) < o.minWords) {
+        a.pending.unshift(...fresh)
+        bus.emit('agent:status', { slideIndex: i, state: 'waiting', reason: 'too-short', words: wordCount([...a.seen, ...a.pending]) })
+        return
+      }
       // B-005 recall: the LLM sees the slide's WHOLE transcript so far (notes already written are
       // passed in so it does not repeat them), not just the newest chunks.
       // H-3: bound the history (a long stay on one slide must not grow memory / the prompt forever)
