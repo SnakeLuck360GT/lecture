@@ -136,7 +136,7 @@ describe('S5 library: per-lecture vector stores are isolated', { skip }, () => {
 })
 
 describe('S5 library: live session capture', { skip }, () => {
-  test('startSession records slides + transcript from the bus, NOT notes; endSession → attended', async () => {
+  test('startSession records slides + transcript + generated notes (H-2: auto-saved, linked) from the bus; endSession → attended', async () => {
     const { createLibrary } = await maybeImport(LIB)
     const bus = recordingBus()
     const lib = await createLibrary({ dir: tmp(), embed, bus })
@@ -147,12 +147,14 @@ describe('S5 library: live session capture', { skip }, () => {
     assert.equal((await lib.getLecture(L.id)).state, 'live')
     bus.emit('slides:loaded', slidesWithImages())
     bus.emit('transcript:chunk', { id: 'c-1', slideIndex: 0, tStart: 0, tEnd: 5, text: 'Welcome back everyone' })
-    bus.emit('note:added', note(1, 0, 'should not be auto-saved'))
+    bus.emit('note:added', note(1, 0, 'auto-saved as it arrives (H-2)'))
     await new Promise((r) => setTimeout(r, 300))
     await lib.endSession()
     const full = await lib.getLecture(L.id)
     assert.equal(full.slides.length, 5); assert.equal(full.transcript.length, 1)
-    assert.equal(full.notes.length, 0, 'notes must only be saved on click')
+    // H-2 (human, 15:53): every generated note is auto-saved during a session, linked to slide + transcript, not starred
+    assert.equal(full.notes.length, 1, 'notes are auto-saved during a session (H-2)')
+    assert.equal(full.notes[0].slideIndex, 0); assert.deepEqual(full.notes[0].sourceChunkIds, ['c-1']); assert.equal(full.notes[0].important, false)
     assert.equal(full.state, 'attended'); assert.equal(await lib.activeLecture(), null)
   })
 })
