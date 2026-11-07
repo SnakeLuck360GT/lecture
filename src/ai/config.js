@@ -10,7 +10,7 @@ export const config = {
     vad: env.LECSCRIBE_VAD_MODEL || '', // e.g. VAD_SILERO_5_1_2 (optional)
     embed: env.LECSCRIBE_EMBED_MODEL || 'EMBEDDINGGEMMA_300M_Q4_0',
     embedFallback: 'GTE_LARGE_FP16',
-    llm: env.LECSCRIBE_LLM_MODEL || 'QWEN3_600M_INST_Q4',
+    llm: env.LECSCRIBE_LLM_MODEL || 'QWEN3_1_7B_INST_Q4',
     ocr: env.LECSCRIBE_OCR_MODEL || 'OCR_LATIN'
   },
   stt: {

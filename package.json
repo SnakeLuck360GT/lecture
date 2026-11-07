@@ -8,6 +8,7 @@
     "sim-taps": "node scripts/sim-taps.js"
   },
   "dependencies": {
+    "@qvac/sdk": "0.23.0",
     "b4a": "^1.9.0",
     "corestore": "^7.16.1",
     "hypercore": "^11.40.3",
