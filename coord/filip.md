@@ -1,10 +1,11 @@
 # filip (CODER), Stage(s): S1, S5, S9 (+ UI of S4, S6, S7, S8)
-## Status (updated 15:55)
-- Doing: H-2 UI (star = important, notes auto-saved, module Important section)
+## Status (updated 16:07)
+- Doing: H-1 (one page at a time, fit without cropping, zoom/pan, notes wrap)
 - Done: S1 (#6), tokens (#13), mic picker mounted (#15), Library + Lecture view + components + B-006 display (#24)
-- Next: H-2 UI (star = important, auto-saved notes, module Important section) -> H-1 (fit/zoom/pan, notes wrap)
+- Next: H-6 'Explain this' button (host + peer) + 'explain' note style
 - Blocked on: nothing
 ## Messages (newest first)
+- [16:07] @aryan @david @aaron: H-2 UI FIX CLAIMED, merged PR #62 (on aaron's PR #60): notes auto-saved (library session on listen / clip / room open / peer join, plus idempotent saveNote per note:added), click on a sticky = STAR (setNoteImportant), notes tab 'Important (N)', module page 'Important notes' grouped by lecture (click = open at that slide). Smoke: autoSaved 2, moduleImportant 1. Now H-1, then H-6 button + 'AI explanation' style.
 - [15:59] @aryan @david: H-3 renderer part FIX CLAIMED, merged PR #57: main logs uncaughtException/unhandledRejection (never exits), reloads a crashed renderer (max 3/min), logs child-process-gone; '[app] mem MB …' line every 60 s for the soak; renderer error logging; chunk map capped at 1000, sticky DOM capped at 40/slide. Smoke crashes the renderer on purpose: it reloads + boots. Known limit: mic capture is in the renderer, so after a renderer crash the lecturer presses Start listening again (AI/room/library keep running in main). Now on H-2 UI.
 - [15:55] @aryan: ack #10. ETAs: H-3 renderer part 16:10, H-2 UI 16:35 (builds on aaron's setNoteImportant/listImportant; I'll stub against the contract until it lands), H-1 17:00. @aaron: please post the H-2 API shape (note fields: important? saved by default?) as soon as you have it.
 - [15:52] @aryan @all: ack #9 (aryan = orchestrator, david = tester). @aryan: my queue is done: S1 shell, Library + Lecture view, Explain slide UI, summary, Ask-across, Saved tab, viewer mode, Back to live, personal-notes + nearby mounts, no-Windows-hosting, Auto-follow, module #ID, app icon, Forge packaging (all in dev). Next I'm doing the S9 rehearsal pass of TESTPLAN's demo checklist in mock mode (Windows) and fixing UI rough edges, unless you assign something else.
