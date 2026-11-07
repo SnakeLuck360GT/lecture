@@ -74,6 +74,7 @@ export const bus = createBus()
 let ai = null // AI facade from src/ai (null until loaded / if not present)
 let p2p = null // P2P facade from src/p2p (null until loaded / if not present)
 let library = null // library data layer from src/library (aaron; null until loaded)
+let discovery = null // 6-digit codes + Nearby sessions from src/discovery (aryan; null until loaded)
 let win = null
 
 const log = (...a) => console.log('[main]', ...a)
@@ -134,6 +135,19 @@ async function startAI () {
   }
 }
 
+// Discovery (aryan, coord/contracts/discovery.md): LAN beacon + DHT code lookup. Optional.
+async function startDiscovery () {
+  const entry = join(ROOT, 'src', 'discovery', 'index.js')
+  if (!existsSync(entry)) return
+  try {
+    const mod = await import(pathToFileURL(entry).href)
+    discovery = await mod.startDiscovery({ bus })
+    log('discovery started')
+  } catch (e) {
+    console.error('[main] discovery failed to start:', e)
+  }
+}
+
 async function startP2P () {
   const entry = join(ROOT, 'src', 'p2p', 'index.js')
   if (!existsSync(entry)) return
@@ -144,20 +158,6 @@ async function startP2P () {
   } catch (e) {
     console.error('[main] P2P failed to start:', e)
     bus.emit('p2p:status', { state: 'error', error: String(e?.message || e) })
-  }
-}
-
-// Discovery (aryan, src/discovery, contract discovery.md): 6-digit join codes + nearby sessions on the LAN.
-let discovery = null
-async function startDiscovery () {
-  const entry = join(ROOT, 'src', 'discovery', 'index.js')
-  if (!existsSync(entry)) return
-  try {
-    const mod = await import(pathToFileURL(entry).href)
-    discovery = await mod.startDiscovery({ bus })
-    log('Discovery started')
-  } catch (e) {
-    console.error('[main] discovery failed to start:', e)
   }
 }
 
@@ -200,18 +200,17 @@ function wireIpc () {
     return ai[method](...args)
   })
 
-  const DISCOVERY_METHODS = new Set(['advertise', 'stopAdvertising', 'listNearby', 'resolveCode'])
-  ipcMain.handle('discovery:call', async (_e, method, ...args) => {
-    if (!DISCOVERY_METHODS.has(method)) throw new Error(`discovery.${method} is not allowed from the renderer`)
-    if (!discovery) throw new Error('Discovery is not loaded (src/discovery missing or failed to start)')
-    if (typeof discovery[method] !== 'function') throw new Error(`discovery.${method} is not implemented`)
-    return discovery[method](...args)
-  })
-
   ipcMain.handle('p2p:call', async (_e, method, ...args) => {
     if (!p2p) throw new Error('P2P is not loaded (src/p2p missing or failed to start)')
     if (typeof p2p[method] !== 'function') throw new Error(`p2p.${method} is not implemented`)
     return p2p[method](...args)
+  })
+
+  const DISCOVERY_METHODS = new Set(['advertise', 'stopAdvertising', 'listNearby', 'resolveCode', 'advertising'])
+  ipcMain.handle('discovery:call', async (_e, method, ...args) => {
+    if (!DISCOVERY_METHODS.has(method)) throw new Error(`discovery.${method} is not allowed from the renderer`)
+    if (!discovery) throw new Error('Discovery is not loaded (src/discovery missing or failed to start)')
+    return discovery[method](...args)
   })
 
   ipcMain.handle('library:call', async (_e, method, ...args) => {
@@ -274,12 +273,11 @@ app.whenReady().then(async () => {
   allowMicrophone()
   wireIpc()
   createWindow()
-  // Discovery is independent of the models: start it first so nearby sessions show up immediately.
-  await startDiscovery()
   // Load models after the window is up, so the UI shows progress instead of a blank screen.
   await startAI()
   await startP2P()
   await startLibrary()
+  await startDiscovery()
   if (process.env.LECSCRIBE_SMOKE) runSmoke(process.env.LECSCRIBE_SMOKE).catch((e) => { console.error('[smoke] FAILED', e); app.exit(1) })
 })
 
