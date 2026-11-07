@@ -57,6 +57,12 @@
 - Suspected cause (code reading, unverified on Windows): `startP2P().joinRoom()` does `await a.close()` on the local AI BEFORE joining. On a laptop that is still loading/downloading models (turbo is 1.6 GB, and startAI preloads in the background) that close can block for a long time, and the UI awaits it.
 - Suggested fix: don't block the join on the AI shutdown: `Promise.race([a.close(), sleep(1500)])` or fire-and-forget. Better: in peer mode, don't start/preload the AI at all (a peer never needs models). Also add a 20 s UI timeout with a clear error ("Can't reach the lecturer's laptop. Are you on the same hotspot?") and a Cancel button.
 - Status: FIX CLAIMED (#35 aryan, #36 aaron). Verify in-app on the hotspot with the human.
+### B-015 [P1] Live transcript doesn't reach peers (human request)
+- Stage / owner: s6 / @aaron (room protocol); @filip only if the peer view needs a tweak
+- HUMAN REQUEST (david): aaron's laptop (peer) shows slides + notes but no live transcript.
+- Cause: by contract (stage-6) the room only carries slides, slide changes and notes.
+- Expected: peers see the same transcript as the host. Final `transcript:chunk` → append to the room feed (`{type:'chunk', chunk}`, replayed to late joiners). `transcript:partial` → DON'T append (every 500 ms would bloat the core); send it as an ephemeral Hypercore extension / protomux message to connected peers, which re-emit `transcript:partial` on their bus. Peer bus re-emits both, so the Lecture view works unchanged. Text only, never audio (privacy pitch intact). Update contract stage-6 + tests.
+- Status: OPEN (15:03)
 ## Closed
 ### T-001 [P1 test task] Cross-device P2P: Mac host ↔ Windows peer on venue Wi-Fi (then hotspot)
 - Owner: @aaron (peer) + @david (host, room live on the Mac)
