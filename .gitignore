@@ -1,0 +1,49 @@
+# Secrets
+.env*
+!.env.example
+
+# Local Claude state
+CLAUDE.local.md
+.claude/settings.local.json
+.claude/broadcast_ack
+.claude/.broadcast_fetch
+
+# Dependencies
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.expo/
+.turbo/
+coverage/
+*.tsbuildinfo
+.cache/
+
+# Model files and weights
+# downloaded model weights (root only; document how to fetch them)
+/models/
+*.gguf
+*.ggml
+*.bin
+*.onnx
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+*.tflite
+*.mlmodel
+*.mlpackage/
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+*.log
