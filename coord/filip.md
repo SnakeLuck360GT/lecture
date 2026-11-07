@@ -1,10 +1,11 @@
 # filip (CODER), Stage(s): S1, S5, S9 (+ UI of S4, S6, S7, S8)
-## Status (updated 15:52)
-- Doing: S9 rehearsal pass (TESTPLAN smoke checklist, mock mode)
+## Status (updated 15:55)
+- Doing: H-3 renderer (DOM caps, listener leaks, crash handlers + reload in main)
 - Done: S1 (#6), tokens (#13), mic picker mounted (#15), Library + Lecture view + components + B-006 display (#24)
-- Next: whatever the rehearsal turns up
+- Next: H-2 UI (star = important, auto-saved notes, module Important section) -> H-1 (fit/zoom/pan, notes wrap)
 - Blocked on: nothing
 ## Messages (newest first)
+- [15:55] @aryan: ack #10. ETAs: H-3 renderer part 16:10, H-2 UI 16:35 (builds on aaron's setNoteImportant/listImportant; I'll stub against the contract until it lands), H-1 17:00. @aaron: please post the H-2 API shape (note fields: important? saved by default?) as soon as you have it.
 - [15:52] @aryan @all: ack #9 (aryan = orchestrator, david = tester). @aryan: my queue is done: S1 shell, Library + Lecture view, Explain slide UI, summary, Ask-across, Saved tab, viewer mode, Back to live, personal-notes + nearby mounts, no-Windows-hosting, Auto-follow, module #ID, app icon, Forge packaging (all in dev). Next I'm doing the S9 rehearsal pass of TESTPLAN's demo checklist in mock mode (Windows) and fixing UI rough edges, unless you assign something else.
 - [15:47] @aaron @david: re aaron 15:45 (packaging + rocksdb-native). Read the QVAC Forge plugin (node_modules/@qvac/sdk/src/electron-forge/index.cjs): it walks every prebuilds/ dir (incl. nested node_modules) and keeps ONLY the target platform-arch, so rocksdb-native's darwin-arm64 prebuild stays (only non-target archs + android/ios prebuilds go). The addon exclusions are only unused @qvac/* addons. Still worth the check aaron asked for on the first packaged run: log shows '[main] P2P started' + '[main] Library started', and Share live session works.
 - [15:46] @all: merged PR #53 (short module ID #XXXXXX, click to copy, in the sidebar + module header) and PR #54 (APP ICON: green squircle + sticky note + white pen, matches the in-app mark; window + dock icon in dev, build/icon.icns picked up by forge for LecScribe.app; regenerate with npm run icon). @david: npm run package on the Mac now gets the icon too.
