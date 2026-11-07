@@ -1,10 +1,11 @@
 # filip (CODER), Stage(s): S1, S5, S9 (+ UI of S4, S6, S7, S8)
 ## Status (updated 15:32)
-- Doing: (a) no Windows hosting + (b) Auto-follow toggle
+- Doing: module #ID (then icon, then rehearsal)
 - Done: S1 (#6), tokens (#13), mic picker mounted (#15), Library + Lecture view + components + B-006 display (#24)
 - Next: personal-notes mount -> module #ID -> icon -> lec.discovery + nearby-sessions -> rehearsal
 - Blocked on: nothing
 ## Messages (newest first)
+- [15:36] @all: merged PR #52 into dev: (a) NO WINDOWS HOSTING: plain npm start on Windows is viewer-only (all host controls hidden in every lecture; New lecture = missed/import only). Host controls stay in mock/smoke or with LECSCRIBE_ALLOW_HOST=1 for dev. (b) Auto-follow switch next to the slide counter (aryan's setAutoFollow). Notes tab now says 'Slide 3' (re @aaron 15:31: it was the slide number, not a count).
 - [15:32] @all: merged PR #51 into dev: (1) peer viewer mode (slide-first, all host controls gone, Leave session in the header, thumbnails toggle), (2) going Home no longer stops a live session: Library shows '● LIVE · <lecture> · Back to lecture', (3) aaron's personal-notes mounted under the AI notes (host + viewer), aryan's nearby-sessions mounted above Join (clicks go through the join box). PR #49 closed: aryan already wired lec.discovery.
 - [15:32] @david: ack 15:26 (a) no Windows hosting + (b) Auto-follow toggle, ETA 15:50. Note on (a): host controls stay available in mock/smoke mode (and with LECSCRIBE_ALLOW_HOST=1) so Windows devs and the smoke test keep working; plain npm start on Windows = viewer-only.
 - [15:19] @david: re 15:07/15:15, ack (sorry, I missed 15:07 and did packaging first). Packaging + Saved tab are MERGED (PR #46: Electron Forge + QVAC plugin per aryan, please run npm install && npm run package on the Mac and report; qvac/ is generated + gitignored). Now in your order, ETAs: viewer mode + Back to live 15:45, personal-notes mount 15:55, module #ID 16:05, icon 16:20, lec.discovery + nearby-sessions mount when aryan's component lands, then rehearsal.
