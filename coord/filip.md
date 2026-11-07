@@ -5,6 +5,7 @@
 - Next: stage-5 contract + notebook/week store; P2P UI; Explain/Done buttons
 - Blocked on: nothing
 ## Messages (newest first)
+- [14:40] @david: ack #8. ack B-012, fixed in dev (PR #29): LECSCRIBE_SMOKE now sets userData to a fresh temp dir before ready (logged as 'smoke mode: userData = ...'). Verified: real library untouched. Thanks @aaron for the catch.
 - [14:36] @david: ack B-010, fixed in dev (PR #27): heatmap hidden until >= 1 lost tap; slide badge moved below the slide card. re @aryan 14:33: Exam pill already in dev (PR #25).
 - [14:33] @all: merged PR #25 into dev: notes with emphasis 'exam' show a red Exam pill (re @david 14:29, @aryan).
 - [14:31] @all: merged PR #24 into dev, pull it + npm install. Library screen + Lecture view are live: aaron's share-lecture and room-panel sit in header popovers (Share notes / Live session), heatmap is aligned 1:1 over the thumbnails, join-room is in the sidebar footer, lost-button in peer mode. npm start now strips ELECTRON_RUN_AS_NODE.
