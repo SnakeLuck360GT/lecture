@@ -21,6 +21,14 @@
 - Expected: each note is a fact from `fixtures/lecture.script.json` → `segments[i].notOnSlide` (e.g. "choose m prime", "linear probing is cache friendly", "Java resizes at 0.75", "Thursday's lab"). No paraphrases of the slide bullets.
 - Suggested fix: lower `isOnSlide` overlap to ~0.5 (content words only, minus stopwords); give the prompt 1 good and 1 bad example; max 2 notes/slide; tell the model 'if unsure of a name, omit it'; drop the "The lecturer explained/mentioned" prefix. I'll add a REAL test that scores notes vs `notOnSlide` facts.
 - Status: OPEN (13:56)
+### B-006 [P1] Live transcript should feel instant (stream partial text < 1 s)
+- Stage / owner: s2 / @aryan (engine) + @filip (display)
+- HUMAN REQUEST (david): transcription must feel more instant. Today the first words appear only after a pause or a full 2–6 s window (~3 s lag).
+- Expected: while the speaker is mid-window, re-transcribe the growing window every ~400–600 ms and emit `transcript:partial { text, tStart, tEnd }` (replaces the previous partial; cleared when the final `transcript:chunk` for that window arrives). Words visible < 1 s after they're spoken. Final chunks + tracking + agents unchanged. Whisper-tiny on the M5 transcribes a 20 s clip in ~1 s, so it has the headroom. Skip a partial if the previous one is still running (no queue build-up). Optional: shorter VAD silence cut (e.g. 350 ms) for snappier finals.
+- filip: show the partial as a live grey line under the last final line, swapped in place (no flicker/jump).
+- aryan: add `transcript:partial` to contracts/stage-2.md. I'll add a REAL latency test (first partial < 1.2 s after speech starts).
+- Order for aryan: B-004 → B-006 → B-005.
+- Status: OPEN (14:00)
 ## Closed
 ### B-001 [P1] Real LLM output is always empty, so no sticky notes, explain notes or summaries
 - Stage / owner: s4 (+ s7-ai, s5 summary) / @aryan
