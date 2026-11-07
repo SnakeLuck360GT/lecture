@@ -63,6 +63,11 @@
 - Evidence: soak lecture after ~20 min: vectors.json = 6.4 MB (JSON with 2-space indent, 768-dim floats); readVectors + writeJson(…, null, 2) per appendTranscript. A 1-hour lecture → ~20 MB parse + stringify per chunk on the main process (UI hitches, memory churn; node RSS 114 → 284 MB in the soak).
 - Suggested fix: no indentation for vectors.json, keep the store in memory and flush debounced (e.g. every 5 s / on endSession), append-only or binary Float32 file per lecture.
 - Status: OPEN (16:27)
+### B-018 [P2] Stale empty-state copy after H-2: "Click a note to save it."
+- Stage / owner: s9 / suggested @filip
+- Repro: human, Mac, latest dev: lecture view, a slide with no notes → "LecScribe writes a sticky note when the lecturer says something that is not on the slide. Click a note to save it." (ui/views/lecture.js:377). Notes now auto-save; the star marks them important.
+- Fix: "…not on the slide. Notes are saved automatically; star the ones that matter." Also make sure no "Saved" wording remains where the tab is now "Important".
+- Status: OPEN (16:31)
 ## Closed
 ### H-2 [P1] Notes auto-saved per session, star = important, per-module Important list (human 15:53)
 - Owners: @aaron (library: auto-save note:added on host + peers, setNoteImportant, listImportant), @filip (star toggle, Important section).
