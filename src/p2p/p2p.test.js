@@ -147,3 +147,36 @@ test('S6: createRoom({ history }) publishes slides/current slide/notes that happ
   await peer.close()
   await room.close()
 })
+
+test('startP2P (app-shell adapter): room opened mid-lecture, peer joins, AI stopped on peer, taps counted', async () => {
+  const { startP2P } = await import('./host.js')
+  const hostBus = mkBus()
+  const host = await startP2P({ bus: hostBus, bootstrap })
+  hostBus.emit('slides:loaded', [{ index: 0, text: 'A' }, { index: 1, text: 'B' }])
+  hostBus.emit('slide:changed', { index: 1, source: 'auto' })
+  hostBus.emit('note:added', { id: 'x1', slideIndex: 1, kind: 'ai', text: 'before room', sourceChunkIds: [], createdAt: 1 })
+  const r = await host.createRoom({ title: 'T' })
+  assert.equal(r.role, 'host')
+  assert.ok(r.link.startsWith('lecscribe://room/'))
+
+  const peerBus = mkBus()
+  let aiClosed = false
+  const peer = await startP2P({ bus: peerBus, bootstrap, ai: () => ({ close: async () => { aiClosed = true } }) })
+  await assert.rejects(peer.lost(0), /not joined/)
+  const gotNote = waitFor(peerBus, 'note:added', (n) => n.id === 'x1')
+  const gotSlide = waitFor(peerBus, 'slide:changed', (e) => e.index === 1)
+  const j = await peer.joinRoom(r.link)
+  assert.equal(j.role, 'peer')
+  assert.equal(aiClosed, true)
+  await gotNote
+  await gotSlide
+
+  const counted = waitFor(hostBus, 'lost:counts', (c) => c[1] === 1)
+  assert.deepEqual(await peer.lost(1), { 1: true })
+  await counted
+  assert.deepEqual(host.lostCounts(), { 1: 1 })
+  assert.deepEqual(host.simulateLost(1, 2), { 1: 3 })
+  structuredClone(host.info()); structuredClone(peer.info()) // IPC-safe
+  await peer.close()
+  await host.close()
+})
