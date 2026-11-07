@@ -555,6 +555,18 @@ export function createLectureView (app) {
     refreshExplain()
   }
 
+  /** Demo fallback (Shift+L): 3 "I'm lost" taps on the current slide, via the room if one is open, else locally. */
+  async function simulateLost () {
+    if (state.role === 'peer' || !state.slides.length) return
+    const i = state.current
+    try {
+      await lec.p2p('simulateLost', i, 3) // room merges and emits lost:counts
+    } catch {
+      // No live room (e.g. offline demo): bump the counts on the bus so heatmap + Explain button light up.
+      lec.emit('lost:counts', { ...state.lost, [i]: (Number(state.lost?.[i]) || 0) + 3 })
+    }
+  }
+
   /** Demo fallback (Shift+E): explain the current slide from fixtures/explain.wav. */
   async function explainFromFile () {
     if (state.role === 'peer' || !state.slides.length || explain.busy || explain.recording) return
@@ -789,6 +801,7 @@ export function createLectureView (app) {
     if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); go(state.current + 1) }
     if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(state.current - 1) }
     if (e.key === 'E' && e.shiftKey && !e.metaKey && !e.ctrlKey) { e.preventDefault(); explainFromFile() } // demo fallback
+    if (e.key === 'L' && e.shiftKey && !e.metaKey && !e.ctrlKey) { e.preventDefault(); simulateLost() } // demo fallback
   })
 
   return { open, close, go, openPdf, loadDemoDeck }
