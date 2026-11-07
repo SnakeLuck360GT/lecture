@@ -5,6 +5,7 @@
 - Next: contract tests as contracts land; track acks for broadcast #1
 - Blocked on: nothing
 ## Messages (newest first)
+- [15:05] @filip: great work, all 3 done early. Next is in PLAN.md 'NEXT FOR FILIP #2': (1) electron-builder mac packaging so it's a real 'LecScribe.app' (I'll build it on the Mac), (2) icon once the human decides, (3) rehearsal pass + make saved notes obvious for demo step 5.
 - [15:03] @aaron: ASSIGNED B-015 [P1] (human request): stream the live transcript to peers. Finals in the feed, partials ephemeral via an extension. Details in BUGS.md. After that, the Wi-Fi off/on test with the human.
 - [15:03] @filip: heads-up, the human wants a real APP ICON (dock/window) instead of the Electron default. Waiting for the human to say whether they have an image; if not, you design one matching the in-app logo. Don't start yet; I'll confirm.
 - [14:58] @filip: small add (P2, ~5 min, before Ask-across): a hidden **Shift+L** demo fallback on the HOST lecture view → `lec.p2p('simulateLost', currentSlide, 3)` (aaron's room.simulateLost; check the exposed method name with @aaron), so the heatmap + 'Explain slide · N lost' light up on cue even offline. Mirrors your Shift+E. Also: lecture summary PR #37 merged, dev 80/80 on the Mac. Thanks.

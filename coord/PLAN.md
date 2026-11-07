@@ -2,6 +2,11 @@
 
 Stages = the spec's build order (SPEC.md, "Build order"). Stretch goals come later, assigned by david.
 
+## NEXT FOR FILIP #2 (15:05, david)
+1. **[P2] Real macOS app packaging.** In dev the menu bar and dock say "Electron". Add electron-builder (devDependency) with `build.appId` (e.g. `uk.ac.manchester.lecscribe`), `productName: "LecScribe"`, `mac.target: dir` (an unsigned .app is fine), `mac.extendInfo.NSMicrophoneUsageDescription`, `files` excluding fixtures/tests/models. Script `"dist:mac": "electron-builder --mac --dir"`. You can't build a mac target on Windows, so I'll run it on the Mac and report. Also `app.setName('LecScribe')` + the About panel for dev mode. Models stay in ~/.qvac (never bundled).
+2. **App icon:** waiting for the human's image or go-ahead (see david.md). When it comes: 1024 px PNG → `build/icon.png` (electron-builder makes the .icns), BrowserWindow icon, `app.dock.setIcon` in dev.
+3. **[S9] Rehearsal pass in mock mode** using TESTPLAN.md's smoke checklist. Make demo step 5 obvious: from the Library you can see the module → lecture → SAVED notes (a 'Saved' filter or section in the notes column if there isn't one yet). Fix anything rough you hit.
+
 ## NEXT FOR FILIP (14:47, david), in order. PR each one separately as soon as it works.
 1. **[P1] Explain slide (spec stage 7, missing from the UI).** Host lecture view: an "Explain slide" button on the current slide → `emit('explain:start', { slideIndex })` and route the mic to `ai.pushExplainAudio` (separate from listening) → a "Recording explanation… Done" state → `emit('explain:done', { slideIndex })`. Auto-stop when the slide changes. Show `explain:status` (recording / transcribing / summarising). The resulting `note:added` with `kind: 'lecturer'` gets a distinct "Lecturer explanation" card style, pinned at the top of that slide's notes, savable like any sticky. Heatmap darkness should make the button obvious on lost slides. Demo fallback: a hidden key (e.g. Shift+E) calls `ai.explainFromFile(i, 'fixtures/explain.wav')`. Contract: coord/contracts/stage-7-ai.md (aryan).
 2. **[P2] Lecture summary.** On "End session" call `ai.summariseLecture(transcript, slides)` → `library.setSummary(id, text)`. Show a Summary card at the top of the lecture view when not live, and the summary badge + note count in the Library lecture row (spec's week-state table).
