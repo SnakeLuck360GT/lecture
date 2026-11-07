@@ -48,6 +48,12 @@ export async function startP2P ({ bus, ai = () => null, bootstrap } = {}) {
       return info()
     },
     info,
+    /** Re-announce on the current network (automatic on IP change; call after switching Wi-Fi to be sure). */
+    async refreshNetwork () {
+      if (room) await room.refreshNetwork()
+      if (peer) await peer.refreshNetwork()
+      return info()
+    },
 
     // ---- S7 lost taps
     async lost (slideIndex, on = true) {

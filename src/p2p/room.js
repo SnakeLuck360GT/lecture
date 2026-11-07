@@ -7,7 +7,7 @@
 //       `lecscribe/lost-v1` extension, and the host merges all logs into per-slide counts.
 import Corestore from 'corestore'
 import Hyperdrive from 'hyperdrive'
-import { defaultStorage, parseKey, roomLink, makeSwarm, joinTopic, imageToBuffer, bufferToDataUrl, serialQueue } from './util.js'
+import { defaultStorage, parseKey, roomLink, resilientSwarm, imageToBuffer, bufferToDataUrl, serialQueue } from './util.js'
 
 const LOST_EXT = 'lecscribe/lost-v1'
 const COUNTS_DEBOUNCE_MS = 200
@@ -83,16 +83,24 @@ export async function createRoom ({ bus, storage, title = '', moduleId = null, w
 
   // ---- swarm
   let peers = 0
-  const swarm = makeSwarm(store, {
+  const net = resilientSwarm(store, {
+    topic: feed.discoveryKey,
+    server: true,
+    client: false,
     bootstrap,
     onConnection: (socket) => {
       peers++
       bus.emit('p2p:peers', { count: peers })
-      socket.once('close', () => { peers--; if (!closed) bus.emit('p2p:peers', { count: peers }) })
+      socket.once('close', () => { peers = Math.max(0, peers - 1); if (!closed) bus.emit('p2p:peers', { count: peers }) })
+    },
+    // Network switched (e.g. Wi-Fi off/on on stage): fresh DHT node re-announced the room.
+    onRestart: (reason) => {
+      if (closed) return
+      bus.emit('p2p:status', { role: 'host', state: 'starting', key, link, reason })
+      net.flushed.then(() => { if (!closed) bus.emit('p2p:status', { role: 'host', state: 'open', key, link, reason }) }, () => {})
     }
   })
-  const topic = joinTopic(swarm, feed.discoveryKey, { server: true, client: false })
-  const ready = topic.flushed.then(() => {
+  const ready = net.flushed.then(() => {
     if (!closed) bus.emit('p2p:status', { role: 'host', state: 'open', key, link })
   }).catch((err) => {
     if (!closed) bus.emit('p2p:status', { role: 'host', state: 'error', key, link, error: String(err?.message || err) })
@@ -129,6 +137,8 @@ export async function createRoom ({ bus, storage, title = '', moduleId = null, w
     ready, // resolves once the room is announced on the DHT
     get peers () { return peers },
     lostCounts,
+    /** Re-announce on the current network (also happens automatically when the IP changes). */
+    refreshNetwork: () => net.restart('manual'),
     simulateLost (slideIndex, n = 1) {
       for (let i = 0; i < n; i++) applyTap(`sim-${slideIndex}-${devices.size}-${i}`, { type: 'lost', slideIndex, on: true })
     },
@@ -140,11 +150,10 @@ export async function createRoom ({ bus, storage, title = '', moduleId = null, w
       try { await append({ type: 'end' }) } catch {}
       closed = true
       clearTimeout(countsTimer)
-      topic.stop()
-      await swarm.destroy().catch(() => {})
+      await net.destroy()
       await store.close().catch(() => {})
     },
-    _internals: { store, feed, drive, swarm }
+    _internals: { store, feed, drive, get swarm () { return net.swarm } }
   }
 }
 
@@ -170,13 +179,20 @@ export async function joinRoom ({ bus, key, storage, bootstrap, imageTimeoutMs =
   feed.on('peer-add', (peer) => { try { ext.send({ logKey }, peer) } catch {} })
 
   let connected = false
-  const swarm = makeSwarm(store, {
+  const net = resilientSwarm(store, {
+    topic: feed.discoveryKey,
+    server: false,
+    client: true,
     bootstrap,
     onConnection: () => {
       if (!connected && !closed) { connected = true; bus.emit('p2p:status', { role: 'peer', state: 'connected', key: keyHex }) }
+    },
+    onRestart: (reason) => {
+      if (closed) return
+      connected = false
+      bus.emit('p2p:status', { role: 'peer', state: 'connecting', key: keyHex, reason })
     }
   })
-  const topic = joinTopic(swarm, feed.discoveryKey, { server: false, client: true })
 
   // ---- feed -> bus (strictly in order)
   const reader = (async () => {
@@ -248,11 +264,11 @@ export async function joinRoom ({ bus, key, storage, bootstrap, imageTimeoutMs =
     async close () {
       if (closed) return
       closed = true
-      topic.stop()
-      await swarm.destroy().catch(() => {})
+      await net.destroy()
       await store.close().catch(() => {})
       await reader
     },
-    _internals: { store, feed, lostLog, swarm }
+    refreshNetwork: () => net.restart('manual'),
+    _internals: { store, feed, lostLog, get swarm () { return net.swarm } }
   }
 }
