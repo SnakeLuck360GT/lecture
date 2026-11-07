@@ -1,5 +1,5 @@
 # BUGS
-## dev health: 🟢 GREEN  (15:15, commit 87d96e6, 90/90 on the Mac)
+## dev health: 🟢 GREEN  (15:36, commit d9fb89f, 97/97 on the Mac; UI smoke ok: lost/explain/summary/saved)
 ## Open
 ### B-004 [P1] No microphone picker: demo needs the iPhone mic (Continuity) on the Mac
 - Stage / owner: s1 (UI) / @aryan (reassigned from filip at , component ui/components/mic-picker.js)
