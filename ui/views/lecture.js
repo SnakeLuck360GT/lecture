@@ -374,7 +374,7 @@ export function createLectureView (app) {
       e.append(el('p', null, state.slides.length
         ? 'Nothing yet for this slide.'
         : 'Notes appear here while the lecture runs.'))
-      e.append(el('p', 'muted', 'LecScribe writes a sticky note when the lecturer says something that is not on the slide. Click a note to save it.'))
+      e.append(el('p', 'muted', 'LecScribe writes a sticky note when the lecturer says something that is not on the slide. Click a note to star it as important.'))
       box.append(e)
       return
     }
@@ -387,11 +387,11 @@ export function createLectureView (app) {
 
   function stickyEl (n) {
     const starred = state.saved.has(n.id) // H-2: notes are saved automatically; the star = important
-    const d = el('button', `sticky ${n.kind === 'lecturer' ? 'lecturer' : 'ai'}${starred ? ' saved starred' : ''}`)
+    const d = el('button', `sticky ${n.kind === 'lecturer' ? 'lecturer' : n.kind === 'explain' ? 'explain' : 'ai'}${starred ? ' saved starred' : ''}`)
     d.type = 'button'
     d.title = starred ? 'Important. Click to unstar.' : 'Saved automatically. Click to mark as important.'
     const top = el('div', 'sticky-top')
-    const kind = el('span', 'sticky-kind', n.kind === 'lecturer' ? 'Lecturer explanation' : 'AI-generated')
+    const kind = el('span', 'sticky-kind', n.kind === 'lecturer' ? 'Lecturer explanation' : n.kind === 'explain' ? 'AI explanation' : 'AI-generated')
     if (n.emphasis === 'exam') {
       const b = el('span', 'exam-badge', 'Exam')
       b.title = 'The lecturer flagged this as likely to come up in the exam'
@@ -576,6 +576,7 @@ export function createLectureView (app) {
     btn.querySelector('.label').textContent = explain.recording
       ? 'Done'
       : lost > 0 ? `Explain slide · ${lost} lost` : 'Explain slide'
+    refreshExplainThis() // H-6: the "Explain this" button follows the same slide/role changes
   }
 
   function setExplainStatus (text, busy = false) {
@@ -622,8 +623,9 @@ export function createLectureView (app) {
     refreshExplain()
   }
 
-  function onExplainStatus ({ slideIndex, state: st, error } = {}) {
+  function onExplainStatus ({ slideIndex, state: st, error, kind } = {}) {
     if (!state.active) return
+    if (kind === 'explain') return onExplainThisStatus({ slideIndex, state: st, error }) // H-6, not the lecturer recording
     const n = (Number.isInteger(slideIndex) ? slideIndex : explain.slide ?? state.current) + 1
     if (st === 'recording') { setExplainStatus(`Recording an explanation for slide ${n}…`); return }
     if (st === 'transcribing') { explain.busy = true; setExplainStatus('Transcribing the explanation…', true) }
@@ -631,6 +633,53 @@ export function createLectureView (app) {
     if (st === 'done') { explain.busy = false; setExplainStatus(''); toast(`Lecturer explanation pinned to slide ${n}`) }
     if (st === 'error') { explain.busy = false; explain.recording = false; setExplainStatus(''); toast(`Explain slide failed: ${error || 'unknown error'}`, { error: true, ms: 7000 }) }
     refreshExplain()
+  }
+
+  // ---------- H-6 "Explain this" (aaron): any user asks the HOST AI to explain the current slide ----------
+  // Host: the AI answers locally (explain:status kind 'explain'). Peer: the room forwards the request to the
+  // host (src/p2p), and the answer arrives as a normal note:added { kind: 'explain' }.
+  var explainThis = { pending: new Map() } // eslint-disable-line no-var -- var: refreshExplain() may run before this line
+
+  function refreshExplainThis () {
+    if (!explainThis) return
+    const bar = $('explain-this-bar')
+    const canAsk = state.role === 'peer' || app.hostAllowed !== false
+    bar.hidden = !state.active || !state.slides.length || !canAsk
+    $('btn-explain-this').disabled = explainThis.pending.has(state.current)
+    if (!explainThis.pending.has(state.current)) setExplainThisStatus('')
+  }
+  function setExplainThisStatus (text, busy = false) {
+    const s = $('explain-this-status')
+    s.hidden = !text
+    s.textContent = text || ''
+    s.classList.toggle('busy', busy)
+  }
+  function clearExplainThis (i) {
+    clearTimeout(explainThis.pending.get(i))
+    explainThis.pending.delete(i)
+    refreshExplainThis()
+  }
+  function requestExplainThis () {
+    const i = state.current
+    if (!state.slides.length || explainThis.pending.has(i)) return
+    const peer = state.role === 'peer'
+    lec.emit('explain:request', { slideIndex: i, from: peer ? 'peer' : 'host' })
+    explainThis.pending.set(i, setTimeout(() => {
+      clearExplainThis(i)
+      toast(peer ? 'No answer from the lecturer’s laptop yet. Try again in a moment.' : 'The explanation is taking too long. Try again.', { error: true, ms: 6000 })
+    }, peer ? 20000 : 60000))
+    refreshExplainThis()
+    setExplainThisStatus(peer ? 'Asked the lecturer’s laptop…' : `Explaining slide ${i + 1}…`, true)
+  }
+  function onExplainThisStatus ({ slideIndex, state: st, error } = {}) {
+    if (!Number.isInteger(slideIndex)) return
+    if (st === 'summarising' && slideIndex === state.current) setExplainThisStatus(`Explaining slide ${slideIndex + 1}…`, true)
+    if (st === 'error') { clearExplainThis(slideIndex); toast(`Explain this failed: ${error || 'unknown error'}`, { error: true, ms: 7000 }) }
+    if (st === 'done') clearExplainThis(slideIndex)
+  }
+  function onExplainThisNote (n) {
+    if (!n || n.kind !== 'explain' || !Number.isInteger(n.slideIndex)) return
+    if (explainThis.pending.has(n.slideIndex)) { clearExplainThis(n.slideIndex); toast(`AI explanation added to slide ${n.slideIndex + 1}`) }
   }
 
   /** Demo fallback (Shift+L): 3 "I'm lost" taps on the current slide, via the room if one is open, else locally. */
@@ -817,6 +866,7 @@ export function createLectureView (app) {
     if (state.active) { updateThumbBadges(); refreshExplain() }
   })
   lec.on('explain:status', onExplainStatus)
+  lec.on('note:added', onExplainThisNote) // H-6: clears the "Asked…" state when the explanation arrives
   $('btn-summarise').addEventListener('click', () => writeSummary())
   $('tab-slide').addEventListener('click', () => setNotesView('slide'))
   $('tab-saved').addEventListener('click', () => setNotesView('saved'))
@@ -838,6 +888,7 @@ export function createLectureView (app) {
   lec.on('ai:autofollow', (s) => { if (typeof s?.on === 'boolean') af.checked = s.on })
   syncAutoFollow = () => lec.ai('getAutoFollow').then((v) => { af.checked = v !== false }).catch(() => {})
   $('btn-explain').addEventListener('click', () => (explain.recording ? stopExplain(true) : startExplain()))
+  $('btn-explain-this').addEventListener('click', requestExplainThis) // H-6
   // aaron PR #33: show reconnecting while the swarm restarts after a network change
   lec.on('p2p:status', (s) => {
     if (s?.role !== 'host') return

@@ -396,6 +396,9 @@ label.btn { cursor: pointer; }
 .notes-empty .muted { font-size: var(--text-sm); }
 .sticky { display: flex; flex-direction: column; gap: var(--space-2); width: 100%; padding: var(--space-3); text-align: left; border-radius: var(--radius); border: 1px solid var(--sticky-edge); background: var(--sticky); color: var(--ink); box-shadow: var(--shadow); transition: transform var(--fast) var(--ease), box-shadow var(--fast) var(--ease); animation: rise 180ms var(--ease); }
 .sticky.lecturer { background: var(--lecturer); border-color: var(--lecturer-edge); }
+/* H-6 (aaron): AI explanation requested with "Explain this" (distinct from the lecturer's blue) */
+.sticky.explain { background: var(--accent-soft); border-color: var(--accent); }
+.explain-this { display: flex; align-items: center; gap: var(--space-2); }
 .sticky:hover { transform: translateY(-1px); box-shadow: var(--shadow-pop); }
 .sticky.saved { box-shadow: inset 3px 0 0 var(--saved), var(--shadow); }
 .sticky-top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }

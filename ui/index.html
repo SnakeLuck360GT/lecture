@@ -137,6 +137,11 @@
               </button>
               <span class="explain-status" id="explain-status" hidden></span>
             </div>
+            <!-- H-6 (aaron): any user (host or viewer) can ask the host AI to explain this slide -->
+            <div class="explain-this" id="explain-this-bar" hidden>
+              <button class="btn small ghost" id="btn-explain-this" type="button" title="Ask the AI to explain this slide using all the slides and what was said so far"><span class="label">Explain this</span></button>
+              <span class="explain-status" id="explain-this-status" hidden></span>
+            </div>
             <div class="slide-meta">
               <label class="auto-follow host-only" title="Turn the slides automatically when LecScribe hears the lecturer move on. Off = manual only."><input type="checkbox" id="auto-follow" checked><span class="switch"></span>Auto-follow</label>
               <span class="track-badge" id="track-badge" hidden></span>
