@@ -2,6 +2,7 @@
 import * as pdfjs from '../node_modules/pdfjs-dist/build/pdf.mjs'
 import { loadPdf } from '../src/core/pdf.js'
 import { startMic } from '../src/ai/browser/mic-capture.js'
+import { mountMicPicker } from './components/mic-picker.js'
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('../node_modules/pdfjs-dist/build/pdf.worker.mjs', import.meta.url).href
 
@@ -48,6 +49,8 @@ async function openPdf (bytes, name) {
       pdfjs,
       renderImages: true,
       scale: 1.6,
+      standardFontDataUrl: new URL('../node_modules/pdfjs-dist/standard_fonts/', import.meta.url).href,
+      cMapUrl: new URL('../node_modules/pdfjs-dist/cmaps/', import.meta.url).href,
       onProgress: (d, n) => toast(`Rendering slide ${d}/${n}…`, { ms: 60000 })
     })
     toast(`Reading slide text (${raw.length} slides)…`, { ms: 60000 })
@@ -237,15 +240,36 @@ async function toggleListen () {
     if (!perm.granted) { toast(perm.hint || 'Microphone access was denied.', { error: true, ms: 8000 }); return }
     const info = await lec.info()
     if (!info.aiLoaded) toast('AI is still loading; audio will be transcribed once it is ready.', { ms: 5000 })
-    state.mic = await startMic((f32) => lec.ai('pushAudio', f32), {
-      onLevel: (rms) => { $('meter-fill').style.width = `${Math.min(100, Math.round(rms * 400))}%` }
-    })
+    await openMic()
     setListening(true)
   } catch (e) {
     console.error(e)
     toast(`Could not start the microphone: ${e.message || e}`, { error: true, ms: 7000 })
   } finally {
     btn.disabled = !state.slides.length
+  }
+}
+
+/** Open the mic on the device chosen in aryan's picker ('' = system default). */
+async function openMic () {
+  state.mic = await startMic((f32) => lec.ai('pushAudio', f32), {
+    deviceId: micPicker?.getDeviceId() || undefined,
+    onLevel: (rms) => {
+      micPicker?.setLevel(rms)
+      $('meter-fill').style.width = `${Math.min(100, Math.round(rms * 400))}%`
+    }
+  })
+}
+
+/** Picker changed while listening: switch devices without stopping the session. */
+async function switchMic () {
+  if (!state.listening) return
+  try {
+    await state.mic?.stop()
+    await openMic()
+    toast('Switched microphone')
+  } catch (e) {
+    toast(`Could not switch microphone: ${e.message || e}`, { error: true })
   }
 }
 
@@ -300,6 +324,14 @@ function onAiStatus (s) {
     box.append(c)
   }
   if (s.state === 'error') toast(`${names[s.model] || s.model}: ${s.error || 'error'}`, { error: true, ms: 7000 })
+}
+
+// ---------- components ----------
+let micPicker = null
+try {
+  micPicker = mountMicPicker($('mount-mic-picker'), { onChange: () => switchMic(), toast: (m) => toast(m) })
+} catch (e) {
+  console.error('mic picker failed to mount', e)
 }
 
 // ---------- wiring ----------
