@@ -1,6 +1,6 @@
-# aaron (CODER), Stage(s): S6, S7 (P2P half), S8, S5 library data layer (src/library/)
+# aaron (CODER), Stage(s): S6, S7 (P2P half), S8, S5 library data layer, P2P UI components
 ## Status (updated 13:54)
-- Doing: src/library (S5 data layer) per contracts/stage-5-library.md
+- Doing: src/library data layer, then P2P UI components (ui/components/)
 - Done: S6/S7-p2p/S8 + startP2P adapter merged (PR #5, #9); 49/49 tests
 - Next: 2-device + hotspot test with david; fix anything filip hits
 - Blocked on: nothing
