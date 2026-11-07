@@ -5,7 +5,7 @@
 //   const ai = await startAI({ bus })        // bus: EventEmitter-like { on, off, emit }
 //   ai.playClip('fixtures/lecture.wav')       // emits transcript:chunk, slide:changed(auto), note:added
 import { config } from './config.js'
-import { setStatusBus, sttModel, embedModel, llmModel, closeAll } from './models.js'
+import { setStatusBus, sttModel, embedModel, llmModel, closeAll, isClosed } from './models.js'
 import { transcribeAudio, playClip as sttPlayClip, createLiveStream, transcribeFile, slideVocab, onSttError } from './stt.js'
 import { embed as realEmbed, cosine } from './embed.js'
 import { createTracker } from './tracker.js'
@@ -73,7 +73,8 @@ export async function startAI ({ bus, mock = config.mock, preload = !mock } = {}
     // every method awaits its own model lazily. Sequential so the first model is ready quickly.
     ready = (async () => {
       for (const f of [() => sttModel('partial'), () => sttModel('final'), embedModel, llmModel]) {
-        try { await f() } catch (e) { console.error('[ai] preload failed', e?.message || e) }
+        if (isClosed()) return // B-014: stop preloading after close()
+        try { await f() } catch (e) { if (!isClosed()) console.error('[ai] preload failed', e?.message || e) }
       }
     })()
   } else if (mock) {
@@ -131,6 +132,7 @@ export async function startAI ({ bus, mock = config.mock, preload = !mock } = {}
     },
     /** Wait until tracker, agents and explainer queues are drained (tests). */
     async idle () { await tracker.idle(); await agents.idle(); await explainer.idle() },
+    /** Fast (<= ~1.5 s) even while models are still downloading (B-014). */
     async close () {
       clip?.stop()
       bus.off('slides:loaded', onSlides)
