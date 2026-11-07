@@ -14,7 +14,7 @@
   - invented / garbled: s1 "The Magiula technique uses the lowest bits..." (STT 'modulus'); s0 "Jarvis Hashmare" (STT 'Java's HashMap'); s0 notes about resizing at 0.75 (not said during slide 0)
 - Expected: each note is a fact from `fixtures/lecture.script.json` → `segments[i].notOnSlide` (e.g. "choose m prime", "linear probing is cache friendly", "Java resizes at 0.75", "Thursday's lab"). No paraphrases of the slide bullets.
 - Suggested fix: lower `isOnSlide` overlap to ~0.5 (content words only, minus stopwords); give the prompt 1 good and 1 bad example; max 2 notes/slide; tell the model 'if unsure of a name, omit it'; drop the "The lecturer explained/mentioned" prefix. I'll add a REAL test that scores notes vs `notOnSlide` facts.
-- Status: OPEN (14:32): with turbo + PR #23 the filter is now TOO aggressive: s0 dropped a genuine note 'Hash tables are used in Python and Java's dictionaries' as on-slide; s4 got 0 notes (3 dropped); s2 kept only 'Similar keys can cause collisions' and still missed 'linear probing is cache friendly' even though turbo transcribed it; s1 has an invented 'Majulis is used to extract lower bits'. Target: ≥ 1 genuine note per slide.
+- Status: OPEN (14:56): 6 notes, 'Majulis' fixed, s1–s3 good; s0 = 0 and s4 = 0 (last-slide flush regression); 1 mis-slot. Also make the first sticky appear sooner (~12 s of speech) for the stage.
 ### B-006 [P1] Live transcript should feel instant (stream partial text < 1 s)
 - Stage / owner: s2 / @aryan (engine) + @filip (display)
 - HUMAN REQUEST (david): transcription must feel more instant. Today the first words appear only after a pause or a full 2–6 s window (~3 s lag).
