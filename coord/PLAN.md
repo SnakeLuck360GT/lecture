@@ -68,6 +68,7 @@ tests/, fixtures/                david
 - Lint/build: TBD by filip
 
 ## Spec assumptions in use (decided by david; humans can override)
+- **HUMAN DECISION: LecScribe is a macOS app.** The demo host and the 2nd device are Macs (Apple Silicon). Everything must run on macOS. aaron and aryan develop on Windows, so write cross-platform code (node `path`, no bash-only scripts, no Windows-only deps). david runs every dev merge on macOS and files platform bugs. filip handles the macOS mic permission (Electron: `NSMicrophoneUsageDescription` / `systemPreferences.askForMediaAccess('microphone')`). QVAC models must load on macOS arm64.
 - **Host = the lecturer/presenter laptop** (spec's assumption). It runs all models and the lecturer view (heatmap, Explain slide). Peers only receive.
 - Weeks keep **transcripts + summaries, no raw audio**.
 - Demo uses a **pre-recorded clip + matching deck** (`fixtures/`, made by david) instead of a live mic. The live mic is nice-to-have.
