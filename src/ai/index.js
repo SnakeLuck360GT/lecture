@@ -55,7 +55,7 @@ export async function startAI ({ bus, mock = config.mock, preload = !mock } = {}
     // Load in the BACKGROUND (first run downloads models) so the facade is usable at once;
     // every method awaits its own model lazily. Sequential so the first model is ready quickly.
     ready = (async () => {
-      for (const f of [sttModel, embedModel, llmModel]) {
+      for (const f of [() => sttModel('partial'), () => sttModel('final'), embedModel, llmModel]) {
         try { await f() } catch (e) { console.error('[ai] preload failed', e?.message || e) }
       }
     })()

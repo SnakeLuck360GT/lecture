@@ -317,3 +317,14 @@ test('B-005: synonym paraphrase of a slide bullet is dropped (Mac run 14:07)', (
   assert.equal(isOnSlide("Thursday's lab implements resizing", SLIDE4), false)
 })
 const SLIDE4 = 'Resizing\nDouble the array when the load factor is too high\nRehash every key\nInsert is amortised O(1)'
+
+test('B-008: final and partial STT queues are independent (partials not blocked by a slow final)', async () => {
+  const { serialSTT, sttBusy } = await import('./stt.js')
+  const order = []
+  const slowFinal = serialSTT(async () => { await tick(30); order.push('final') }, 'final')
+  const partial = serialSTT(async () => { await tick(1); order.push('partial') }, 'partial')
+  assert.equal(sttBusy('final'), true)
+  await Promise.all([slowFinal, partial])
+  assert.deepEqual(order, ['partial', 'final'])
+  assert.equal(sttBusy('partial'), false)
+})
