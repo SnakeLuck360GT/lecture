@@ -55,6 +55,16 @@ function realStore (lec) {
     unsaveNote: (id, nid) => call('unsaveNote', id, nid),
     appendTranscript: (id, c) => call('appendTranscript', id, c),
     setSummary: (id, text) => call('setSummary', id, text),
+    // H-2 (stage-5-library v1.2). Until aaron's implementation lands, fall back to saveNote with the flag.
+    setNoteImportant: async (id, noteId, important = true, note) => {
+      try { return await call('setNoteImportant', id, noteId, important, note) } catch (e) {
+        if (!/not implemented/i.test(String(e?.message || e)) || !note) throw e
+        return call('saveNote', id, { ...note, important, importantAt: important ? Date.now() : null })
+      }
+    },
+    listImportant: async (moduleId) => {
+      try { return await call('listImportant', moduleId) } catch (e) { if (/not implemented/i.test(String(e?.message || e))) return []; throw e }
+    },
     search: (id, q, k) => call('search', id, q, k),
     searchAll: (q, k) => call('searchAll', q, k),
     startSession: (id) => call('startSession', id),
@@ -94,6 +104,18 @@ function memoryStore () {
     async unsaveNote (lid, nid) { const l = find(lid); l.notes = l.notes.filter((x) => x.id !== nid); return summary(l) },
     async appendTranscript (lid, chunks) { const l = find(lid); for (const c of chunks) if (!l.transcript.some((x) => x.id === c.id)) l.transcript.push(c); return summary(l) },
     async setSummary (lid, text) { find(lid).summary = String(text || ''); return summary(find(lid)) },
+    async setNoteImportant (lid, nid, important = true, note) {
+      const l = find(lid)
+      let x = l.notes.find((n) => n.id === nid)
+      if (!x && note) { x = { ...note, savedAt: Date.now() }; l.notes.push(x) }
+      if (x) { x.important = !!important; x.importantAt = important ? Date.now() : null }
+      return x || null
+    },
+    async listImportant (mid) {
+      return lectures.filter((l) => l.moduleId === mid && l.notes.some((n) => n.important))
+        .sort((a, b) => String(a.date).localeCompare(String(b.date)) || a.createdAt - b.createdAt)
+        .map((l) => ({ lectureId: l.id, lectureTitle: l.title, date: l.date, state: l.state, notes: l.notes.filter((n) => n.important).sort((a, b) => (a.slideIndex ?? 0) - (b.slideIndex ?? 0)) }))
+    },
     async searchAll (q, k = 5) {
       const all = []
       for (const l of lectures) all.push(...await this.search(l.id, q, k))
