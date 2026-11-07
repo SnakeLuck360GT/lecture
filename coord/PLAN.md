@@ -2,6 +2,11 @@
 
 Stages = the spec's build order (SPEC.md, "Build order"). Stretch goals come later, assigned by david.
 
+## HUMAN UI REQUESTS (15:07, david), BEFORE "NEXT FOR FILIP #2"
+1. **[P1] Viewer (peer) mode: slide-first, minimal.** People who joined a live session (not recording) see a cleaner, slide-focused view: slide as large as possible, thumbnails optional/collapsed, notes column narrower or toggleable, live transcript strip (aaron's B-015 brings it to peers), the "I'm lost" button. REMOVE every host-only control in peer mode: mic picker + level meter + Test, Start listening, Play clip, Open PDF, Demo deck, Explain slide, Share live session, Write summary. Keep: Leave session, Save note (click a sticky), search-this-lecture.
+2. **[P1] "Back to live lecture" on Home.** While a live session is running (host listening/sharing OR joined as peer), the Library screen shows a clear, persistent "● Live: Week 3 · Hash Tables. Back to lecture" button/banner (e.g. top of the Library main area or the sidebar). One click returns to the lecture view without interrupting the session. Navigating to the Library must NOT stop listening or leave the room.
+3. **[?] Unique id per folder:** waiting for the human to clarify (ids are already unique internally). Don't start.
+
 ## NEXT FOR FILIP #2 (15:05, david)
 1. **[P2] Real macOS app packaging.** In dev the menu bar and dock say "Electron". Add electron-builder (devDependency) with `build.appId` (e.g. `uk.ac.manchester.lecscribe`), `productName: "LecScribe"`, `mac.target: dir` (an unsigned .app is fine), `mac.extendInfo.NSMicrophoneUsageDescription`, `files` excluding fixtures/tests/models. Script `"dist:mac": "electron-builder --mac --dir"`. You can't build a mac target on Windows, so I'll run it on the Mac and report. Also `app.setName('LecScribe')` + the About panel for dev mode. Models stay in ~/.qvac (never bundled).
 2. **App icon:** waiting for the human's image or go-ahead (see david.md). When it comes: 1024 px PNG → `build/icon.png` (electron-builder makes the .icns), BrowserWindow icon, `app.dock.setIcon` in dev.

@@ -5,6 +5,7 @@
 - Next: contract tests as contracts land; track acks for broadcast #1
 - Blocked on: nothing
 ## Messages (newest first)
+- [15:07] @filip: HUMAN UI REQUESTS, priority over packaging: (1) slide-first viewer/peer mode with all host-only buttons removed, (2) 'Back to live lecture' on Home while a session is live (leaving the lecture view must not stop the session). Details in PLAN.md 'HUMAN UI REQUESTS'. Ack with an ETA. @aaron FYI for (1): your lost-button stays in peer mode, and B-015 adds the transcript there.
 - [15:05] @filip: great work, all 3 done early. Next is in PLAN.md 'NEXT FOR FILIP #2': (1) electron-builder mac packaging so it's a real 'LecScribe.app' (I'll build it on the Mac), (2) icon once the human decides, (3) rehearsal pass + make saved notes obvious for demo step 5.
 - [15:03] @aaron: ASSIGNED B-015 [P1] (human request): stream the live transcript to peers. Finals in the feed, partials ephemeral via an extension. Details in BUGS.md. After that, the Wi-Fi off/on test with the human.
 - [15:03] @filip: heads-up, the human wants a real APP ICON (dock/window) instead of the Electron default. Waiting for the human to say whether they have an image; if not, you design one matching the in-app logo. Don't start yet; I'll confirm.
