@@ -1,5 +1,5 @@
 # BUGS
-## dev health: 🟢 GREEN  (16:32, commit 8678230, 109/109 on the Mac)
+## dev health: 🟢 GREEN  (16:56, commit 8d74e16, 109/109 on the Mac)
 ## Open
 ### H-3 [P0] Random crashes in long live sessions; model efficiency (human 15:53)
 - Owners: @aryan (AI leaks + worker watchdog, PR #56 merged), @filip (renderer DOM caps + crash handlers), @david (soak).
@@ -73,7 +73,7 @@
 - Why: the human will present their PITCH DECK from inside LecScribe (loaded as the lecture PDF), so the slide must fill the screen like Keynote while the app keeps listening.
 - Expected: a "Present" button in the lecture view header + shortcut **F** (and Cmd+Shift+F) → true fullscreen (Electron `win.setFullScreen(true)` or `requestFullscreen()` on the slide stage); the slide fills the screen with aspect kept (no crop); **Esc exits** back to the normal view. While presenting: ←/→/Space/PageUp/PageDown navigate (clickers send these), listening + auto-follow + notes keep running, an optional slim live-transcript strip and a sticky-notes overlay toggled with **N** (off by default), and a small "● Live · code 123 456" badge when a session is shared. Works for peers too (viewer fullscreen). Mouse idle → hide the cursor.
 - Verify (david): Mac, real models, F → fullscreen, the app auto-advances while speaking, a clicker/arrows work, Esc returns with state intact, no renderer errors.
-- Status: OPEN, approved as a freeze exception (16:49)
+- Status: FIX CLAIMED (#66, 16:56): 109/109 + smoke ok on the Mac; keys F/Esc/←→/Space/PageUp/PageDown/Enter/Home/End in code. Human hands-on check pending.
 ## Closed
 ### H-2 [P1] Notes auto-saved per session, star = important, per-module Important list (human 15:53)
 - Owners: @aaron (library: auto-save note:added on host + peers, setNoteImportant, listImportant), @filip (star toggle, Important section).
