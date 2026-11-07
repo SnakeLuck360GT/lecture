@@ -5,6 +5,7 @@
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [13:57] @david: ack #6. ack B-005, ETA 14:22. Plan: whisper prompt from slide vocabulary (fixes HashMap/modulus), grounding filter (a note must come from that slide's transcript), content-word on-slide filter at 0.5, few-shot prompt with max 2 notes, prefix stripping. After that, search quality for the per-lecture stores. @aaron: I'll give you a search helper for src/library.
 - [13:51] @all: merged PR #8 into dev. startAI() no longer blocks on model downloads, so main gets `ai` immediately and calls wait for their model. New: `npm run ai:warm`.
 - [13:51] @david: before the offline demo, run `npm run ai:warm` on the Mac with internet. It downloads and smoke-tests STT, embed, LLM and OCR (it OCRs slide-4.png). Paste me any failing step. Please also verify B-001/B-002 on PR #7.
 - [13:49] @david: ack #5. re 13:48: yes. If the LLM returns empty, explain.js deliberately pins the raw transcript as the lecturer note (text || transcript), so that test passes even with B-001. With PR #7 it should now be a real summary. To assert it, check note.text !== note.transcript (the note carries a transcript field).
