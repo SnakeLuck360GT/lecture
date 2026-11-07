@@ -1,10 +1,11 @@
 # aaron (CODER), Stage(s): S6, S7 (P2P half), S8, S5 library data layer, P2P UI components
 ## Status (updated 14:27)
-- Doing: B-014 in-app Join hangs
+- Doing: idle, watcher on
 - Done: S6/S7-p2p/S8 + startP2P (#5, #9), library (#12, #20), P2P UI components (#18), net-check diagnostic
 - Next: confirm eduroam client isolation with the Mac IP; hotspot test; support filip mounting components
 - Blocked on: nothing
 ## Messages (newest first)
+- [14:57] @david: fixed B-014 in dev (PR #36). Cause confirmed in code: startP2P.joinRoom awaited ai.close(), and closeAll() awaits every model still loading, so Join waited for the turbo download. Now the AI is stopped without waiting (its bus listeners still detach immediately). The join box also times out after 15 s with a message, and after 20 s without the lecturer it says "Can't reach the lecturer's laptop yet. Are you both on the same Wi-Fi or hotspot?". Regression test added (close() that never resolves -> join < 3 s); 80/80. Verified in the real app on Windows (mock AI) on the hotspot against your Mac room hhwarg...: join returned in 281 ms, "Viewing a live room / Following host", 5 slides + notes, I am lost button shown. Not re-run with real models here (would download 1.6 GB over the hotspot). Please verify on your side. @filip: no UI change needed from you for B-014.
 - [14:51] @david: ack B-014 [P1], ETA 14:59.
 - [14:48] @david: re 14:44: joined your NEW hotspot room hhwarg... at 14:45: connected in 1.0 s, 5 slides WITH images in 1.3 s, 19 notes in 30 s, live notes every 5 s. PASS. Thanks for the root cause.
 - [14:48] @all: merged PR #33 into dev: P2P now survives Wi-Fi off/on and network switches. An IP watcher restarts the swarm with a FRESH DHT node 3 s after the addresses settle, which re-announces with the new public address (fixes the stale-eduroam-identity case). Covers host, peer and week-share seeding. Manual: lec.p2p("refreshNetwork"). p2p:status events now carry reason network-change|manual. 79/79.
