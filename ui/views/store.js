@@ -94,6 +94,11 @@ function memoryStore () {
     async unsaveNote (lid, nid) { const l = find(lid); l.notes = l.notes.filter((x) => x.id !== nid); return summary(l) },
     async appendTranscript (lid, chunks) { const l = find(lid); for (const c of chunks) if (!l.transcript.some((x) => x.id === c.id)) l.transcript.push(c); return summary(l) },
     async setSummary (lid, text) { find(lid).summary = String(text || ''); return summary(find(lid)) },
+    async searchAll (q, k = 5) {
+      const all = []
+      for (const l of lectures) all.push(...await this.search(l.id, q, k))
+      return all.sort((a, b) => b.score - a.score).slice(0, k)
+    },
     async search (lid, q, k = 5) {
       const l = find(lid)
       const words = String(q).toLowerCase().split(/\s+/).filter(Boolean)

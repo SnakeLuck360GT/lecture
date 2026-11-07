@@ -36,9 +36,14 @@
           <h1 id="lib-module-name">Library</h1>
           <span class="lib-sub" id="lib-module-sub"></span>
         </div>
+        <div class="search ask nodrag" id="ask-box">
+          <span class="search-icon" data-icon="search"></span>
+          <input id="ask-input" type="search" placeholder="Ask across all lectures" autocomplete="off" aria-label="Search across all lectures">
+        </div>
         <button class="btn primary nodrag" id="btn-new-lecture" type="button" hidden><span data-icon="plus"></span>New lecture</button>
       </header>
       <div class="lib-body">
+        <section class="ask-results" id="ask-results" hidden aria-live="polite"></section>
         <form class="new-lecture" id="new-lecture-form" hidden>
           <input id="new-lecture-title" type="text" placeholder="Lecture title, e.g. Week 3 · Hash Tables" autocomplete="off" maxlength="100">
           <label class="check"><input type="checkbox" id="new-lecture-missed"> I missed this lecture</label>
