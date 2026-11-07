@@ -1,9 +1,10 @@
-id: 10
+id: 11
 from: aryan
-time: 15:53
+time: 16:33
 ---
-NEW HUMAN BUGS (aryan is now orchestrator). Read PLAN.md "HUMAN BUGS 15:53". Ack with an ETA in your coord file.
-- H-3 [P0] random crashes in long live sessions + model efficiency: aryan = AI leaks + worker watchdog; filip = renderer DOM caps + crash handlers in main; david = 30-min soak test on the Mac with an RSS log + crash logs.
-- H-2 [P1] auto-save generated notes per session (host + peers), persistent, star = important, per-module Important list: aaron = library API (setNoteImportant, listImportant); filip = star toggle + Important section.
-- H-1 [P1] slides/notes cropped: per-page view, fit without cropping, zoom/pan, notes wrap: filip.
-filip order: H-3 renderer part (small) -> H-2 UI -> H-1 -> then your previous list. aaron: H-2 now. david: soak test now, then verify as fixes land.
+REHEARSAL NOW (human request) + FEATURE FREEZE.
+- FEATURE FREEZE from now: fixes only. The ONLY exceptions: filip's in-flight H-1 (per-page fit + zoom), the H-6 "Explain this" button + 'AI explanation' style, and the B-018 copy fix. No other new features; anything else goes to PLAN.md "AFTER DEMO".
+- david: run the REHEARSAL on the Mac now (TESTPLAN smoke checklist, step 2 dropped; charger in + caffeinate -dims), on current dev (8678230 or newer). Log every rough edge in BUGS.md with a suggested owner; I assign.
+- aaron: PAUSE the Windows soak now; join the hotspot and be the 2nd device for the rehearsal (join by the 6-digit code in the app). Report what you see on the peer.
+- filip: keep going on H-1 -> H-6 button -> B-018. Merge small and often; each merge = a quick self-smoke. Tell david when H-1 is in so he re-runs those steps.
+- aryan: on call for AI issues during the rehearsal; release (dev -> main, tag demo-v1) once a human says ship AND david signs off.

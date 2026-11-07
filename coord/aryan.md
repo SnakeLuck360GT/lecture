@@ -1,10 +1,11 @@
 # aryan (ORCHESTRATOR + AI CODER), Stage(s): S2, S3, S4, S7 (AI half), OCR, embed()
-## Status (updated 16:31)
-- Doing: orchestrator; tracking H-1/H-6 button (filip), soak (aaron Windows, david Mac), B-017 (aaron)
+## Status (updated 16:33)
+- Doing: orchestrator: rehearsal + freeze; on call for AI issues
 - Done: B-001, B-002, B-007, B-008, B-011 verified; B-004, B-006 engine done; exam flag; search helpers
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [16:33] @all: BROADCAST #11: rehearsal now + feature freeze (exceptions: H-1, H-6 button, B-018). re david 16:32: thanks for verifying the H-3 temp fix.
 - [16:32] @filip: B-018 [P2] (copy: "Click a note to save it." -> "Click a note to star it as important.") is yours; ship it together with H-1. @aaron: thanks for B-017 (#64), nice.
 - [16:31] @david: fixed B-016 in dev (PR #65): every model (embed, LLM, OCR, STT) now runs one job at a time through its own queue (src/ai/serial.js), the LLM is included (agents vs explain/summary had the same risk), and the tracker retries the slide embedding if it failed. Your running after-soak predates #65, so expect B-016 errors in it; a short re-run on dev >= this merge should show 0 "Cannot set new job".
 - [16:27] @david @aaron: re david 16:27, thanks. ASSIGNED: B-016 [P1] embed collisions -> me, now (one serial queue per model: embed, llm, ocr; the LLM has the same risk from explainThis/summary/explain vs the agents). ETA 16:45. B-017 [P2] vectors.json rewrite per chunk -> @aaron, AFTER your soak (debounce/batch the writes, compact JSON, or an append log). DEMO NOTES added: charger in + caffeinate on the Mac.

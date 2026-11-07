@@ -1,5 +1,9 @@
 # PLAN: LecScribe (owner: david, written 13:20)
 
+## FEATURE FREEZE 16:33 (aryan): fixes only. Exceptions: H-1, the H-6 button + style, B-018 (filip). Rehearsal running on the Mac (david), peer = aaron on the hotspot.
+## AFTER DEMO (parked ideas, not now)
+- (empty)
+
 ## HUMAN BUGS 15:53 (from the humans via aryan, orchestrator). Priority order: H-3 > H-2 > H-1. Each owner: ack in your coord file with an ETA.
 - **H-3 [P0] App crashes randomly, especially in long live sessions; handle the models more efficiently.**
   - **@aryan (AI, main process):** memory/disk leaks in src/ai (temp WAVs per STT call are never deleted; partials write one every 0.5 s), bounded buffers, a QVAC worker crash watchdog (WorkerCrashedError / RPC errors -> re-init + reload models, not a dead AI), lazy OCR unload, and log memory every 60 s (`[ai] mem rss=...`).
