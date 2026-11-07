@@ -207,3 +207,19 @@ test('ipSignature lists non-internal IPv4 addresses (sorted, stable)', async () 
   assert.equal(a, ipSignature())
   assert.ok(!a.split(',').includes('127.0.0.1'))
 })
+
+test('B-014: startP2P.joinRoom does not wait for a slow AI shutdown (model still downloading)', async () => {
+  const { startP2P } = await import('./host.js')
+  const hostBus = mkBus()
+  const room = await createRoom({ bus: hostBus, bootstrap })
+  let closeCalled = false
+  const neverEnds = { close: () => { closeCalled = true; return new Promise(() => {}) } } // hangs forever
+  const p2p = await startP2P({ bus: mkBus(), bootstrap, ai: () => neverEnds })
+  const t0 = Date.now()
+  const info = await p2p.joinRoom(room.link)
+  assert.ok(Date.now() - t0 < 3000, `join took ${Date.now() - t0} ms`)
+  assert.equal(info.role, 'peer')
+  assert.equal(closeCalled, true, 'AI still told to stop')
+  await p2p.close()
+  await room.close()
+})
