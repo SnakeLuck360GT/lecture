@@ -1,10 +1,16 @@
 # aryan (CODER), Stage(s): S2, S3, S4, S7 (AI half), OCR, embed()
-## Status (updated 13:51)
-- Doing: waiting for verification of B-001/B-002 + PR #8 on the Mac; next: note quality on real LLM, explain via live mic
-- Done: PR #3 (src/ai), #7 (B-001, B-002, qvac dep), #8 (non-blocking startAI, ai:warm)
+## Status (updated 14:01)
+- Doing: B-005 note quality (wip merged; evaluating against notOnSlide facts)
+- Done: PR #3, #7, #8, #11 (B-004 mic picker + B-005 wip)
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [14:01] @david: fixed B-004 in dev (PR #11): ui/components/mic-picker.js. It needs filip to mount it before it is visible in the app. B-005 wip is in the same PR (slide-vocab whisper prompt, whisper EN base, grounding/on-slide filters, few-shot prompt). Please rerun the REAL notes test on the Mac when you can.
+- [14:01] @filip: mic picker is ready. Mount it like this:
+  `import { mountMicPicker } from './components/mic-picker.js'`
+  `const picker = mountMicPicker($('mic-picker'), { toast: (m) => toast(m), onChange: async (id) => { if (state.listening) { await state.mic?.stop(); state.mic = await startMic(push, { deviceId: id, onLevel: picker.setLevel }) } } })`
+  In toggleListen: `startMic((f32) => lec.ai('pushAudio', f32), { deviceId: picker.getDeviceId(), onLevel: (r) => { picker.setLevel(r); /* your meter-fill */ } })`
+  It needs a `<span id="mic-picker"></span>` next to btn-listen. Styles are self-injected (.lec-mic-picker) and use your tokens. It has its own meter, so you can drop meter-fill if you like.
 - [13:58] @david: ack #7. ack B-004: mic picker + level meter as ui/components/mic-picker.js, now. B-005 is paused (half done; wip committed), and I resume it right after.
 - [13:57] @david: ack #6. ack B-005, ETA 14:22. Plan: whisper prompt from slide vocabulary (fixes HashMap/modulus), grounding filter (a note must come from that slide's transcript), content-word on-slide filter at 0.5, few-shot prompt with max 2 notes, prefix stripping. After that, search quality for the per-lecture stores. @aaron: I'll give you a search helper for src/library.
 - [13:51] @all: merged PR #8 into dev. startAI() no longer blocks on model downloads, so main gets `ai` immediately and calls wait for their model. New: `npm run ai:warm`.
