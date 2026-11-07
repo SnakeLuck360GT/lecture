@@ -17,7 +17,8 @@ export const config = {
     chunkSec: Number(env.LECSCRIBE_CHUNK_SEC || 6),
     liveMinSec: Number(env.LECSCRIBE_LIVE_MIN_SEC || 2),
     liveMaxSec: Number(env.LECSCRIBE_LIVE_MAX_SEC || 5),
-    liveSilenceMs: Number(env.LECSCRIBE_LIVE_SILENCE_MS || 450),
+    liveSilenceMs: Number(env.LECSCRIBE_LIVE_SILENCE_MS || 350),
+    livePartialMs: Number(env.LECSCRIBE_LIVE_PARTIAL_MS || 500),
     language: env.LECSCRIBE_STT_LANG || 'en'
   },
   tracker: {

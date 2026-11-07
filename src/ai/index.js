@@ -47,7 +47,7 @@ export async function startAI ({ bus, mock = config.mock, preload = !mock } = {}
   // Mock live mic: map stream time onto a script fixture (LECSCRIBE_MOCK_SCRIPT, default fixtures/lecture.script.json).
   const liveTx = mock ? await liveScriptTranscriber(process.env.LECSCRIBE_MOCK_SCRIPT || 'fixtures/lecture.script.json') : transcribe
   const getVocab = () => slideVocab(slides[current]?.text, slides[current + 1]?.text)
-  const live = createLiveStream({ onChunk: emitChunk, getSlideIndex: () => current, transcribe: liveTx, getVocab })
+  const live = createLiveStream({ onChunk: emitChunk, getSlideIndex: () => current, transcribe: liveTx, getVocab, onPartial: (p) => bus.emit('transcript:partial', p) })
 
   let ready = Promise.resolve()
   if (preload) {

@@ -245,3 +245,36 @@ test('search: passages merge chunks per slide; hybrid ranks the right passage fi
   assert.equal(await ask('what is primary clustering'), 2)
   assert.equal(await ask('what is in Thursday lab'), 4)
 })
+
+test('B-006: live partials stream while speaking, stop after the final, never queue up', async () => {
+  const { createLiveStream } = await import('./stt.js')
+  const SR = 16000
+  let clock = 0
+  const events = []
+  let busy = 0; let maxBusy = 0
+  const transcribe = async (a, o) => {
+    busy++; maxBusy = Math.max(maxBusy, busy)
+    await tick(1)
+    busy--
+    return `${o.partial ? 'partial' : 'final'} ${(a.length / SR).toFixed(1)}`
+  }
+  const live = createLiveStream({
+    transcribe, getSlideIndex: () => 0, now: () => clock, partialMs: 500,
+    onChunk: (c) => events.push({ type: 'final', ...c }),
+    onPartial: (p) => events.push({ type: 'partial', ...p })
+  })
+  const tone = Float32Array.from({ length: 3 * SR }, (_, i) => Math.sin(i / 5) * 0.2)
+  const sil = new Float32Array(SR)
+  for (const part of [tone, sil]) {
+    for (let i = 0; i < part.length; i += 1600) { live.push(part.subarray(i, i + 1600)); clock += 100; await tick(2) }
+  }
+  await live.flush()
+  await tick(5)
+  const partials = events.filter((e) => e.type === 'partial')
+  const finalIdx = events.findIndex((e) => e.type === 'final')
+  assert.ok(partials.length >= 3, `got ${partials.length} partials`)
+  assert.ok(finalIdx > 0 && events.slice(0, finalIdx).every((e) => e.type === 'partial'), 'partials come before the final')
+  assert.ok(events.slice(finalIdx + 1).every((e) => e.type !== 'partial'), 'no stale partial after the final')
+  assert.ok(partials[0].tEnd - partials[0].tStart <= 1.2, 'first partial within ~1 s of speech')
+  assert.ok(maxBusy <= 2, 'at most one partial + one final in flight')
+})
