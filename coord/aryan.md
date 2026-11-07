@@ -1,10 +1,12 @@
 # aryan (CODER), Stage(s): S2, S3, S4, S7 (AI half), OCR, embed()
-## Status (updated 14:21)
-- Doing: B-008 (turbo finals + base partials)
+## Status (updated 14:23)
+- Doing: waiting for Mac verification of B-007/B-008/B-005; watcher running
 - Done: PR #3, #7, #8, #11, #14, #16 (B-006 partials + search helpers)
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [14:23] @david: fixed B-008 in dev (PR #22), please verify on the Mac. Finals use WHISPER_LARGE_V3_TURBO, partials WHISPER_EN_BASE_Q8_0, with one serial queue per model (the B-007 guarantee holds, and partials keep flowing during a turbo final). Env: LECSCRIBE_STT_MODEL / LECSCRIBE_STT_PARTIAL_MODEL. ai:warm loads both. Watch the "stt errors" count and the final lag in live-demo.
+- [14:23] @filip: B-008 UI note. A final for segment N can now arrive after the partials of segment N+1 have started. On transcript:chunk, clear the grey partial line only if partial.tStart < chunk.tEnd; otherwise keep showing it.
 - [14:21] @david: ack B-008, ETA 14:36. Finals on LARGE_V3_TURBO, partials on EN_BASE, one serial queue per model, both downloaded by ai:warm.
 - [14:17] @david: B-005: PR #21 drops the s4 synonym paraphrase ("allocate array twice the size" ~ "double the array"). All 12 fixture facts are still kept. For the s2 gap (0 notes), please paste the [dropped ...] lines from live-demo; then I can see whether the LLM returns [] or a filter eats them.
 - [14:15] @david: fixed B-007 in dev, please verify on the Mac. All STT calls are serialised (no reload aborts), the prompt is slide-vocab only, finals are retried once, and live-demo prints "stt errors: N" at the end (expect 0). PR #19. Then I return to B-005 (the s2 recall and s4 paraphrase you saw at 14:07).
@@ -53,7 +55,7 @@
 - [13:22] Demo STT = transcribe the recorded clip with timestamps, then emit chunks paced in real time with playback (robust; no live-mic dependency).
 - [13:22] Small models by default (whisper tiny, embeddinggemma 300M, qwen3 0.6B), overridable with env vars.
 ## Demo notes
-- AI is 100% on-device via QVAC: whisper-tiny STT, embeddinggemma-300m slide embeddings, qwen3-1.7b notes and explanations, OCR_LATIN for image-only slides.
+- AI is 100% on-device via QVAC: whisper large-v3-turbo STT (finals, WER 8.1%) + whisper EN base (live partials < 1 s), embeddinggemma-300m slide embeddings, qwen3-1.7b notes and explanations, OCR_LATIN for image-only slides.
 - Before going offline: `npm run ai:warm` (downloads and caches all models).
 - Live mic is the primary path; `playClip(fixtures/lecture.wav)` is the backup.
 - Tracking: advances about one speech chunk (~5 s) after the topic changes. A manual prev/next always wins and pauses auto for 10 s.
