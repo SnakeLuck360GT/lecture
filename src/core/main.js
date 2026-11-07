@@ -74,6 +74,7 @@ export const bus = createBus()
 let ai = null // AI facade from src/ai (null until loaded / if not present)
 let p2p = null // P2P facade from src/p2p (null until loaded / if not present)
 let library = null // library data layer from src/library (aaron; null until loaded)
+let discovery = null // 6-digit codes + Nearby sessions from src/discovery (aryan; null until loaded)
 let win = null
 
 const log = (...a) => console.log('[main]', ...a)
@@ -134,6 +135,19 @@ async function startAI () {
   }
 }
 
+// Discovery (aryan, coord/contracts/discovery.md): LAN beacon + DHT code lookup. Optional.
+async function startDiscovery () {
+  const entry = join(ROOT, 'src', 'discovery', 'index.js')
+  if (!existsSync(entry)) return
+  try {
+    const mod = await import(pathToFileURL(entry).href)
+    discovery = await mod.startDiscovery({ bus })
+    log('discovery started')
+  } catch (e) {
+    console.error('[main] discovery failed to start:', e)
+  }
+}
+
 async function startP2P () {
   const entry = join(ROOT, 'src', 'p2p', 'index.js')
   if (!existsSync(entry)) return
@@ -190,6 +204,13 @@ function wireIpc () {
     if (!p2p) throw new Error('P2P is not loaded (src/p2p missing or failed to start)')
     if (typeof p2p[method] !== 'function') throw new Error(`p2p.${method} is not implemented`)
     return p2p[method](...args)
+  })
+
+  const DISCOVERY_METHODS = new Set(['advertise', 'stopAdvertising', 'listNearby', 'resolveCode', 'advertising'])
+  ipcMain.handle('discovery:call', async (_e, method, ...args) => {
+    if (!DISCOVERY_METHODS.has(method)) throw new Error(`discovery.${method} is not allowed from the renderer`)
+    if (!discovery) throw new Error('Discovery is not loaded (src/discovery missing or failed to start)')
+    return discovery[method](...args)
   })
 
   ipcMain.handle('library:call', async (_e, method, ...args) => {
@@ -256,6 +277,7 @@ app.whenReady().then(async () => {
   await startAI()
   await startP2P()
   await startLibrary()
+  await startDiscovery()
   if (process.env.LECSCRIBE_SMOKE) runSmoke(process.env.LECSCRIBE_SMOKE).catch((e) => { console.error('[smoke] FAILED', e); app.exit(1) })
 })
 
@@ -351,6 +373,7 @@ async function runSmoke (pngPath) {
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })
 app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
 app.on('before-quit', async () => {
+  try { await discovery?.close?.() } catch {}
   try { await p2p?.close?.() } catch {}
   try { await library?.close?.() } catch {}
   try { await ai?.close?.() } catch {}

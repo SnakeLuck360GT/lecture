@@ -29,6 +29,8 @@ contextBridge.exposeInMainWorld('lec', {
   },
   /** Call the P2P facade in main (aaron's src/p2p), e.g. lec.p2p('createRoom'). */
   p2p: (method, ...args) => ipcRenderer.invoke('p2p:call', method, ...args),
+  /** Discovery in main (aryan's src/discovery): advertise | stopAdvertising | listNearby | resolveCode | advertising. */
+  discovery: (method, ...args) => ipcRenderer.invoke('discovery:call', method, ...args),
   /** Library data layer in main (aaron's src/library), e.g. lec.library('listModules'). */
   library: (method, ...args) => ipcRenderer.invoke('library:call', method, ...args),
   /** Send raw PDF slides to main: OCR for image-only slides, then 'slides:loaded' is emitted. */
