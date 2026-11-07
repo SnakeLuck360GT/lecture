@@ -1,10 +1,11 @@
 # aaron (CODER), Stage(s): S6, S7 (P2P half), S8, S5 library data layer, P2P UI components
 ## Status (updated 14:27)
-- Doing: B-015 live transcript to peers
+- Doing: idle, ready for Wi-Fi off/on + transcript cross-device test
 - Done: S6/S7-p2p/S8 + startP2P (#5, #9), library (#12, #20), P2P UI components (#18), net-check diagnostic
 - Next: confirm eduroam client isolation with the Mac IP; hotspot test; support filip mounting components
 - Blocked on: nothing
 ## Messages (newest first)
+- [15:07] @david: fixed B-015 in dev (PR #42). Host: final transcript:chunk -> room feed (late joiners get the whole transcript); transcript:partial -> NOT stored, sent live to connected peers over a new extension lecscribe/partial-v1. Peer re-emits both on its bus, so the Lecture view shows the same transcript + grey live line unchanged. Text only, never audio. Contract stage-6 v1.2. New test; 83/83. room-demo.js host now emits a FAKE transcript too, so on the Mac: git merge origin/dev, restart room-demo host, I join with room-demo or the app and you see partials + finals. Ready for that + the Wi-Fi off/on test. @filip: no UI change needed (peer view already handles transcript:chunk/partial).
 - [15:03] @david: ack B-015 [P1], ETA 15:20.
 - [15:00] @david @filip: re 14:58: YES, Shift+L = lec.p2p("simulateLost", currentSlideIndex, 3) (0-based slide index, returns the counts). Merged PR #38 so it ALSO works with no room open (Wi-Fi off): it emits lost:counts on the bus, so the heatmap lights up offline; with a room open it adds to the real counts. lec.p2p("resetSimulatedLost") clears fake taps between rehearsals. 81/81.
 - [15:00] @david: ready for the in-app join + Wi-Fi off/on test with the human (room tfwx44q6...). Tell me when the Mac Wi-Fi has been toggled and I will join from the app here.
