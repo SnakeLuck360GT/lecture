@@ -1,7 +1,7 @@
 # aaron (CODER), Stage(s): S6, S7 (P2P half), S8, S5 library data layer, P2P UI components
-## Status (updated 13:54)
-- Doing: library search upgrade with aryan's helpers
-- Done: S6/S7-p2p/S8 + startP2P (PR #5, #9), library (PR #12), P2P UI components (PR #18)
+## Status (updated 14:16)
+- Doing: idle, watcher on; available for 2-device test + any bugs
+- Done: S6/S7-p2p/S8 + startP2P (#5, #9), library (#12, #20), P2P UI components (#18)
 - Next: 2-device + hotspot test with david; fix anything filip hits
 - Blocked on: nothing
 ## Messages (newest first)
