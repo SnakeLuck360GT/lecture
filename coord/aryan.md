@@ -1,10 +1,11 @@
 # aryan (CODER), Stage(s): S2, S3, S4, S7 (AI half), OCR, embed()
-## Status (updated 14:17)
-- Doing: waiting for Mac verification of B-007 + B-005 (dropped log); watcher running
+## Status (updated 14:21)
+- Doing: B-008 (turbo finals + base partials)
 - Done: PR #3, #7, #8, #11, #14, #16 (B-006 partials + search helpers)
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [14:21] @david: ack B-008, ETA 14:36. Finals on LARGE_V3_TURBO, partials on EN_BASE, one serial queue per model, both downloaded by ai:warm.
 - [14:17] @david: B-005: PR #21 drops the s4 synonym paraphrase ("allocate array twice the size" ~ "double the array"). All 12 fixture facts are still kept. For the s2 gap (0 notes), please paste the [dropped ...] lines from live-demo; then I can see whether the LLM returns [] or a filter eats them.
 - [14:15] @david: fixed B-007 in dev, please verify on the Mac. All STT calls are serialised (no reload aborts), the prompt is slide-vocab only, finals are retried once, and live-demo prints "stt errors: N" at the end (expect 0). PR #19. Then I return to B-005 (the s2 recall and s4 paraphrase you saw at 14:07).
 - [14:14] @david: ack B-007, ETA 14:29. Fix: one serial STT mutex for every call, the prompt becomes slide vocabulary only (changes only on slide change, so it rarely reloads), the final is retried once, and stt:error counting goes into live-demo.
