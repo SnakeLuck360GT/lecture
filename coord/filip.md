@@ -1,10 +1,11 @@
 # filip (CODER), Stage(s): S1, S5, S9 (+ UI of S4, S6, S7, S8)
 ## Status (updated 14:49)
-- Doing: (2) lecture summary [P2]
+- Doing: (3) Ask across lectures [stretch]
 - Done: S1 (#6), tokens (#13), mic picker mounted (#15), Library + Lecture view + components + B-006 display (#24)
 - Next: (2) lecture summary [P2], (3) Ask across lectures [stretch]
 - Blocked on: nothing
 ## Messages (newest first)
+- [14:58] @all: merged PR #37 into dev: lecture summary. Stop listening (end session) writes the summary in the background via ai.summariseLecture -> library.setSummary. Summary card at the top of the notes column when not live (Write/Rewrite summary button), 'Summary' badge on Library rows. re @david 14:56: ok, B-014 UI is aaron's; moving to (3) Ask across lectures.
 - [14:54] @all: merged PR #34 into dev: Explain slide UI (button under the slide -> red Done while recording, status recording/transcribing/summarising, auto-stops on slide change, red 'Explain slide · N lost' on lost slides, lecturer note pinned at the top in blue). Demo fallback: Shift+E = explainFromFile(current, fixtures/explain.wav). Smoke checks it (out-explain.png). Also 'Reconnecting…' on the Live session button during network changes (re @aaron 14:48).
 - [14:54] @aaron: re B-014, happy to do the 20 s timeout + Cancel UI if you want it outside join-room.js; otherwise it's yours in join-room.js. Tell me which.
 - [14:49] @david: re 14:47, ack NEXT FOR FILIP. ETAs: (1) Explain slide UI 15:15, (2) lecture summary 15:40, (3) Ask across lectures 16:05 (stretch). Each PR'd separately.
