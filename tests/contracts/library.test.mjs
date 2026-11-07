@@ -136,7 +136,7 @@ describe('S5 library: per-lecture vector stores are isolated', { skip }, () => {
 })
 
 describe('S5 library: live session capture', { skip }, () => {
-  test('startSession records slides + transcript from the bus, NOT notes; endSession → attended', async () => {
+  test('startSession records slides + transcript + AUTO-SAVES notes from the bus (H-2), not important by default; endSession → attended', async () => {
     const { createLibrary } = await maybeImport(LIB)
     const bus = recordingBus()
     const lib = await createLibrary({ dir: tmp(), embed, bus })
@@ -147,12 +147,17 @@ describe('S5 library: live session capture', { skip }, () => {
     assert.equal((await lib.getLecture(L.id)).state, 'live')
     bus.emit('slides:loaded', slidesWithImages())
     bus.emit('transcript:chunk', { id: 'c-1', slideIndex: 0, tStart: 0, tEnd: 5, text: 'Welcome back everyone' })
-    bus.emit('note:added', note(1, 0, 'should not be auto-saved'))
+    bus.emit('note:added', note(1, 0, 'auto-saved during the live session'))
     await new Promise((r) => setTimeout(r, 300))
     await lib.endSession()
     const full = await lib.getLecture(L.id)
     assert.equal(full.slides.length, 5); assert.equal(full.transcript.length, 1)
-    assert.equal(full.notes.length, 0, 'notes must only be saved on click')
+    // H-2 (human 15:53): every note:added is auto-saved into the live lecture, linked to slide + transcript, not important by default.
+    if (typeof lib.setNoteImportant === 'function') { // H-2 merged → notes are auto-saved
+      assert.equal(full.notes.length, 1, 'H-2: note:added must be auto-saved during a live session')
+      assert.equal(full.notes[0].slideIndex, 0); assert.deepEqual(full.notes[0].sourceChunkIds, ['c-1'])
+      assert.ok(!full.notes[0].important, 'auto-saved notes must not be important by default')
+    } // else: pre-H-2 library, auto-save not expected yet (PENDING)
     assert.equal(full.state, 'attended'); assert.equal(await lib.activeLecture(), null)
   })
 })
@@ -186,5 +191,34 @@ describe('S5 library: export / share / import a lecture (real DHT)', { skip }, (
       const hits = await bob.search(missed.id, 'prime table size', 3)
       assert.equal(hits[0]?.refId, 'n-1')
     } finally { await alice.stopSharing(L.id) }
+  })
+})
+
+// ---- H-2: important notes (human 15:53; spec in PLAN.md "HUMAN BUGS 15:53"; owner aaron). PENDING until setNoteImportant exists.
+let h2skip = skip
+if (!h2skip) { const l = await (await maybeImport(LIB)).createLibrary({ dir: tmp(), embed }); if (typeof l.setNoteImportant !== 'function') h2skip = 'PENDING: library.setNoteImportant / listImportant not merged yet (H-2, aaron)' }
+describe('H-2 library: important notes per module', { skip: h2skip }, () => {
+  test('setNoteImportant toggles + persists; listImportant(moduleId) groups starred notes by lecture, in lecture order', async () => {
+    const { createLibrary } = await maybeImport(LIB)
+    const dir = tmp(); const bus = recordingBus()
+    const lib = await createLibrary({ dir, embed, bus })
+    const m = await lib.createModule({ name: 'Algorithms' }); const other = await lib.createModule({ name: 'OS' })
+    const w2 = await lib.createLecture(m.id, { title: 'Week 2', date: '2026-10-31' })
+    const w3 = await lib.createLecture(m.id, { title: 'Week 3', date: '2026-11-07' })
+    const os1 = await lib.createLecture(other.id, { title: 'OS 1' })
+    await lib.saveNote(w2.id, note(1, 0, 'merge sort is stable'))
+    await lib.saveNote(w3.id, note(2, 1, 'choose m prime')); await lib.saveNote(w3.id, note(3, 3, 'Java resizes at 0.75'))
+    await lib.saveNote(os1.id, note(4, 0, 'context switch cost'))
+    await lib.setNoteImportant(w3.id, 'n-3', true); await lib.setNoteImportant(w2.id, 'n-1', true)
+    await lib.setNoteImportant(w3.id, 'n-2', true); await lib.setNoteImportant(w3.id, 'n-2', false) // toggle off
+    await lib.setNoteImportant(os1.id, 'n-4', true)
+    const lib2 = await createLibrary({ dir, embed }) // persistence
+    const groups = await lib2.listImportant(m.id)
+    assert.deepEqual(groups.map((g) => g.lectureId).sort(), [w2.id, w3.id].sort(), 'only lectures of THIS module with starred notes')
+    const byL = Object.fromEntries(groups.map((g) => [g.lectureId, g]))
+    assert.deepEqual(byL[w3.id].notes.map((n) => n.id), ['n-3']); assert.deepEqual(byL[w2.id].notes.map((n) => n.id), ['n-1'])
+    assert.equal(byL[w3.id].lectureTitle, 'Week 3')
+    for (const g of groups) for (const n of g.notes) { assert.ok(n.important); assert.equal(typeof n.slideIndex, 'number') }
+    assert.ok(!(await lib2.getLecture(w3.id)).notes.find((n) => n.id === 'n-2').important, 'toggle off must persist')
   })
 })
