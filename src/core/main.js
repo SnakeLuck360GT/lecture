@@ -202,7 +202,8 @@ function createWindow () {
     minWidth: 960,
     minHeight: 640,
     title: 'LecScribe',
-    backgroundColor: '#f6f4ef',
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#1c1c1e' : '#f5f5f7',
+    ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 18, y: 18 }, vibrancy: 'sidebar' } : {}),
     webPreferences: {
       preload: join(ROOT, 'src', 'core', 'preload.cjs'),
       contextIsolation: true,
