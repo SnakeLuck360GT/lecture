@@ -1,10 +1,13 @@
 # aaron (CODER), Stage(s): S6, S7 (P2P half), S8, S5 library data layer, P2P UI components
-## Status (updated 14:16)
-- Doing: idle, watcher on; available for 2-device test + any bugs
-- Done: S6/S7-p2p/S8 + startP2P (#5, #9), library (#12, #20), P2P UI components (#18)
-- Next: 2-device + hotspot test with david; fix anything filip hits
-- Blocked on: human (phone hotspot for the cross-device test)
+## Status (updated 14:27)
+- Doing: cross-device test with david (eduroam blocks the peer connection; diagnosing)
+- Done: S6/S7-p2p/S8 + startP2P (#5, #9), library (#12, #20), P2P UI components (#18), net-check diagnostic
+- Next: confirm eduroam client isolation with the Mac IP; hotspot test; support filip mounting components
+- Blocked on: david (Mac IP + net-check output) / human (phone hotspot)
 ## Messages (newest first)
+- [14:27] @all: REPOST (my coord edits since 13:57 were silently lost to a CRLF bug, now fixed). Summary: ack #6 + ack #7. Merged into dev: PR #12 src/library (S5 data layer) + window.lec.library(method, ...args) (small additive edits to src/core/main.js + preload.cjs); PR #18 ui/components room-panel, join-room, lost-button, heatmap, share-lecture + lec.p2p("qr", text) -> local SVG (new dep qrcode, run npm install); PR #20 library search uses aryan embedQuery/embedDocs + 30 s transcript passages + hybridScore. Contract: coord/contracts/stage-5-library.md. dev 68/68 on Windows; david library contract tests 8/8.
+- [14:27] @filip: REPOST, how to mount my components (import from ./components/<name>.js; each returns { destroy() }): mountRoomPanel(el, { getRoomOptions: () => ({ title, moduleId, weekId: lectureId }) }) in the live-session view; mountJoinRoom(el, { onJoined: () => openLectureView({ peer: true }), onLeft: () => showLibrary() }) in the sidebar footer; mountLostButton(el) in the peer lecture view (it hides itself unless joined); mountHeatmap(el, { onSelect: goToSlide }) right above the thumbnail strip at the same width (cell i = slide i); mountShareLecture(el, { lectureId, onImported: reload }) in the Lecture view and on a missed lecture card. Library for your screens: listModules / createModule({name, code}) / listLectures(moduleId) / createLecture(moduleId, {title, date, state}) / getLecture(id) / saveNote(id, note) / unsaveNote(id, noteId) / search(id, q) / startSession(id) when a live lecture opens, endSession() when it closes; re-fetch on bus event library:changed.
+- [14:27] @aryan: REPOST: your search helpers are integrated (PR #20). Transcript hits carry chunkIds; refId = first chunk id.
 - [14:26] @david: re 14:25: already ran it twice (14:20 and 14:26), both on eduroam: the join never connects (0 slides, 0 notes). net-check: DHT OK, your Mac IS found announcing the room, but connect fails with HOLEPUNCH_ABORTED. This laptop: eduroam 10.205.105.2/16, public 130.88.226.2, firewalled + randomized NAT. Same Wi-Fi does not help if eduroam isolates clients (devices cannot reach each other locally) and the outward NAT is randomized. To confirm, please run on the Mac and paste the output here: (1) ipconfig getifaddr en0  (2) node src/p2p/scripts/net-check.js lecscribe://room/uebob54ojy8umd663tt8oeb9nxfpry7uwwqm334gdqk8b5jgpzxy . I will then test whether I can reach the Mac directly by its eduroam IP. If not, demo step 6 needs a phone hotspot.
 - [13:57] @aryan: re your SDK note: checked npm ls; @qvac/sdk and src/p2p share ONE copy each of hyperswarm 4.17.2 / corestore 7.16.1 / hypercore 11.40.3 / hyperdht 6.36.0 (all deduped). No version clash.
 - [13:54] @all: merged PR #9 into dev: src/p2p now exports startP2P({ bus, ai }), so filip's main loads P2P automatically ("[main] P2P started"). 49/49 tests. Contract stage-6.md v1.1 has the method table.
@@ -29,4 +32,6 @@
 - P2P works over the real public DHT (verified 13:39, same machine): peer gets all 5 slides + images 0.5 s after joining; live note latency ~51 ms; no server.
 - Heatmap on cue: `npm run sim-taps -- <room link> --slide 2 --devices 6` (fake devices join over Pears and tap). Offline fallback: room.simulateLost(slide, n).
 - Share link demo: `node src/p2p/scripts/share-demo.js share` -> lecscribe://week/... ; `... import <link>` on another device.
-- Risk: campus Wi-Fi may block UDP hole punching -> use a phone hotspot. Needs internet for DHT discovery (AI stays offline).
+- ON STAGE: eduroam BLOCKS the peer connection (verified 14:20 + 14:26, Mac host <-> Windows peer: room found on the DHT but HOLEPUNCH_ABORTED; firewalled + randomized NAT). Put host + 2nd device on ONE phone hotspot for demo step 6. Pre-check: node src/p2p/scripts/net-check.js <room link>. Needs internet for DHT discovery (AI stays offline).
+- Library: each lecture has its own folder + vector store (userData/library/lectures/<id>/vectors.json); delete/rebuild one never touches another (byte-identical, contract-tested). Share a lecture -> lecscribe://week/ link -> import into a missed lecture in ~5 s (real DHT), re-embedded locally.
+- UI components verified in 2 Electron processes: room link + QR, peer count, peer "I am lost" -> host heatmap; missed-lecture import shows "Shared by".
