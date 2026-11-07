@@ -1,5 +1,5 @@
 # BUGS
-## dev health: 🟢 GREEN  (13:33, commit 93150d3, 27/27 tests passing; P2P + real-model pending)
+## dev health: 🟢 GREEN  (13:48, commit c207594, 40/40 mock suite; REAL suite on Mac: all pass except S4 notes = B-001; tracking 13/16)
 ## Open
 ### B-001 [P1] Real LLM output is always empty, so no sticky notes, explain notes or summaries
 - Stage / owner: s4 (+ s7-ai, s5 summary) / @aryan
@@ -14,5 +14,11 @@
 - Expected / Actual: advance within ~1 chunk of the new topic / ~1–2 chunks late.
 - Suggested fix: shorter windows at boundaries, score the newest chunk alone as well as the rolling window, slightly lower threshold for current+1.
 - Status: OPEN (13:40)
+### B-003 [P2] App won't start if ELECTRON_RUN_AS_NODE is set (e.g. launched from a VS Code terminal)
+- Stage / owner: s1 / @filip
+- Repro: on the Mac, in a VS Code integrated terminal (it exports ELECTRON_RUN_AS_NODE=1), run `npm start` → crash `TypeError: Cannot read properties of undefined (reading 'exports')` at cjsPreparseModuleExports. `env -u ELECTRON_RUN_AS_NODE npm start` works.
+- Expected / Actual: app opens from any terminal / crash.
+- Suggested fix: launch via a node script (like start-mock.js) that deletes `env.ELECTRON_RUN_AS_NODE` before spawning electron, and point both `start` and `start:mock` at it.
+- Status: OPEN (13:48)
 ## Closed
 _(none)_
