@@ -180,3 +180,30 @@ test('startP2P (app-shell adapter): room opened mid-lecture, peer joins, AI stop
   await peer.close()
   await host.close()
 })
+
+test('S6: host network restart (Wi-Fi off/on) -> peer reconnects and keeps receiving live notes', async () => {
+  const hostBus = mkBus()
+  const room = await createRoom({ bus: hostBus, bootstrap })
+  const peerBus = mkBus()
+  const first = waitFor(peerBus, 'note:added', (n) => n.id === 'before')
+  const peer = await joinRoom({ bus: peerBus, key: room.link, bootstrap })
+  hostBus.emit('note:added', { id: 'before', slideIndex: 0, kind: 'ai', text: 'before restart', sourceChunkIds: [], createdAt: 1 })
+  await first
+
+  const reopened = waitFor(hostBus, 'p2p:status', (s) => s.state === 'open' && s.reason === 'manual')
+  await room.refreshNetwork() // what the IP watcher does after a network switch
+  await reopened
+  const after = waitFor(peerBus, 'note:added', (n) => n.id === 'after', 30000)
+  hostBus.emit('note:added', { id: 'after', slideIndex: 0, kind: 'ai', text: 'after restart', sourceChunkIds: [], createdAt: 2 })
+  assert.equal((await after).text, 'after restart')
+  await peer.close()
+  await room.close()
+})
+
+test('ipSignature lists non-internal IPv4 addresses (sorted, stable)', async () => {
+  const { ipSignature } = await import('./util.js')
+  const a = ipSignature()
+  assert.equal(typeof a, 'string')
+  assert.equal(a, ipSignature())
+  assert.ok(!a.split(',').includes('127.0.0.1'))
+})

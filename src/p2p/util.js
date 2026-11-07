@@ -1,6 +1,6 @@
 // Shared helpers for the P2P stages (S6/S7/S8). Owner: aaron. Cross-platform, no shell.
 import { readFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { tmpdir, networkInterfaces } from 'node:os'
 import { join, extname } from 'node:path'
 import { randomBytes } from 'node:crypto'
 import Hyperswarm from 'hyperswarm'
@@ -62,6 +62,83 @@ export function joinTopic (swarm, topic, { server = false, client = true, retryM
     if (timer.unref) timer.unref()
   }
   return { discovery, flushed: discovery.flushed(), stop: () => clearInterval(timer) }
+}
+
+/** Sorted list of this machine's non-internal IPv4 addresses ('' when offline). */
+export function ipSignature () {
+  const out = []
+  for (const list of Object.values(networkInterfaces())) {
+    for (const a of list || []) if ((a.family === 'IPv4' || a.family === 4) && !a.internal) out.push(a.address)
+  }
+  return out.sort().join(',')
+}
+
+/**
+ * A swarm on one topic that survives network switches (e.g. Wi-Fi off -> on, eduroam -> hotspot).
+ * Hyperswarm refreshes discovery on a network change but keeps the same DHT node, which can keep
+ * announcing a stale public address. Here, when the IPv4 addresses change and stay stable for
+ * `settleMs`, we destroy the swarm and start a fresh one (new DHT node = fresh NAT detection and a
+ * fresh announcement). Corestore data is untouched; replication re-attaches on the new connections.
+ * The watcher is off when `bootstrap` is given (tests); `restart()` always works.
+ */
+export function resilientSwarm (store, { topic, server = false, client = true, bootstrap, onConnection, onRestart, watch = !bootstrap, pollMs = 2000, settleMs = 3000 } = {}) {
+  let swarm = null
+  let joined = null
+  let closed = false
+  let flushed = null
+  const start = () => {
+    swarm = makeSwarm(store, { bootstrap, onConnection })
+    joined = joinTopic(swarm, topic, { server, client })
+    flushed = joined.flushed
+    flushed.catch(() => {})
+  }
+  start()
+
+  let restarting = null
+  async function restart (reason = 'manual') {
+    if (closed) return
+    if (restarting) return restarting
+    restarting = (async () => {
+      const old = swarm
+      joined.stop()
+      await old.destroy().catch(() => {})
+      if (closed) return
+      start()
+      if (onRestart) { try { onRestart(reason) } catch {} }
+      await flushed.catch(() => {})
+    })()
+    try { await restarting } finally { restarting = null }
+  }
+
+  let timer = null
+  if (watch) {
+    let last = ipSignature()
+    let changedAt = 0
+    let pendingSig = null
+    timer = setInterval(() => {
+      const sig = ipSignature()
+      if (sig !== (pendingSig ?? last)) { pendingSig = sig; changedAt = Date.now(); return }
+      if (pendingSig !== null && Date.now() - changedAt >= settleMs) {
+        const had = last
+        last = pendingSig
+        pendingSig = null
+        if (last && last !== had) restart('network-change').catch(() => {}) // only when (back) online
+      }
+    }, pollMs)
+    if (timer.unref) timer.unref()
+  }
+
+  return {
+    get swarm () { return swarm },
+    get flushed () { return flushed },
+    restart,
+    async destroy () {
+      closed = true
+      clearInterval(timer)
+      joined.stop()
+      await swarm.destroy().catch(() => {})
+    }
+  }
 }
 
 const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif', '.svg': 'image/svg+xml' }
