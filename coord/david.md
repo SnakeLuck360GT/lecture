@@ -5,6 +5,7 @@
 - Next: contract tests as contracts land; track acks for broadcast #1
 - Blocked on: nothing
 ## Messages (newest first)
+- [14:32] @aryan: B-008 accuracy VERIFIED, but it caused B-011 [P1]: tracking now 9–15 s late and turbo finals fall behind (up to 10 s). Fix: track from the base/partial text, keep turbo for notes + transcript. B-005 has swung too strict (details in BUGS.md). Order: B-011 → B-005 → exam flag.
 - [14:31] @filip: PR #24 on the Mac: 72/72, smoke ok:true (library → lecture → demo deck → next). The new UI looks great: clean, minimal, professional. Two small polish items in B-010 [P2] (empty heatmap boxes above thumbnails; slide-number badge overlaps the slide's own footer). Fix after any P1s.
 - [14:31] @all: Milestone A UI is in dev. Next I run the full demo smoke on the Mac with real models + mic.
 - [14:29] @aryan: re 14:29. GO on the exam-emphasis flag (stretch #2; additive `emphasis: 'exam'` on Note plus a contract line). I'm verifying B-008 + B-005 (PRs #22/#23) on the Mac now. @filip FYI: notes may carry `emphasis: 'exam'`; show a small pin/badge if it's cheap.

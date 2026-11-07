@@ -14,7 +14,7 @@
   - invented / garbled: s1 "The Magiula technique uses the lowest bits..." (STT 'modulus'); s0 "Jarvis Hashmare" (STT 'Java's HashMap'); s0 notes about resizing at 0.75 (not said during slide 0)
 - Expected: each note is a fact from `fixtures/lecture.script.json` → `segments[i].notOnSlide` (e.g. "choose m prime", "linear probing is cache friendly", "Java resizes at 0.75", "Thursday's lab"). No paraphrases of the slide bullets.
 - Suggested fix: lower `isOnSlide` overlap to ~0.5 (content words only, minus stopwords); give the prompt 1 good and 1 bad example; max 2 notes/slide; tell the model 'if unsure of a name, omit it'; drop the "The lecturer explained/mentioned" prefix. I'll add a REAL test that scores notes vs `notOnSlide` facts.
-- Status: OPEN, close (14:22): 8 notes, every slide ≥ 1, copies dropped. Weak spots: generic s3 'Open addressing used in hash maps', s4 'Amortized cost of resizing is constant' (≈ slide bullet), s2 still misses 'linear probing is cache friendly'. Re-test after B-008 (turbo should transcribe those words).
+- Status: OPEN (14:32): with turbo + PR #23 the filter is now TOO aggressive: s0 dropped a genuine note 'Hash tables are used in Python and Java's dictionaries' as on-slide; s4 got 0 notes (3 dropped); s2 kept only 'Similar keys can cause collisions' and still missed 'linear probing is cache friendly' even though turbo transcribed it; s1 has an invented 'Majulis is used to extract lower bits'. Target: ≥ 1 genuine note per slide.
 ### B-006 [P1] Live transcript should feel instant (stream partial text < 1 s)
 - Stage / owner: s2 / @aryan (engine) + @filip (display)
 - HUMAN REQUEST (david): transcription must feel more instant. Today the first words appear only after a pause or a full 2–6 s window (~3 s lag).
@@ -34,7 +34,7 @@
   | WHISPER_LARGE_V3_TURBO | **8.1%** | 45 s (RTF 0.48) | **4/5** |
 - Expected: finals (`transcript:chunk`, which drive tracking + notes + the library) come from LARGE_V3_TURBO (~2.5 s per 5 s window on the M5); partials (`transcript:partial`) stay on EN_BASE so text still appears in < 1 s. Keep B-007's guarantee (no aborted segments): give each model its own serial queue, so partials aren't blocked behind a 2.5 s final. Env overrides: `LECSCRIBE_STT_MODEL` (finals), `LECSCRIBE_STT_PARTIAL_MODEL` (partials). `ai:warm` must download both. Turbo is 1.6 GB and already cached on the Mac.
 - Watch: memory (turbo 1.6 GB + LLM 1 GB + embed 0.3 GB, fine on 24 GB), and that finals don't fall behind real time (RTF 0.48 < 1).
-- Status: OPEN (14:20)
+- Status: ACCURACY VERIFIED (14:32): turbo text clearly better, 0 errors. Latency side effect is tracked in B-011.
 ### T-001 [P1 test task] Cross-device P2P: Mac host ↔ Windows peer on venue Wi-Fi (then hotspot)
 - Owner: @aaron (peer) + @david (host, room live on the Mac)
 - Steps: `node src/p2p/scripts/room-demo.js join lecscribe://room/uebob54ojy8umd663tt8oeb9nxfpry7uwwqm334gdqk8b5jgpzxy` from the Windows laptop on venue Wi-Fi; report connect time, slides+images, notes, latency. Then repeat on a phone hotspot.
@@ -51,6 +51,13 @@
   1. A row of 5 empty bordered boxes sits above the thumbnails (the heatmap strip with no counts). It looks like a rendering glitch. Hide it until a live room has ≥ 1 lost tap, or render it as a borderless 4 px bar.
   2. The "Manual 2 / 5" badge sits on top of the slide image's own "2/5" footer, which peeks out above it. Move the badge outside the slide card (e.g. next to the transcript bar) or below the slide.
 - Status: OPEN (14:31)
+### B-011 [P1] Regression from B-008: slide tracking now 9–15 s late; turbo finals fall behind (lag up to 10 s)
+- Stage / owner: s2/s3 / @aryan
+- Repro (Mac, real, dev ca0e07e, `live-demo.js … --partials`): finals lag 3.5–4.5 s, then 8.8–10.1 s for c-15..c-17 (queue falls behind). Auto-advances at 24.3 / 43.0 / 63.7 / 87.6 s vs topic starts 15.1 / 33.7 / 54.5 / 72.9 s, so 9–15 s late (was ~5 s before B-008). On stage the slide would visibly lag the speaker.
+- Good news from the same run: stt errors 0, first partial 0.35 s, turbo text much better ('linear probing is cache friendly', "Java's HashMap" now correct; 'modulus' → 'Majulis' still wrong).
+- Suggested fix: drive the TRACKER from the fast EN_BASE text (partials or a base-model final per VAD window), and keep turbo finals for transcript/notes/library only. Make sure turbo never queues more than ~1 window behind (drop/merge windows or skip turbo for a window and keep the base text if the queue is > 1 deep). Prioritise GPU for turbo over partials when the turbo queue is non-empty.
+- Expected: auto-advance within ~5 s of the topic change (as before), finals lag ≤ 5 s throughout.
+- Status: OPEN (14:32)
 ## Closed
 ### B-007 [P1] Live STT drops whole segments: "RPCError: Model was reloaded" (partials collide with finals)
 - Stage / owner: s2 / @aryan
