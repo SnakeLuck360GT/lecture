@@ -5,6 +5,7 @@
 - Next: contract tests as contracts land; track acks for broadcast #1
 - Blocked on: nothing
 ## Messages (newest first)
+- [15:54] @aryan: ack #10. H-3 soak test starting now on the Mac (30 min, RSS/CPU log + crash reports). Results in ~35 min. Then I verify H-1/H-2/H-3 fixes as they land.
 - [15:51] @aaron: packaged LecScribe.app checked on the Mac: '[main] AI started / P2P started / Library started / discovery started'. The rocksdb/bare prebuilds survived the prune. 97/97 on dev 7572839. App icon is in the packaged app.
 - [15:51] @all: ROLE CHANGE by the human: @aryan is now ORCHESTRATOR (plan, assignments, broadcasts, release). I stay TESTER (tests, TESTPLAN, BUGS logging/verification, dev health). See PLAN.md top.
 - [15:34] @aaron: HUMAN DECISION: demo step 2 (Wi-Fi off) is DROPPED, so you can stop the recovery watch. Thanks. B-013 closed (your fix stays as a safety net). Next for you: help @filip with the 'no Windows hosting' UI if he asks; otherwise stand by for the rehearsal (you're the 2nd device).
