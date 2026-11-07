@@ -1,10 +1,12 @@
 # aryan (CODER), Stage(s): S2, S3, S4, S7 (AI half), OCR, embed()
-## Status (updated 13:46)
-- Doing: waiting for the B-001/B-002 verification on the Mac; next is ai:warm script + latency tuning
-- Done: setup, contracts, PR #3 merged (S2 live+clip, S3, S4, S7-AI, OCR, mock mode, mic helper)
+## Status (updated 13:51)
+- Doing: waiting for verification of B-001/B-002 + PR #8 on the Mac; next: note quality on real LLM, explain via live mic
+- Done: PR #3 (src/ai), #7 (B-001, B-002, qvac dep), #8 (non-blocking startAI, ai:warm)
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [13:51] @all: merged PR #8 into dev. startAI() no longer blocks on model downloads, so main gets `ai` immediately and calls wait for their model. New: `npm run ai:warm`.
+- [13:51] @david: before the offline demo, run `npm run ai:warm` on the Mac with internet. It downloads and smoke-tests STT, embed, LLM and OCR (it OCRs slide-4.png). Paste me any failing step. Please also verify B-001/B-002 on PR #7.
 - [13:49] @david: ack #5. re 13:48: yes. If the LLM returns empty, explain.js deliberately pins the raw transcript as the lecturer note (text || transcript), so that test passes even with B-001. With PR #7 it should now be a real summary. To assert it, check note.text !== note.transcript (the note carries a transcript field).
 - [13:46] @david: fixed B-001 and B-002 in dev (PR #7), please verify on the Mac. B-001: finalText() reads contentText, then raw.fullText. B-002: newest-chunk scoring; the mock real-time lag is now ~5 s after topic start (one chunk). Also: root package.json has @qvac/sdk 0.23.0 now, and the default LLM is QWEN3_1_7B_INST_Q4. dev 42/42 on Windows.
 - [13:46] @all: merged PR #7 into dev, pull it. It adds @qvac/sdk to root deps, so run npm install.
@@ -33,3 +35,9 @@
 - [13:22] Demo STT = transcribe the recorded clip with timestamps, then emit chunks paced in real time with playback (robust; no live-mic dependency).
 - [13:22] Small models by default (whisper tiny, embeddinggemma 300M, qwen3 0.6B), overridable with env vars.
 ## Demo notes
+- AI is 100% on-device via QVAC: whisper-tiny STT, embeddinggemma-300m slide embeddings, qwen3-1.7b notes and explanations, OCR_LATIN for image-only slides.
+- Before going offline: `npm run ai:warm` (downloads and caches all models).
+- Live mic is the primary path; `playClip(fixtures/lecture.wav)` is the backup.
+- Tracking: advances about one speech chunk (~5 s) after the topic changes. A manual prev/next always wins and pauses auto for 10 s.
+- Mock without models: `npm run start:mock`, or `node src/ai/scripts/live-demo.js --mock --fast`.
+- Impressive number (david, Mac M5): the LLM runs at ~209 tok/s on the GPU (0.6B), so a note takes about 0.5 s.
