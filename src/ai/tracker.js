@@ -1,0 +1,130 @@
+// S3: automatic slide tracking. Owner: aryan.
+// Compares rolling transcript windows with slide embeddings; advances only when confident.
+import { config } from './config.js'
+import { cosine } from './embed.js'
+
+/**
+ * Pure decision function (unit-tested).
+ * @returns {{ index:number, confidence:number, scores:Object }|null} target slide or null to stay.
+ */
+export function decide ({ scores, current, threshold, margin }) {
+  const cur = scores[current] ?? 0
+  let best = current; let bestS = -Infinity
+  for (const [k, s] of Object.entries(scores)) {
+    const i = Number(k)
+    if (i > current && s > bestS) { best = i; bestS = s }
+  }
+  if (best === current) return null
+  if (bestS >= threshold && bestS - cur >= margin) return { index: best, confidence: clamp01(bestS), margin: bestS - cur }
+  return null
+}
+const clamp01 = (x) => Math.max(0, Math.min(1, x))
+
+/**
+ * Wire a tracker onto the bus.
+ * @param {object} o
+ * @param {{on,off,emit}} o.bus
+ * @param {(texts:string[])=>Promise<number[][]>} o.embedMany
+ * @param {(text:string)=>Promise<number[]>} o.embedOne
+ */
+export function createTracker ({ bus, embedMany, embedOne, opts = {} }) {
+  const o = { ...config.tracker, ...opts }
+  let slideVecs = [] // number[][] (index-aligned with slides)
+  let slideTexts = []
+  let slidesReady = Promise.resolve()
+  let current = 0
+  let holdUntil = 0
+  let autoFollow = true // Auto-follow toggle (UI): off = keep scoring, never auto-advance
+  const recent = [] // recent chunk texts
+  let busy = Promise.resolve()
+  let pending = null // narrow-win candidate awaiting confirmation
+  let lastFresh = null // { chunkId, scores } of the previous chunk (B-005 mis-slot fix)
+
+  const onSlides = (slides) => {
+    current = 0
+    recent.length = 0
+    slideVecs = []
+    const texts = (slides || []).map((s) => s.text || '')
+    slideTexts = texts
+    slidesReady = embedMany(texts).then((v) => { slideVecs = v }).catch((e) => {
+      console.error('[ai/tracker] slide embedding failed', e)
+    })
+  }
+
+  const onChanged = (ev) => {
+    if (!ev || typeof ev.index !== 'number') return
+    current = ev.index
+    if (ev.source === 'manual') { holdUntil = Date.now() + o.manualHoldMs; recent.length = 0; pending = null; lastFresh = null }
+  }
+
+  const seen = new Set() // B-011: a chunk is scored once (quick text if present, else the final)
+  const onChunk = (chunk) => {
+    if (chunk?.id) {
+      if (seen.has(chunk.id)) return
+      seen.add(chunk.id)
+      if (seen.size > 500) seen.delete(seen.values().next().value)
+    }
+    recent.push(chunk.text || '')
+    while (recent.length > o.windowChunks) recent.shift()
+    const windowText = recent.join(' ')
+    const newest = chunk.text || ''
+    busy = busy.then(async () => {
+      await slidesReady
+      // B-016: if embedding the slides failed (e.g. a collided job), retry instead of silently never tracking
+      if (!slideVecs.length && slideTexts.length) {
+        try { slideVecs = await embedMany(slideTexts) } catch (e) { console.error('[ai/tracker] slide embedding retry failed', e?.message || e) }
+      }
+      if (!slideVecs.length) return
+      // B-002: score the newest chunk on its own (reacts to a topic change at once) AND the
+      // rolling window (stable). Decide on the fresh scores first, then fall back to the window.
+      const [wv, cv] = recent.length > 1 ? await embedMany([windowText, newest]) : [null, await embedOne(newest)]
+      const last = Math.min(slideVecs.length - 1, current + o.lookahead)
+      const score = (qv) => {
+        const s = {}
+        for (let i = current; i <= last; i++) s[i] = cosine(qv, slideVecs[i]) + (i === current + 1 ? o.nextBonus : 0)
+        return s
+      }
+      const fresh = score(cv)
+      const win = wv ? score(wv) : fresh
+      bus.emit('tracker:scores', { chunkId: chunk.id, scores: fresh, windowScores: win })
+      const prevFresh = lastFresh
+      lastFresh = { chunkId: chunk.id, scores: fresh }
+      if (Date.now() < holdUntil || !autoFollow) return
+      const args = { current, threshold: o.threshold, margin: o.margin }
+      const d = decide({ scores: fresh, ...args }) || decide({ scores: win, ...args })
+      if (!d) { pending = null; return }
+      // Next slide (the normal case) or a clear win: advance now. Skipping ahead with a narrow
+      // margin needs the same candidate on two consecutive chunks.
+      const sure = d.index === current + 1 || d.margin >= o.strongMargin || (pending && pending.index === d.index)
+      if (!sure) { pending = d; return }
+      {
+        const oldIndex = current
+        pending = null
+        current = d.index
+        recent.length = 0
+        // If the chunk BEFORE the trigger already matched the new slide better than the old one,
+        // the topic changed there: report it so S4 re-files it under the new slide.
+        const from = prevFresh?.scores
+        const earlier = from && from[d.index] !== undefined && from[d.index] - (from[oldIndex] ?? -1) >= o.margin && from[d.index] >= o.threshold * 0.7 && prevFresh.chunkId
+        bus.emit('slide:changed', { index: d.index, source: 'auto', confidence: d.confidence, chunkId: earlier || chunk.id })
+      }
+    }).catch((e) => console.error('[ai/tracker] chunk scoring failed', e))
+  }
+
+  bus.on('slides:loaded', onSlides)
+  bus.on('slide:changed', onChanged)
+  bus.on('transcript:chunk', onChunk)
+  bus.on('transcript:quick', onChunk)
+  return {
+    current: () => current,
+    setAutoFollow (on) { autoFollow = !!on; pending = null; return autoFollow },
+    autoFollow: () => autoFollow,
+    idle: () => busy,
+    dispose () {
+      bus.off('slides:loaded', onSlides)
+      bus.off('slide:changed', onChanged)
+      bus.off('transcript:chunk', onChunk)
+      bus.off('transcript:quick', onChunk)
+    }
+  }
+}
