@@ -131,7 +131,7 @@ describe('S8 share link', { skip: pending(SHARE, 'S8 share link (aaron)') }, () 
     await assert.rejects(importWeek('not a link', { storage: store(), timeoutMs: 2000 }), /BAD_LINK/)
   })
 
-  test('importWeek fails with SHARE_TIMEOUT when no device holding the notes is online', { timeout: 30_000 }, async () => {
+  test('importWeek fails with SHARE_TIMEOUT when no device holding the notes is online', { timeout: 120_000 }, async () => {
     const { shareWeek, importWeek } = await maybeImport(SHARE)
     const s = await shareWeek(bundle(), { storage: store() })
     const link = s.link

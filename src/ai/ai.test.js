@@ -438,3 +438,10 @@ test('B-005: a slide left with no note keeps its best soft-dropped candidate (>=
   assert.equal(notes.filter((n) => n.slideIndex === 0).length, 1)
   sum.dispose()
 })
+
+test('B-005: rephrased duplicates are caught, distinct facts on the same slide are not', async () => {
+  const { similar } = await import('./agents.js')
+  assert.equal(similar('Choose the table size m to be prime', 'Pick a prime table size'), true)
+  assert.equal(similar('Choose the table size m to be prime', 'If m is a power of two, only the lowest bits of the key are used'), false)
+  assert.equal(similar('Linear probing is cache friendly', 'Linear probing suffers from primary clustering'), false)
+})

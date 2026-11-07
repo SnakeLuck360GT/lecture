@@ -10,6 +10,8 @@ import Hyperdrive from 'hyperdrive'
 import { defaultStorage, parseKey, roomLink, resilientSwarm, imageToBuffer, bufferToDataUrl, serialQueue } from './util.js'
 
 const LOST_EXT = 'lecscribe/lost-v1'
+// B-015: live (partial) transcript lines are ephemeral, so they go over an extension, never into the feed.
+const PARTIAL_EXT = 'lecscribe/partial-v1'
 const COUNTS_DEBOUNCE_MS = 200
 
 // ---------------------------------------------------------------- HOST
@@ -123,13 +125,21 @@ export async function createRoom ({ bus, storage, title = '', moduleId = null, w
   }).catch((err) => bus.emit('p2p:status', { role: 'host', state: 'error', key, link, error: 'slides: ' + err.message }))
   const onSlide = (e) => { if (e && Number.isInteger(e.index)) append({ type: 'slide', index: e.index, source: e.source || 'manual', t: Date.now() }).catch(() => {}) }
   const onNote = (note) => { if (note && note.id) append({ type: 'note', note }).catch(() => {}) }
+  // B-015 transcript (text only, never audio): finals go into the feed (late joiners get them),
+  // partials are broadcast to connected peers only.
+  const partialExt = feed.registerExtension(PARTIAL_EXT, { encoding: 'json', onmessage: () => {} })
+  const onChunk = (c) => { if (c && c.id && c.text) append({ type: 'chunk', chunk: c }).catch(() => {}) }
+  const onPartial = (p) => { if (!closed && p && p.text) { try { partialExt.broadcast({ partial: p }) } catch {} } }
   // A room opened mid-lecture first publishes what already happened: { slides, slideIndex, notes }.
   if (history?.slides) onSlides(history.slides)
   if (Number.isInteger(history?.slideIndex)) onSlide({ index: history.slideIndex, source: 'manual' })
   for (const n of history?.notes || []) onNote(n)
+  for (const c of history?.chunks || []) onChunk(c)
   bus.on('slides:loaded', onSlides)
   bus.on('slide:changed', onSlide)
   bus.on('note:added', onNote)
+  bus.on('transcript:chunk', onChunk)
+  bus.on('transcript:partial', onPartial)
 
   return {
     key,
@@ -147,6 +157,8 @@ export async function createRoom ({ bus, storage, title = '', moduleId = null, w
       bus.off('slides:loaded', onSlides)
       bus.off('slide:changed', onSlide)
       bus.off('note:added', onNote)
+      bus.off('transcript:chunk', onChunk)
+      bus.off('transcript:partial', onPartial)
       try { await append({ type: 'end' }) } catch {}
       closed = true
       clearTimeout(countsTimer)
@@ -175,6 +187,10 @@ export async function joinRoom ({ bus, key, storage, bootstrap, imageTimeoutMs =
   bus.emit('p2p:status', { role: 'peer', state: 'connecting', key: keyHex })
 
   const ext = feed.registerExtension(LOST_EXT, { encoding: 'json', onmessage: () => {} })
+  feed.registerExtension(PARTIAL_EXT, {
+    encoding: 'json',
+    onmessage: (m) => { if (!closed && m && m.partial && typeof m.partial.text === 'string') bus.emit('transcript:partial', m.partial) }
+  })
   const announce = () => { try { ext.broadcast({ logKey }) } catch {} }
   feed.on('peer-add', (peer) => { try { ext.send({ logKey }, peer) } catch {} })
 
@@ -243,6 +259,7 @@ export async function joinRoom ({ bus, key, storage, bootstrap, imageTimeoutMs =
       }
       case 'slide': bus.emit('slide:changed', { index: msg.index, source: 'remote' }); break
       case 'note': bus.emit('note:added', msg.note); break
+      case 'chunk': bus.emit('transcript:chunk', msg.chunk); break
       case 'lost': bus.emit('lost:counts', msg.counts || {}); break
       case 'end': bus.emit('room:ended', {}); break
     }
