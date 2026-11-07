@@ -47,6 +47,23 @@ export function makeSwarm (store, { bootstrap, onConnection } = {}) {
   return swarm
 }
 
+/**
+ * swarm.join + keep re-querying the DHT while we have no connection. Without this, a client that looks up
+ * the topic before the server has finished announcing waits for Hyperswarm's slow periodic refresh.
+ * Returns { discovery, flushed, stop }.
+ */
+export function joinTopic (swarm, topic, { server = false, client = true, retryMs = 3000 } = {}) {
+  const discovery = swarm.join(topic, { server, client })
+  let timer = null
+  if (client) {
+    timer = setInterval(() => {
+      if (swarm.connections.size === 0) discovery.refresh({ client: true, server }).catch(() => {})
+    }, retryMs)
+    if (timer.unref) timer.unref()
+  }
+  return { discovery, flushed: discovery.flushed(), stop: () => clearInterval(timer) }
+}
+
 const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif', '.svg': 'image/svg+xml' }
 const EXT = Object.fromEntries(Object.entries(MIME).map(([e, m]) => [m, e]))
 

@@ -1,6 +1,6 @@
 // S8 share link: export/import one week's notes as text over Pears. Owner: aaron. Contract: coord/contracts/stage-8.md
 import Corestore from 'corestore'
-import { defaultStorage, parseKey, weekLink, makeSwarm } from './util.js'
+import { defaultStorage, parseKey, weekLink, makeSwarm, joinTopic } from './util.js'
 
 /** Seed a week's bundle. Returns { key, link, stop() }. The link works while this device stays online. */
 export async function shareWeek (bundle, { storage, bootstrap } = {}) {
@@ -27,13 +27,13 @@ export async function shareWeek (bundle, { storage, bootstrap } = {}) {
     await core.append(blocks)
   }
   const swarm = makeSwarm(store, { bootstrap })
-  const discovery = swarm.join(core.discoveryKey, { server: true, client: true })
-  const ready = discovery.flushed().catch(() => {})
+  const topic = joinTopic(swarm, core.discoveryKey, { server: true, client: false })
+  // Wait until the link is announced on the DHT, so it works the moment we hand it out.
+  await topic.flushed.catch(() => {})
   let stopped = false
   return {
     key: core.key.toString('hex'),
     link: weekLink(core.key),
-    ready,
     async stop () {
       if (stopped) return
       stopped = true
@@ -50,7 +50,7 @@ export async function importWeek (link, { storage, bootstrap, timeoutMs = 30000,
   const core = store.get({ key, valueEncoding: 'json' })
   await core.ready()
   const swarm = makeSwarm(store, { bootstrap })
-  swarm.join(core.discoveryKey, { server: false, client: true })
+  const topic = joinTopic(swarm, core.discoveryKey, { server: false, client: true })
 
   const deadline = Date.now() + timeoutMs
   const bundle = { v: 1, moduleId: null, weekId: null, title: '', sharedBy: null, slides: [], notes: [], summary: '', transcript: [], exportedAt: null }
@@ -75,6 +75,7 @@ export async function importWeek (link, { storage, bootstrap, timeoutMs = 30000,
     }
     return bundle
   } finally {
+    topic.stop()
     await swarm.destroy().catch(() => {})
     await store.close().catch(() => {})
   }

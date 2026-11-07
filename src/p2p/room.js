@@ -7,7 +7,7 @@
 //       `lecscribe/lost-v1` extension, and the host merges all logs into per-slide counts.
 import Corestore from 'corestore'
 import Hyperdrive from 'hyperdrive'
-import { defaultStorage, parseKey, roomLink, makeSwarm, imageToBuffer, bufferToDataUrl, serialQueue } from './util.js'
+import { defaultStorage, parseKey, roomLink, makeSwarm, joinTopic, imageToBuffer, bufferToDataUrl, serialQueue } from './util.js'
 
 const LOST_EXT = 'lecscribe/lost-v1'
 const COUNTS_DEBOUNCE_MS = 200
@@ -43,21 +43,27 @@ export async function createRoom ({ bus, storage, title = '', moduleId = null, w
     }
     return counts
   }
-  const scheduleCounts = () => {
-    if (countsTimer || closed) return
+  // The bus event fires on every change (cheap, keeps the heatmap in step with lostCounts()).
+  // Only the republish into the room feed is debounced, so a burst of taps doesn't flood peers.
+  let lastCountsJson = '{}'
+  const countsChanged = () => {
+    if (closed) return
+    const counts = lostCounts()
+    const json = JSON.stringify(counts)
+    if (json === lastCountsJson) return
+    lastCountsJson = json
+    bus.emit('lost:counts', counts)
+    if (countsTimer) return
     countsTimer = setTimeout(() => {
       countsTimer = null
-      if (closed) return
-      const counts = lostCounts()
-      bus.emit('lost:counts', counts)
-      append({ type: 'lost', counts }).catch(() => {})
+      if (!closed) append({ type: 'lost', counts: lostCounts() }).catch(() => {})
     }, COUNTS_DEBOUNCE_MS)
   }
   const applyTap = (deviceId, entry) => {
     if (!entry || entry.type !== 'lost' || !Number.isInteger(entry.slideIndex)) return
     if (!devices.has(deviceId)) devices.set(deviceId, new Map())
     devices.get(deviceId).set(entry.slideIndex, entry.on !== false)
-    scheduleCounts()
+    countsChanged()
   }
   const openLostLog = async (logKeyHex) => {
     if (closed || openLogs.has(logKeyHex)) return
@@ -85,8 +91,8 @@ export async function createRoom ({ bus, storage, title = '', moduleId = null, w
       socket.once('close', () => { peers--; if (!closed) bus.emit('p2p:peers', { count: peers }) })
     }
   })
-  const discovery = swarm.join(feed.discoveryKey, { server: true, client: true })
-  const ready = discovery.flushed().then(() => {
+  const topic = joinTopic(swarm, feed.discoveryKey, { server: true, client: false })
+  const ready = topic.flushed.then(() => {
     if (!closed) bus.emit('p2p:status', { role: 'host', state: 'open', key, link })
   }).catch((err) => {
     if (!closed) bus.emit('p2p:status', { role: 'host', state: 'error', key, link, error: String(err?.message || err) })
@@ -130,6 +136,7 @@ export async function createRoom ({ bus, storage, title = '', moduleId = null, w
       try { await append({ type: 'end' }) } catch {}
       closed = true
       clearTimeout(countsTimer)
+      topic.stop()
       await swarm.destroy().catch(() => {})
       await store.close().catch(() => {})
     },
@@ -165,7 +172,7 @@ export async function joinRoom ({ bus, key, storage, bootstrap, imageTimeoutMs =
       if (!connected && !closed) { connected = true; bus.emit('p2p:status', { role: 'peer', state: 'connected', key: keyHex }) }
     }
   })
-  swarm.join(feed.discoveryKey, { server: false, client: true })
+  const topic = joinTopic(swarm, feed.discoveryKey, { server: false, client: true })
 
   // ---- feed -> bus (strictly in order)
   const reader = (async () => {
@@ -237,6 +244,7 @@ export async function joinRoom ({ bus, key, storage, bootstrap, imageTimeoutMs =
     async close () {
       if (closed) return
       closed = true
+      topic.stop()
       await swarm.destroy().catch(() => {})
       await store.close().catch(() => {})
       await reader
