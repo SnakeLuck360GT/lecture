@@ -53,17 +53,56 @@ function show (screen) {
   $('app').classList.toggle('in-lecture', screen === 'lecture')
 }
 
+/**
+ * HUMAN UI REQUEST (2): going Home must NOT stop a live session (host listening / clip / sharing a room,
+ * or a joined peer). The lecture view keeps running hidden and the Library shows "Back to live lecture".
+ */
 async function openLibrary () {
+  await lecture?.refreshLive?.()
+  if (!lecture?.isLive()) await lecture?.close()
+  show('library')
+  renderLiveBanner()
+  await library.show()
+}
+
+/** End the session for real (Leave session / room ended), then go Home. */
+async function endLecture () {
   await lecture?.close()
   show('library')
+  renderLiveBanner()
   await library.show()
 }
 
 async function openLecture (lectureId, opts = {}) {
+  await lecture?.refreshLive?.()
+  // Same live lecture (and no jump requested): just bring it back, don't re-open.
+  if (lecture?.isLive() && lectureId && lectureId === state.lectureId && opts.jumpTo == null) return backToLive()
+  if (lecture?.isLive()) {
+    await lecture.close() // opening another lecture ends the live one
+    toast('Ended the live session')
+  }
   library.hide()
   show('lecture')
+  renderLiveBanner()
   await lecture.open(lectureId, opts)
 }
+
+function backToLive () {
+  library.hide()
+  show('lecture')
+  renderLiveBanner()
+}
+
+function renderLiveBanner () {
+  const live = !!lecture?.isLive()
+  const banner = $('live-banner')
+  banner.hidden = !live || state.screen !== 'library'
+  if (!live) return
+  const title = $('crumb-lecture').textContent || 'Live lecture'
+  $('live-banner-title').textContent = title
+  $('live-banner-kind').textContent = state.role === 'peer' ? 'Following live' : state.listening ? 'Live · listening' : 'Live'
+}
+app.liveChanged = () => renderLiveBanner()
 
 /** join-room component (or fallback) reports a joined room: open the peer view on a local lecture. */
 async function onJoined ({ key, title } = {}) {
@@ -96,9 +135,26 @@ async function boot () {
   library = createLibraryView(app)
   lecture = createLectureView(app)
   $('btn-back').addEventListener('click', () => openLibrary())
+  $('btn-back-live').addEventListener('click', () => backToLive())
+  $('btn-leave').addEventListener('click', async () => {
+    try { await lec.p2p('leaveRoom') } catch {}
+    await endLecture()
+  })
   lec.on('library:changed', () => app.libraryChanged())
+  for (const ev of ['listen:state', 'p2p:status', 'clip:ended']) lec.on(ev, () => setTimeout(renderLiveBanner, 0))
 
-  await mountComponent('join-room', $('mount-join-room'), { ...app.deps(), onJoined, onLeft: () => openLibrary() }, fallbackJoinRoom)
+  await mountComponent('join-room', $('mount-join-room'), { ...app.deps(), onJoined, onLeft: () => endLecture() }, fallbackJoinRoom)
+  // aryan's Nearby sessions (6-digit codes on the LAN): clicking a session goes through aaron's join box,
+  // so its timeouts / Leave state stay consistent.
+  await mountComponent('nearby-sessions', $('mount-nearby'), {
+    ...app.deps(),
+    onJoin: (link) => {
+      const input = $('mount-join-room').querySelector('input')
+      if (!input) return lec.p2p('joinRoom', link).then((info) => onJoined(info || {})).catch((e) => toast(`Could not join: ${e.message || e}`, { error: true }))
+      input.value = link
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    }
+  })
   hydrateIcons()
   show('library')
   await library.show()
@@ -114,5 +170,8 @@ window.__lecscribe = {
   loadDemoDeck: () => lecture?.loadDemoDeck(),
   openLibrary,
   openLecture,
+  backToLive,
+  endLecture,
+  isLive: () => !!lecture?.isLive(),
   ready: boot().catch((e) => { console.error('boot failed', e); toast(`LecScribe failed to start: ${e.message || e}`, { error: true, ms: 10000 }) })
 }

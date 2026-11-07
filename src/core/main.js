@@ -365,7 +365,24 @@ async function runSmoke (pngPath) {
     askOpened.wanted = want
   }
   const ask = { hits: hitCount, opened: askOpened }
-  const result = { ok: slides.length > 0 && ui.current === 1 && ui.img, lost: lostLabel, explain, summary, savedView, ask, slides: slides.length, texts: slides.map((s) => s.text.slice(0, 40)), ui, events: [...new Set(seen)] }
+  // HUMAN UI REQUEST 2: a live session survives going Home; the Library shows "Back to lecture".
+  await wc.executeJavaScript("document.getElementById('btn-clip').click()")
+  await new Promise((r) => setTimeout(r, 1200))
+  await wc.executeJavaScript('window.__lecscribe.openLibrary()')
+  await new Promise((r) => setTimeout(r, 800))
+  const liveHome = await wc.executeJavaScript("({ banner: !document.getElementById('live-banner').hidden, title: document.getElementById('live-banner-title').textContent, stillPlaying: window.__lecscribe.state.clipPlaying })")
+  await writeFile(out.replace(/.png$/i, '') + '-live.png', (await wc.capturePage()).toPNG())
+  await wc.executeJavaScript("document.getElementById('btn-back-live').click()")
+  await new Promise((r) => setTimeout(r, 500))
+  liveHome.back = await wc.executeJavaScript('window.__lecscribe.state.screen')
+  await wc.executeJavaScript("window.__lecscribe.state.clipPlaying && document.getElementById('btn-clip').click()")
+  // HUMAN UI REQUEST 1: viewer (peer) mode hides every host-only control.
+  await wc.executeJavaScript('(async () => { const L = window.__lecscribe; await L.endLecture(); const m = await L.app.store.createModule({ name: "Smoke peer" }); const l = await L.app.store.createLecture(m.id, { title: "Joined session" }); await L.openLecture(l.id, { role: "peer", title: "Joined session" }) })()')
+  await new Promise((r) => setTimeout(r, 1200))
+  const vis = (sel) => `!!(document.querySelector('${sel}') && document.querySelector('${sel}').offsetParent)`
+  const peer = await wc.executeJavaScript(`({ toolbar: ${vis('#toolbar')}, listen: ${vis('#btn-listen')}, explain: ${vis('#btn-explain')}, live: ${vis('#btn-room-pop')}, leave: ${vis('#btn-leave')}, search: ${vis('#search-input')} })`)
+  await writeFile(out.replace(/.png$/i, '') + '-peer.png', (await wc.capturePage()).toPNG())
+  const result = { ok: slides.length > 0 && ui.current === 1 && ui.img, lost: lostLabel, explain, summary, savedView, ask, liveHome, peer, slides: slides.length, texts: slides.map((s) => s.text.slice(0, 40)), ui, events: [...new Set(seen)] }
   console.log('[smoke] ' + JSON.stringify(result))
   app.exit(result.ok ? 0 : 1)
 }
