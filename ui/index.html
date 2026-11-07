@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; worker-src 'self' blob:; connect-src 'self'">
+  <title>LecScribe</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo">✎</span> LecScribe</div>
+    <div class="context" id="context" title="Module and week">
+      <span id="ctx-module">COMP26120</span><span class="sep">›</span><span id="ctx-week">Week 3</span>
+    </div>
+    <div class="actions">
+      <label class="btn" title="Open a PDF slide deck">
+        <input type="file" id="file-input" accept="application/pdf" hidden>Open PDF…
+      </label>
+      <button class="btn" id="btn-demo-deck" title="Load fixtures/deck.pdf">Demo deck</button>
+      <button class="btn primary" id="btn-listen" disabled title="Load slides first">
+        <span class="dot"></span><span class="label">Start listening</span>
+        <span class="meter"><span id="meter-fill"></span></span>
+      </button>
+      <button class="btn ghost" id="btn-clip" title="Backup: play fixtures/lecture.wav through the AI">▶ Clip</button>
+    </div>
+    <div class="status" id="ai-status" title="On-device AI status"></div>
+  </header>
+
+  <main class="layout">
+    <section class="stage">
+      <div class="slide-wrap" id="slide-wrap">
+        <div class="empty" id="empty">
+          <h1>Load a slide deck to begin</h1>
+          <p>Open a PDF, or use the demo deck. Everything runs on this laptop.</p>
+        </div>
+        <img id="slide-img" alt="" hidden>
+        <div class="slide-text" id="slide-text" hidden></div>
+        <button class="nav prev" id="btn-prev" title="Previous slide (←)" disabled>‹</button>
+        <button class="nav next" id="btn-next" title="Next slide (→)" disabled>›</button>
+        <div class="slide-meta">
+          <span id="slide-count">–</span>
+          <span class="badge" id="track-badge" hidden></span>
+        </div>
+      </div>
+      <div class="transcript" id="transcript">
+        <span class="t-label">Transcript</span>
+        <span class="t-text" id="t-text">Not listening.</span>
+      </div>
+    </section>
+
+    <aside class="margin">
+      <div class="margin-head">
+        <h2>Margin notes</h2>
+        <span class="sub" id="margin-sub">for this slide</span>
+      </div>
+      <div class="notes" id="notes">
+        <p class="hint">Sticky notes appear here for things the lecturer says that are not on the slide. Click one to save it.</p>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="strip" id="strip"></footer>
+  <div class="toast" id="toast" hidden></div>
+  <audio id="clip-audio" preload="auto" hidden></audio>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

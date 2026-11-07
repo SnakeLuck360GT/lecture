@@ -57,21 +57,29 @@ export function createTracker ({ bus, embedMany, embedOne, opts = {} }) {
     recent.push(chunk.text || '')
     while (recent.length > o.windowChunks) recent.shift()
     const windowText = recent.join(' ')
+    const newest = chunk.text || ''
     busy = busy.then(async () => {
       await slidesReady
       if (!slideVecs.length) return
-      const qv = await embedOne(windowText)
-      const scores = {}
+      // B-002: score the newest chunk on its own (reacts to a topic change at once) AND the
+      // rolling window (stable). Decide on the fresh scores first, then fall back to the window.
+      const [wv, cv] = recent.length > 1 ? await embedMany([windowText, newest]) : [null, await embedOne(newest)]
       const last = Math.min(slideVecs.length - 1, current + o.lookahead)
-      for (let i = current; i <= last; i++) {
-        scores[i] = cosine(qv, slideVecs[i]) + (i === current + 1 ? o.nextBonus : 0)
+      const score = (qv) => {
+        const s = {}
+        for (let i = current; i <= last; i++) s[i] = cosine(qv, slideVecs[i]) + (i === current + 1 ? o.nextBonus : 0)
+        return s
       }
-      bus.emit('tracker:scores', { chunkId: chunk.id, scores })
+      const fresh = score(cv)
+      const win = wv ? score(wv) : fresh
+      bus.emit('tracker:scores', { chunkId: chunk.id, scores: fresh, windowScores: win })
       if (Date.now() < holdUntil) return
-      const d = decide({ scores, current, threshold: o.threshold, margin: o.margin })
+      const args = { current, threshold: o.threshold, margin: o.margin }
+      const d = decide({ scores: fresh, ...args }) || decide({ scores: win, ...args })
       if (!d) { pending = null; return }
-      // Clear win -> advance now; narrow win -> needs the same candidate on two consecutive chunks.
-      const sure = d.margin >= o.strongMargin || (pending && pending.index === d.index)
+      // Next slide (the normal case) or a clear win: advance now. Skipping ahead with a narrow
+      // margin needs the same candidate on two consecutive chunks.
+      const sure = d.index === current + 1 || d.margin >= o.strongMargin || (pending && pending.index === d.index)
       if (!sure) { pending = d; return }
       {
         pending = null
