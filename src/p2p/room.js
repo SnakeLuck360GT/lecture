@@ -12,6 +12,10 @@ import { defaultStorage, parseKey, roomLink, resilientSwarm, imageToBuffer, buff
 const LOST_EXT = 'lecscribe/lost-v1'
 // B-015: live (partial) transcript lines are ephemeral, so they go over an extension, never into the feed.
 const PARTIAL_EXT = 'lecscribe/partial-v1'
+// H-6 (aryan, while aaron is offline): a peer's "Explain this" request goes to the host over an
+// extension; the host re-emits it on its bus as { from: 'peer', forwarded: true } for the AI.
+const EXPLAIN_EXT = 'lecscribe/explain-v1'
+const EXPLAIN_THROTTLE_MS = 10000
 const COUNTS_DEBOUNCE_MS = 200
 
 // ---------------------------------------------------------------- HOST
@@ -81,6 +85,17 @@ export async function createRoom ({ bus, storage, title = '', moduleId = null, w
   feed.registerExtension(LOST_EXT, {
     encoding: 'json',
     onmessage: (msg) => { if (msg && typeof msg.logKey === 'string') openLostLog(msg.logKey) }
+  })
+  const lastExplain = new Map() // slideIndex -> time of the last forwarded request (throttle)
+  feed.registerExtension(EXPLAIN_EXT, {
+    encoding: 'json',
+    onmessage: (msg) => {
+      if (closed || !msg || !Number.isInteger(msg.slideIndex) || msg.slideIndex < 0) return
+      const now = Date.now()
+      if (now - (lastExplain.get(msg.slideIndex) || 0) < EXPLAIN_THROTTLE_MS) return
+      lastExplain.set(msg.slideIndex, now)
+      bus.emit('explain:request', { slideIndex: msg.slideIndex, from: 'peer', forwarded: true })
+    }
   })
 
   // ---- swarm
@@ -191,6 +206,10 @@ export async function joinRoom ({ bus, key, storage, bootstrap, imageTimeoutMs =
     encoding: 'json',
     onmessage: (m) => { if (!closed && m && m.partial && typeof m.partial.text === 'string') bus.emit('transcript:partial', m.partial) }
   })
+  const explainExt = feed.registerExtension(EXPLAIN_EXT, { encoding: 'json', onmessage: () => {} })
+  const sendExplain = (slideIndex) => { if (!closed && Number.isInteger(slideIndex)) { try { explainExt.broadcast({ slideIndex }) } catch {} } }
+  const onExplainRequest = (ev) => { if (ev && ev.from === 'peer' && !ev.forwarded) sendExplain(ev.slideIndex) }
+  bus.on('explain:request', onExplainRequest)
   const announce = () => { try { ext.broadcast({ logKey }) } catch {} }
   feed.on('peer-add', (peer) => { try { ext.send({ logKey }, peer) } catch {} })
 
@@ -278,9 +297,12 @@ export async function joinRoom ({ bus, key, storage, bootstrap, imageTimeoutMs =
       announce()
     },
     lostState: () => ({ ...lostState }),
+    /** H-6: ask the host's AI to explain a slide (the answer arrives as note:added kind 'explain'). */
+    explainThis: (slideIndex) => sendExplain(slideIndex),
     async close () {
       if (closed) return
       closed = true
+      bus.off('explain:request', onExplainRequest)
       await net.destroy()
       await store.close().catch(() => {})
       await reader
