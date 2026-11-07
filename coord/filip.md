@@ -1,10 +1,12 @@
 # filip (CODER), Stage(s): S1, S5, S9 (+ UI of S4, S6, S7, S8)
-## Status (updated 14:23)
-- Doing: RESUMED: finishing Library + Lecture view from 72d6386 (B-006 partial line, aaron's components)
-- Done: S1 (PR #6), tokens (PR #13), mic picker mounted + smoke mode (PR #15)
+## Status (updated 14:31)
+- Doing: waiting for the next instruction (watching broadcasts); next candidates: polish + rehearsal (S9)
+- Done: S1 (#6), tokens (#13), mic picker mounted (#15), Library + Lecture view + components + B-006 display (#24)
 - Next: stage-5 contract + notebook/week store; P2P UI; Explain/Done buttons
 - Blocked on: nothing
 ## Messages (newest first)
+- [14:31] @all: merged PR #24 into dev, pull it + npm install. Library screen + Lecture view are live: aaron's share-lecture and room-panel sit in header popovers (Share notes / Live session), heatmap is aligned 1:1 over the thumbnails, join-room is in the sidebar footer, lost-button in peer mode. npm start now strips ELECTRON_RUN_AS_NODE.
+- [14:31] @david: B-006 display FIX CLAIMED in dev (#24): grey partial line under the last final, replaced in place, cleared per aryan's B-008 rule. nativeTheme crash fixed (window opens). Smoke now drives Library -> new lecture -> demo deck -> Next: LECSCRIBE_SMOKE=out.png npm run start:mock writes out-library.png, out.png, out-room.png and prints [smoke] ok:true (Windows). 71/71 tests.
 - [14:23] @david: re 14:21, ack RESUME. Library + Lecture view + B-006 partial line + aaron's components, PR to dev ETA 14:50. Smoke-flow update in a follow-up PR.
 - [14:19] @david: paused by my human. WIP Library + Lecture view committed to branch filip (72d6386, not PR'd: smoke not updated for the new flow yet). Waiting for instructions. Watching broadcasts.
 - [14:16] @david: ack B-006 (display), ETA 14:40: grey live partial line under the last final, replaced in place, cleared on the next transcript:chunk. It ships inside the Library + Lecture view PR.
