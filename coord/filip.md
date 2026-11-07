@@ -1,15 +1,22 @@
-# filip (CODER), Stage(s): S1, S5, S9 (+ UI of S4, S7, S8)
-## Status (updated 13:28)
-- Doing: S1 scaffold (Electron app shell, bus + IPC bridge, PDF viewer, prev/next, macOS mic permission)
-- Done: setup; gh ready
-- Next: contracts/stage-1.md (~13:40), S1 PR into dev (target ~14:10), then stage-5 contract + notebook
-- Blocked on: nothing (installing Node on my Windows box, ~2 min)
+# filip (CODER), Stage(s): S1, S5, S9 (+ UI of S4, S6, S7, S8)
+## Status (updated 13:49)
+- Doing: contracts/stage-1.md, then wiring aaron's room UI (Share room / Join / I'm lost) + S5 notebook
+- Done: S1 merged into dev (PR #6): Electron shell, bus + IPC bridge, PDF viewer, stickies, live mic toggle
+- Next: stage-5 contract + notebook/week store; P2P UI; Explain/Done buttons
+- Blocked on: nothing
 ## Messages (newest first)
+- [13:49] @all: merged S1 (PR #6) into dev, pull it + `npm install`. Run: `npm run start:mock` (AI mock) or `npm start`. 47/47 tests on Windows. Renderer API is `window.lec` (emit/on/ai/p2p/processSlides/requestMic/info). Main auto-loads `src/ai/index.js` (startAI) and `src/p2p/index.js` if it exports `startP2P({ bus, ai })` (or default). TIP for Claudes inside VS Code: your shell has `ELECTRON_RUN_AS_NODE=1`, so `npm start` launched from your tool crashes. `npm run start:mock` strips it; for `npm start`, run `env -u ELECTRON_RUN_AS_NODE npm start`.
+- [13:49] @david: re 13:30/13:33/13:45. ack #4. Skeleton shipped as full S1 in PR #6 (merged 8d515d2). Git identity switched in BOTH folders to `Filip <152434470+Filip5011@users.noreply.github.com>` (repo-local config; earlier commits not rewritten). Smoke on the Mac: `npm install`, `npm run start:mock`, click "Demo deck", arrows/thumbnails, "Start listening" (macOS should prompt for the mic). Note: npm 11 blocks electron's postinstall; package.json has `allowScripts` for electron@33.4.11.
+- [13:49] @aaron: re 13:39. Folded your deps + sim-taps script into package.json. Next I'm building the host "Share room" panel (room.link + QR + p2p:peers), the "Join a room" paste box -> viewer mode, "I'm lost" -> peer.lost(i), heatmap <- lost:counts. Where do createRoom/joinRoom live: `src/p2p/index.js` named exports? I'll call them from main over `window.lec.p2p(method, ...)` unless you export `startP2P`.
 - [13:31] @all: ack #3. Live mic is on my critical path: S1 ships with the "Start listening" toggle (renderer getUserMedia -> 16 kHz mono Float32 -> ai.pushAudio over IPC), macOS mic permission, and a live transcript line.
 - [13:28] @aryan: re 13:22. (1) YES: bus = Node EventEmitter in main (`src/core/bus.js`). Every bus event is forwarded to the renderer, and renderer emits are forwarded to the main bus (preload exposes `window.lec.emit/on`). (2) YES: main runs `ai.ocr(image)` for slides with text < 20 chars BEFORE emitting `slides:loaded`. (3) YES: mic in the renderer; ship your helper in `src/ai/` and I'll import it from `ui/`. The renderer calls AI methods over IPC: `window.lec.ai(method, ...args)` for playClip/stopClip/pushAudio/embed/summariseLecture. Main does `import('../src/ai/index.js')` dynamically inside try/catch, so the shell runs before S2 is merged.
 - [13:28] @all: ack #1 and #2. ack PLAN, stages S1, S5, S9. DECISION: plain Electron (ESM; Electron main = Node) instead of the Pear template. Root `package.json` gets `"type": "module"`. contracts/stage-1.md coming in ~10 min.
 - [13:14] @all: filip setup done, ready for spec.
 ## Provides / Needs   (include verified SDK/API notes here so others don't repeat the research)
+- Provides (S1): host bus in main (`src/core/bus.js`), renderer bridge `window.lec`, `loadPdf(bytes, { pdfjs })` in `src/core/pdf.js` (Node: `pdfjs-dist/legacy/build/pdf.mjs`), `processSlides(raw, { ocr })` in `src/core/slides.js`. UI emits `slide:changed {source:'manual'}`, `note:saved {note, moduleId, weekId, slide, sources, savedAt}`, `listen:state {listening}`.
+- Verified: Electron 33.4.11 ESM main works; load electron with `createRequire(import.meta.url)('electron')`. pdf.js 4.10 needs a `Uint8Array` (not a Buffer) and `standardFontDataUrl` for standard fonts.
 ## Decisions
+- [13:49] npm 11 blocks install scripts: added `"allowScripts": { "electron@33.4.11": true }` and pinned electron to 33.4.11.
 - [13:28] Stack: plain Electron + Node ESM (the PLAN fallback). Why: AI must run in Node main (aryan's contract); hyperswarm/hypercore/hyperdrive run as npm deps in main; the Pear-Electron template adds risk with Windows dev + a macOS demo. PDF: pdfjs-dist in the renderer (text + page images).
 ## Demo notes (for the presentation: what works, how to run it, URLs, screenshots, impressive numbers)
+- S1 (13:49): `npm run start:mock` -> click "Demo deck" -> 5 slides render with thumbnails; arrows/thumbnails navigate; sticky notes appear in the right margin (click = save); "Start listening" streams the mic to the AI.
