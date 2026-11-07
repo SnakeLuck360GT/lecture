@@ -1,8 +1,15 @@
 // S3 / shared: text embeddings via QVAC. Owner: aryan.
-import { sdk, embedModel } from './models.js'
+import { sdk, embedModel, noteSdkError } from './models.js'
 
 /** embed(string) → number[] ; embed(string[]) → number[][] (vectors L2-normalised). */
 export async function embed (text) {
+  try { return await embedOnce(text) } catch (e) {
+    if (!noteSdkError(e)) throw e
+    return embedOnce(text) // worker was re-initialised: one retry
+  }
+}
+
+async function embedOnce (text) {
   const q = await sdk()
   const modelId = await embedModel()
   if (Array.isArray(text)) {

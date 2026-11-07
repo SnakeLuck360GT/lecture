@@ -41,7 +41,8 @@ export function createSummariser ({ bus, complete, opts = {} }) {
       const fresh = a.pending.splice(0)
       // B-005 recall: the LLM sees the slide's WHOLE transcript so far (notes already written are
       // passed in so it does not repeat them), not just the newest chunks.
-      const chunks = [...a.seen, ...fresh]
+      // H-3: bound the history (a long stay on one slide must not grow memory / the prompt forever)
+      const chunks = [...a.seen, ...fresh].slice(-40)
       a.seen = chunks
       if (!chunks.length) return
       a.lastRun = Date.now()

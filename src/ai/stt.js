@@ -3,7 +3,8 @@
 // playback, and its chunk is emitted when playback reaches the window end (realtime pacing).
 import { sdk, sttModel } from './models.js'
 import { config } from './config.js'
-import { loadWav16k, writeTempWav } from './wav.js'
+import { loadWav16k, writeTempWav, removeTemp } from './wav.js'
+import { noteSdkError } from './models.js'
 
 const SR = 16000
 
@@ -29,17 +30,27 @@ export async function transcribeAudio (audio, { prompt, partial } = {}) {
   const q = await sdk()
   const kind = partial ? 'partial' : 'final'
   const modelId = await sttModel(kind)
-  const audioChunk = typeof audio === 'string' ? audio : await writeTempWav(audio, SR)
+  const temp = typeof audio !== 'string'
+  const audioChunk = temp ? await writeTempWav(audio, SR) : audio
   // same model for both kinds -> same queue (B-007 guarantee)
   const key = partial && config.models.sttPartial !== config.models.stt ? 'partial' : 'final'
-  const once = () => serialSTT(() => q.transcribe({ modelId, audioChunk, ...(prompt ? { prompt } : {}) }), key)
+  const once = async () => {
+    const id = await sttModel(kind) // re-resolve: the model may have been reloaded after a worker crash
+    return serialSTT(() => q.transcribe({ modelId: id, audioChunk, ...(prompt ? { prompt } : {}) }), key)
+  }
+  void modelId
   let text
   try {
-    text = await once()
-  } catch (e) {
-    errorSink?.({ error: String(e?.message || e), partial: !!partial, retried: !partial })
-    if (partial) throw e // partials are disposable
-    text = await once() // finals: retry once
+    try {
+      text = await once()
+    } catch (e) {
+      noteSdkError(e) // H-3: a crashed worker is re-initialised on the next call
+      errorSink?.({ error: String(e?.message || e), partial: !!partial, retried: !partial })
+      if (partial) throw e // partials are disposable
+      text = await once() // finals: retry once
+    }
+  } finally {
+    if (temp) removeTemp(audioChunk) // H-3: partials alone wrote 2 files/s and never deleted them
   }
   return cleanText(typeof text === 'string' ? text : (text || []).map((s) => s.text).join(' '))
 }
