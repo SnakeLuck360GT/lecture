@@ -47,11 +47,15 @@ export async function startAI ({ bus, mock = config.mock, preload = !mock } = {}
   const liveTx = mock ? await liveScriptTranscriber(process.env.LECSCRIBE_MOCK_SCRIPT || 'fixtures/lecture.script.json') : transcribe
   const live = createLiveStream({ onChunk: emitChunk, getSlideIndex: () => current, transcribe: liveTx })
 
+  let ready = Promise.resolve()
   if (preload) {
-    // Load in sequence so the first is usable quickly; never throw from here.
-    for (const f of [sttModel, embedModel, llmModel]) {
-      try { await f() } catch (e) { console.error('[ai] preload failed', e?.message || e) }
-    }
+    // Load in the BACKGROUND (first run downloads models) so the facade is usable at once;
+    // every method awaits its own model lazily. Sequential so the first model is ready quickly.
+    ready = (async () => {
+      for (const f of [sttModel, embedModel, llmModel]) {
+        try { await f() } catch (e) { console.error('[ai] preload failed', e?.message || e) }
+      }
+    })()
   } else if (mock) {
     for (const m of ['stt', 'embed', 'llm']) bus.emit('ai:status', { model: m, state: 'ready', mock: true })
   }
@@ -59,6 +63,8 @@ export async function startAI ({ bus, mock = config.mock, preload = !mock } = {}
   let clip = null
   return {
     mock,
+    /** Resolves when STT, embedding and LLM models are loaded (or failed). */
+    ready: () => ready,
     /** S2 demo path: stream a recorded 16 kHz WAV as transcript chunks (paced to wall clock). */
     async playClip (wavPath, { realtime = true } = {}) {
       clip?.stop()
