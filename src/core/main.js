@@ -50,6 +50,7 @@ protocol.registerSchemesAsPrivileged([
 export const bus = createBus()
 let ai = null // AI facade from src/ai (null until loaded / if not present)
 let p2p = null // P2P facade from src/p2p (null until loaded / if not present)
+let library = null // library data layer from src/library (aaron; null until loaded)
 let win = null
 
 const log = (...a) => console.log('[main]', ...a)
@@ -123,6 +124,22 @@ async function startP2P () {
   }
 }
 
+// Library data layer (aaron, src/library): modules -> lectures, per-lecture vector store. Data lives in userData/library.
+async function startLibrary () {
+  const entry = join(ROOT, 'src', 'library', 'index.js')
+  if (!existsSync(entry)) return
+  try {
+    const mod = await import(pathToFileURL(entry).href)
+    const start = mod.startLibrary || mod.default
+    if (typeof start === 'function') {
+      library = await start({ bus, ai: () => ai, dir: join(app.getPath('userData'), 'library') })
+      log('Library started')
+    }
+  } catch (e) {
+    console.error('[main] Library failed to start:', e)
+  }
+}
+
 // Renderer -> AI. pushAudio/pushExplainAudio come in fire-and-forget ('ai:push'), the rest via invoke.
 const AI_METHODS = new Set(['playClip', 'stopClip', 'pushAudio', 'flushAudio', 'pushExplainAudio', 'embed', 'ocr', 'summariseLecture'])
 const PATH_ARG_METHODS = new Set(['playClip'])
@@ -151,6 +168,12 @@ function wireIpc () {
     return p2p[method](...args)
   })
 
+  ipcMain.handle('library:call', async (_e, method, ...args) => {
+    if (!library) throw new Error('Library is not loaded (src/library missing or failed to start)')
+    if (typeof library[method] !== 'function') throw new Error(`library.${method} is not implemented`)
+    return library[method](...args)
+  })
+
   ipcMain.handle('slides:process', async (_e, raw) => {
     const slides = await processSlides(raw, {
       ocr: ai && typeof ai.ocr === 'function' ? (img) => ai.ocr(img) : undefined,
@@ -167,6 +190,7 @@ function wireIpc () {
     mock: MOCK,
     aiLoaded: !!ai,
     p2pLoaded: !!p2p,
+    libraryLoaded: !!library,
     versions: { electron: process.versions.electron, node: process.versions.node }
   }))
 }
@@ -206,6 +230,7 @@ app.whenReady().then(async () => {
   // Load models after the window is up, so the UI shows progress instead of a blank screen.
   await startAI()
   await startP2P()
+  await startLibrary()
   if (process.env.LECSCRIBE_SMOKE) runSmoke(process.env.LECSCRIBE_SMOKE).catch((e) => { console.error('[smoke] FAILED', e); app.exit(1) })
 })
 
@@ -236,5 +261,6 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
 app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
 app.on('before-quit', async () => {
   try { await p2p?.close?.() } catch {}
+  try { await library?.close?.() } catch {}
   try { await ai?.close?.() } catch {}
 })

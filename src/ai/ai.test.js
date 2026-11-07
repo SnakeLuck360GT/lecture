@@ -198,3 +198,22 @@ test('B-002: tracker advances on the FIRST chunk of a new topic even with old te
   assert.equal(tr.current(), 1, 'advanced on first bubble-sort chunk')
   tr.dispose()
 })
+
+test('B-005: filters keep every notOnSlide fact and drop slide paraphrases (fixtures)', async () => {
+  const { readFile } = await import('node:fs/promises')
+  const { grounding, tidyNote } = await import('./agents.js')
+  const fx = (f) => new URL(`../../fixtures/${f}`, import.meta.url)
+  const slides = JSON.parse(await readFile(fx('slides.json'), 'utf8'))
+  const script = JSON.parse(await readFile(fx('lecture.script.json'), 'utf8'))
+  for (const seg of script.segments) {
+    const st = slides[seg.slideIndex].text
+    for (const f of seg.notOnSlide) {
+      assert.equal(isOnSlide(f, st), false, `kept on slide ${seg.slideIndex}: ${f}`)
+      assert.ok(grounding(f, seg.text, st) >= 0.45, `grounded: ${f}`)
+    }
+  }
+  const copies = [[2, 'Separate chaining uses a list per bucket'], [2, 'Open addressing requires probing for free slots'],
+    [4, 'Resizing doubles the array when the load factor is too high'], [4, 'Resizing requires rehashing every key']]
+  for (const [i, c] of copies) assert.equal(isOnSlide(c, slides[i].text), true, `dropped: ${c}`)
+  assert.equal(tidyNote('The lecturer explained that linear probing is cache friendly'), 'Linear probing is cache friendly')
+})
