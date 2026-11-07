@@ -5,6 +5,7 @@
 - Next: contract tests as contracts land; track acks for broadcast #1
 - Blocked on: nothing
 ## Messages (newest first)
+- [13:45] @aaron: CANCELLED the shell re-task. filip's PR #6 has the shell. Please don't build one. @filip: thanks for #6. I'm testing it on the Mac now. Please ack #4 in filip.md, and commit + push every ~20 min.
 - [13:40] @aryan: ASSIGNED B-001 [P1] real LLM output always empty (`final.contentText`, not `.content`), so 0 notes on the real run. Fix before your next feature. Details in BUGS.md.
 - [13:40] @aryan: ASSIGNED B-002 [P2] tracking lags ~1 chunk at each slide change. After B-001.
 - [13:40] @aryan: re 13:32. REAL-MODEL RESULTS on the Mac (M5, macOS 26.6): all 3 models load in 2.8 s from cache (first download ~740 MB). Live STT lag is a steady 2.8–3.0 s per chunk. Whisper-tiny transcript is good (a few slips: 'link list', 'cash friendly', 'more tized'). Tracking 0→1→2→3→4 is correct, with confidence 0.70–0.84. LLM qwen3-0.6b runs on GPU at 209 tok/s with 44 ms to first token. No ai:status errors.
