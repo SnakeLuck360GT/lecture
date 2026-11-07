@@ -1,11 +1,11 @@
 # BUGS
-## dev health: 🟢 GREEN  (16:08, commit edd29df, 105/105 on the Mac; UI smoke ok)
+## dev health: 🟢 GREEN  (16:32, commit 8678230, 109/109 on the Mac)
 ## Open
 ### H-3 [P0] Random crashes in long live sessions; model efficiency (human 15:53)
 - Owners: @aryan (AI leaks + worker watchdog, PR #56 merged), @filip (renderer DOM caps + crash handlers), @david (soak).
 - Repro / evidence: `node tests/soak/soak.mjs 30 <out>` on the Mac (real models, AI + P2P host + peer + library session, lecture.wav looped live). 'Before' run (pre-#56) in progress since 15:56: no crash yet; temp files grow ~120/min (~11 MB/min): $TMPDIR lecscribe*/qvac* reached 4580 files / 251 MB from today's runs. QVAC workers ~3.7–4.2 GB RSS.
 - Expected: 30 min with flat RSS, no temp growth, 0 crashes; a worker crash auto-recovers.
-- Status: 'BEFORE' soak (16:27, pre-#56/#57, stopped at 25 min): 0 crashes, 0 unhandled; AI workers flat ~3.7 GB, node 114→284 MB; temp files +~150/min (6712 files / 409 MB) [fixed by #56?]; notes stalled for ~8 min; NEW B-016 (embed collisions) + B-017 (vectors.json O(n²)). NOTE: the Mac SLEPT on battery 16:10–16:19 (pmset DarkWake), so that gap is not an app freeze. Demo: plug in + caffeinate. 'AFTER' soak now running on dev with #56 + #57 (caffeinated).
+- Status: PARTLY VERIFIED (16:32): 'after' soak (dev with #56+#57, 4 min, then stopped for the rehearsal): temp files +2 in 4 min (was ~+600) → temp leak FIXED; 0 errors, workers ~2.8 GB, node ~98 MB. B-016/B-017 fixes (#65/#64) landed after it started; a full 30-min re-soak after the demo rehearsal if time allows.
 ### H-1 [P1] Slides/notes cropped and hard to read: per-page view, fit without cropping, zoom/pan, notes wrap (human 15:53)
 - Owner: @filip. Verify: Mac, real PDF + a portrait/odd-aspect PDF, zoom in/out/fit, long sticky text not clipped.
 - Status: OPEN (16:02)
@@ -57,12 +57,12 @@
 - Stage / owner: s3 + s5 / suggested @aryan (embed is in src/ai); @aryan please assign
 - Repro: Mac, real models, `node tests/soak/soak.mjs 30` on dev pre-#56 (also check after). From ~12 min in: 10× `[ai/tracker] chunk scoring failed RPCError: Cannot set new job…` and 18× `[library] embed failed, falling back to keyword search: Cannot set new job…`. The tracker and the library call ai.embed concurrently; QVAC's embed model takes one job at a time. Effect: auto slide-follow stops, and lecture search degrades to keywords.
 - Suggested fix: ONE serial queue for every embed call (like B-007 did for STT), tracker first (latency-critical), library indexing batched + low priority (drop/merge when backed up).
-- Status: OPEN (16:27)
+- Status: FIX CLAIMED (#65); 109/109 on the Mac. Long-session soak pending.
 ### B-017 [P2] Library rewrites the whole pretty-printed vectors.json on every transcript chunk (O(n²) over a long lecture)
 - Stage / owner: s5 / suggested @aaron (OFFLINE): @aryan please assign
 - Evidence: soak lecture after ~20 min: vectors.json = 6.4 MB (JSON with 2-space indent, 768-dim floats); readVectors + writeJson(…, null, 2) per appendTranscript. A 1-hour lecture → ~20 MB parse + stringify per chunk on the main process (UI hitches, memory churn; node RSS 114 → 284 MB in the soak).
 - Suggested fix: no indentation for vectors.json, keep the store in memory and flush debounced (e.g. every 5 s / on endSession), append-only or binary Float32 file per lecture.
-- Status: OPEN (16:27)
+- Status: FIX CLAIMED (#64); 109/109 on the Mac. Long-session soak pending.
 ### B-018 [P2] Stale empty-state copy after H-2: "Click a note to save it."
 - Stage / owner: s9 / suggested @filip
 - Repro: human, Mac, latest dev: lecture view, a slide with no notes → "LecScribe writes a sticky note when the lecturer says something that is not on the slide. Click a note to save it." (ui/views/lecture.js:377). Notes now auto-save; the star marks them important.
