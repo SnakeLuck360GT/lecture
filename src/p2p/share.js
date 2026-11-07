@@ -1,6 +1,6 @@
 // S8 share link: export/import one week's notes as text over Pears. Owner: aaron. Contract: coord/contracts/stage-8.md
 import Corestore from 'corestore'
-import { defaultStorage, parseKey, weekLink, makeSwarm, joinTopic } from './util.js'
+import { defaultStorage, parseKey, weekLink, makeSwarm, joinTopic, resilientSwarm } from './util.js'
 
 /** Seed a week's bundle. Returns { key, link, stop() }. The link works while this device stays online. */
 export async function shareWeek (bundle, { storage, bootstrap } = {}) {
@@ -26,10 +26,10 @@ export async function shareWeek (bundle, { storage, bootstrap } = {}) {
     blocks.push({ type: 'end', count: notes.length })
     await core.append(blocks)
   }
-  const swarm = makeSwarm(store, { bootstrap })
-  const topic = joinTopic(swarm, core.discoveryKey, { server: true, client: false })
+  // Seeding can last a long time, so survive network switches too.
+  const net = resilientSwarm(store, { topic: core.discoveryKey, server: true, client: false, bootstrap })
   // Wait until the link is announced on the DHT, so it works the moment we hand it out.
-  await topic.flushed.catch(() => {})
+  await net.flushed.catch(() => {})
   let stopped = false
   return {
     key: core.key.toString('hex'),
@@ -37,7 +37,7 @@ export async function shareWeek (bundle, { storage, bootstrap } = {}) {
     async stop () {
       if (stopped) return
       stopped = true
-      await swarm.destroy().catch(() => {})
+      await net.destroy()
       await store.close().catch(() => {})
     }
   }
