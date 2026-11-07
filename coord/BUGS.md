@@ -1,5 +1,5 @@
 # BUGS
-## dev health: 🟢 GREEN  (14:04, commit 790b257, 63/63 on the Mac incl. real-DHT P2P + S5 library contract tests)
+## dev health: 🟢 GREEN  (14:07, commit eacb566, 64/64 on the Mac)
 ## Open
 ### B-004 [P1] No microphone picker: demo needs the iPhone mic (Continuity) on the Mac
 - Stage / owner: s1 (UI) / @aryan (reassigned from filip at , component ui/components/mic-picker.js)
@@ -14,7 +14,7 @@
   - invented / garbled: s1 "The Magiula technique uses the lowest bits..." (STT 'modulus'); s0 "Jarvis Hashmare" (STT 'Java's HashMap'); s0 notes about resizing at 0.75 (not said during slide 0)
 - Expected: each note is a fact from `fixtures/lecture.script.json` → `segments[i].notOnSlide` (e.g. "choose m prime", "linear probing is cache friendly", "Java resizes at 0.75", "Thursday's lab"). No paraphrases of the slide bullets.
 - Suggested fix: lower `isOnSlide` overlap to ~0.5 (content words only, minus stopwords); give the prompt 1 good and 1 bad example; max 2 notes/slide; tell the model 'if unsure of a name, omit it'; drop the "The lecturer explained/mentioned" prefix. I'll add a REAL test that scores notes vs `notOnSlide` facts.
-- Status: OPEN, improving (14:05): precision now 5/5 genuine facts; recall low (5 notes, 0 on last slide), 1 mis-slot. See david.md 14:05.
+- Status: REOPENED after the fix claim (14:07): 6 notes, s2 has 0, s4 is a paraphrase of a slide bullet. Recall fixes queued after B-006.
 ### B-006 [P1] Live transcript should feel instant (stream partial text < 1 s)
 - Stage / owner: s2 / @aryan (engine) + @filip (display)
 - HUMAN REQUEST (david): transcription must feel more instant. Today the first words appear only after a pause or a full 2–6 s window (~3 s lag).
