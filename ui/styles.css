@@ -239,7 +239,8 @@ label.btn { cursor: pointer; }
 .nav:hover { opacity: 1 !important; }
 .nav:disabled { display: none; }
 .nav.prev { left: var(--space-3); } .nav.next { right: var(--space-3); }
-.slide-meta { position: absolute; right: var(--space-3); bottom: var(--space-3); display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); color: var(--muted); font-variant-numeric: tabular-nums; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 2px var(--space-2); }
+/* B-010: sits BELOW the slide card (never covers the slide's own footer) */
+.slide-meta { align-self: flex-end; display: flex; align-items: center; gap: var(--space-2); margin-top: calc(-1 * var(--space-2)); font-size: var(--text-sm); color: var(--muted); font-variant-numeric: tabular-nums; }
 .slide-meta:has(#slide-count:empty) { display: none; }
 .track-badge { font-weight: 600; font-size: var(--text-xs); }
 .track-badge.auto { color: var(--accent); }
@@ -279,7 +280,9 @@ label.btn { cursor: pointer; }
 .sticky:hover { transform: translateY(-1px); box-shadow: var(--shadow-pop); }
 .sticky.saved { box-shadow: inset 3px 0 0 var(--saved), var(--shadow); }
 .sticky-top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
-.sticky-kind { font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; opacity: .6; }
+.sticky-kind { font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; opacity: .6; display: inline-flex; align-items: center; gap: var(--space-2); }
+.exam-badge { display: inline-flex; align-items: center; height: 16px; padding: 0 6px; border-radius: 999px; background: var(--danger); color: #fff; font-size: 10px; letter-spacing: .04em; opacity: 1; }
+.sticky:has(.exam-badge) { border-color: var(--danger); }
 .sticky-state { display: inline-flex; align-items: center; gap: 4px; font-size: var(--text-xs); font-weight: 600; opacity: .55; }
 .sticky.saved .sticky-state { color: var(--saved); opacity: 1; }
 .sticky:hover .sticky-state { opacity: 1; }
@@ -291,8 +294,9 @@ label.btn { cursor: pointer; }
 /* thumbnail strip + heatmap layer */
 .strip-wrap { position: relative; flex: none; border-top: 1px solid var(--line); background: var(--panel); }
 /* heatmap cells line up 1:1 with thumbnails (same width, gap and left padding as .strip) */
-#mount-heatmap { padding: var(--space-2) var(--space-4) 0; }
-#mount-heatmap:empty { display: none; }
+#mount-heatmap { padding: var(--space-2) var(--space-4) 0; display: none; }
+/* B-010: only show the heatmap once a live room has at least one "I'm lost" tap */
+.strip-wrap.has-heat #mount-heatmap:not(:empty) { display: block; }
 #mount-heatmap .lec-heatmap__strip { grid-auto-columns: 112px; gap: var(--space-2); justify-content: start; }
 #mount-heatmap .lec-heatmap__cell { height: 18px; }
 #mount-heatmap ~ .strip { padding-top: var(--space-2); }

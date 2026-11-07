@@ -314,7 +314,13 @@ export function createLectureView (app) {
     d.type = 'button'
     d.title = saved ? 'Saved. Click to remove from your notes.' : 'Click to save to your notes'
     const top = el('div', 'sticky-top')
-    top.append(el('span', 'sticky-kind', n.kind === 'lecturer' ? 'Lecturer explanation' : 'AI-generated'))
+    const kind = el('span', 'sticky-kind', n.kind === 'lecturer' ? 'Lecturer explanation' : 'AI-generated')
+    if (n.emphasis === 'exam') {
+      const b = el('span', 'exam-badge', 'Exam')
+      b.title = 'The lecturer flagged this as likely to come up in the exam'
+      kind.append(b)
+    }
+    top.append(kind)
     const st = el('span', 'sticky-state')
     st.innerHTML = saved ? `${iconSvg('check', 12)}<span>Saved</span>` : `${iconSvg('bookmark', 12)}<span>Save</span>`
     top.append(st)
@@ -569,7 +575,11 @@ export function createLectureView (app) {
   lec.on('transcript:chunk', onChunk)
   lec.on('transcript:partial', onPartial)
   lec.on('ai:status', onAiStatus)
-  lec.on('lost:counts', (counts) => { state.lost = counts || {}; if (state.active) updateThumbBadges() })
+  lec.on('lost:counts', (counts) => {
+    state.lost = counts || {}
+    document.querySelector('.strip-wrap')?.classList.toggle('has-heat', Object.values(state.lost).some((n) => Number(n) > 0))
+    if (state.active) updateThumbBadges()
+  })
   lec.on('clip:ended', () => setClip(false))
   lec.on('room:ended', () => { if (state.role === 'peer') toast('The host ended the room') })
 
