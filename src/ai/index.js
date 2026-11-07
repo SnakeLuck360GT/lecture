@@ -107,6 +107,13 @@ export async function startAI ({ bus, mock = config.mock, preload = !mock } = {}
       }
     },
     stopClip () { clip?.stop(); clip = null },
+    /** Auto-follow toggle: false = the tracker never auto-advances (manual prev/next only). */
+    setAutoFollow (on) {
+      const v = tracker.setAutoFollow(on)
+      bus.emit('ai:autofollow', { on: v })
+      return v
+    },
+    getAutoFollow () { return tracker.autoFollow() },
     /** S2 live mic: Float32Array 16 kHz mono PCM from the renderer. */
     pushAudio (f32) { live.push(toF32(f32)) },
     /** S2 live mic: transcribe whatever is buffered (call on "Stop listening"). Resolves when done. */
