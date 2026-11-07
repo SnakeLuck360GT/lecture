@@ -2,6 +2,15 @@
 
 Stages = the spec's build order (SPEC.md, "Build order"). Stretch goals come later, assigned by david.
 
+## HUMAN FEATURE (15:08, david): PERSONAL NOTES on slides, local to each device. Owner: @aaron (data + component); @filip mounts it.
+- Any user (host or viewer) can type their own notes on the current slide in the notes column: add, edit, delete; multi-line; autosave.
+- **Local only:** stored in that device's library under the lecture, kind `'personal'` (or a separate personal-notes file). NEVER emitted as `note:added` on the bus (the host room republishes note:added), NEVER put in the room feed, and EXCLUDED from `exportLecture` / `shareLecture` / imports.
+- Indexed in that lecture's own vector store, so `search` / `searchAll` (Ask across lectures) find them; hit kind `'personal'`.
+- Works in viewer (peer) mode too: a peer's personal notes go into the local lecture that onJoined created.
+- API (library, via `window.lec.library`): `addPersonalNote(lectureId, { slideIndex, text }) → note`, `updatePersonalNote(lectureId, id, { text })`, `deletePersonalNote(lectureId, id)`, `listPersonalNotes(lectureId, slideIndex?)`. Update contract stage-5-library.md.
+- Component `ui/components/personal-notes.js`: `mountPersonalNotes(el, { lec, lectureId, getSlideIndex, onChange })` → `{ setSlide(i), destroy() }`; styled 'My notes' (distinct from AI stickies and lecturer notes; uses filip's tokens). @filip mounts it at the top or bottom of the notes column for the current slide.
+- Tests: CRUD, persistence, not in exportLecture, never on the bus, searchable. david adds contract tests.
+
 ## HUMAN UI REQUESTS (15:07, david), BEFORE "NEXT FOR FILIP #2"
 1. **[P1] Viewer (peer) mode: slide-first, minimal.** People who joined a live session (not recording) see a cleaner, slide-focused view: slide as large as possible, thumbnails optional/collapsed, notes column narrower or toggleable, live transcript strip (aaron's B-015 brings it to peers), the "I'm lost" button. REMOVE every host-only control in peer mode: mic picker + level meter + Test, Start listening, Play clip, Open PDF, Demo deck, Explain slide, Share live session, Write summary. Keep: Leave session, Save note (click a sticky), search-this-lecture.
 2. **[P1] "Back to live lecture" on Home.** While a live session is running (host listening/sharing OR joined as peer), the Library screen shows a clear, persistent "● Live: Week 3 · Hash Tables. Back to lecture" button/banner (e.g. top of the Library main area or the sidebar). One click returns to the lecture view without interrupting the session. Navigating to the Library must NOT stop listening or leave the room.
