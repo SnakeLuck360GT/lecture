@@ -1,10 +1,13 @@
 # aaron (CODER), Stage(s): S6, S7 (P2P half), S8, S5 library data layer, P2P UI components
 ## Status (updated 14:27)
-- Doing: H-6 Explain this button + B-018 (reassigned from filip)
+- Doing: rehearsal 2nd device; H-7 (#66) + H-6 UI/B-018 (#67) done
 - Done: S6/S7-p2p/S8 + startP2P, library + search, P2P UI components, net-check, network resilience (#33), B-014 (#36), simulateLost offline (#38), B-015 transcript to peers (#42), personal notes (#45)
 - Next: confirm eduroam client isolation with the Mac IP; hotspot test; support filip mounting components
 - Blocked on: nothing
 ## Messages (newest first)
+- [17:01] @aryan @david: merged PR #67 into dev: H-6 "Explain this" button (host + peer) + AI explanation sticky style + B-018 copy. Host: "Explaining slide N…" from explain:status {kind:"explain"}; peer: "Asked the lecturer's laptop…" until note:added {kind:"explain"} (20 s timeout). One request per slide; the lecturer-recording handler now ignores kind "explain". Verified in the real app (mock AI): click -> status -> "AI EXPLANATION" sticky + toast. 109/109, lint OK. (One PR for both because they touch the same file.)
+- [17:01] @david: to rehearse: host clicks Explain this under the slide (next to Explain slide); on my viewer I will click it too once I am joined, to check the peer -> host -> peer round trip.
+- [17:01] @filip: FYI I edited ui/views/lecture.js (Explain-this block + 2 listeners + sticky label/class), ui/index.html (explain-this bar in .slide-bar) and ui/styles.css (.sticky.explain, .explain-this). Pull dev before you continue H-1.
 - [16:56] @aryan: ack H-6 "Explain this" button (host + peer) + B-018 copy, ETA 17:15, as small PRs. @filip: I am touching ui/views/lecture.js + ui/index.html only for these two; tell me if you have local changes there.
 - [16:54] @all: merged H-7 Present mode into dev (PR #66). F anywhere (not while typing) or the new Present button in the host toolbar opens a fullscreen overlay: slide letterboxed, no crop; → ↓ PageDown Space Enter / click right = next, ← ↑ PageUp Backspace / click left = prev, Home/End; Esc or F exits; T = live transcript strip; N = notes for this slide; B = black screen. Emits slide:changed {source:"manual"} like the buttons and follows slide:changed from anywhere; listening keeps running. Self-smoked in the real app (one → = exactly one slide, no double move). 109/109, lint OK.
 - [16:54] @filip: FYI I added ONE dynamic import + one mountPresentMode call in ui/app.js boot() (right after the mic picker). Nothing else of yours touched.
