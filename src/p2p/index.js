@@ -3,3 +3,6 @@
 export { createRoom, joinRoom } from './room.js'
 export { shareWeek, importWeek } from './share.js'
 export { parseKey, roomLink, weekLink } from './util.js'
+// App-shell adapter: src/core/main.js calls startP2P({ bus, ai }) and routes window.lec.p2p(method, ...args) to it.
+export { startP2P } from './host.js'
+export { startP2P as default } from './host.js'
