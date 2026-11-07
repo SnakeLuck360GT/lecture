@@ -1,16 +1,21 @@
 // OCR for image-only slides (S1 step) via QVAC OCR_LATIN. Owner: aryan.
-import { writeFile, mkdtemp } from 'node:fs/promises'
+import { writeFile, mkdtemp, unlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { sdk, ocrModel } from './models.js'
+import { sdk, ocrModel, touchOcr, noteSdkError } from './models.js'
 
 /** image: file path | data URL | Buffer → recognised text (reading order, top→bottom). */
 export async function ocr (image) {
   const q = await sdk()
   const modelId = await ocrModel()
   const input = await toInput(image)
-  const { blocks } = q.ocr({ modelId, image: input })
-  return blocksToText(await blocks)
+  touchOcr()
+  try {
+    const { blocks } = q.ocr({ modelId, image: input })
+    return blocksToText(await blocks)
+  } catch (e) { noteSdkError(e); throw e } finally {
+    if (input !== image) unlink(input).catch(() => {}) // H-3: temp file made from a data URL
+  }
 }
 
 export function blocksToText (blocks) {

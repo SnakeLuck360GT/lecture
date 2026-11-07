@@ -465,3 +465,21 @@ test('auto-follow off: tracker keeps scoring but never auto-advances; on again r
   assert.equal(changes.length, 1)
   await ai.close()
 })
+
+test('H-3: worker-crash errors are recognised (models reset), other errors are not', async () => {
+  const { noteSdkError } = await import('./models.js')
+  assert.equal(noteSdkError(new Error('Something else went wrong')), false)
+  const crash = Object.assign(new Error('worker process exited unexpectedly'), { name: 'WorkerCrashedError' })
+  assert.equal(noteSdkError(crash), true)
+  assert.equal(noteSdkError(new Error('RPC initialization timed out after 30000ms')), true, 'debounced but still recognised')
+})
+
+test('H-3: temp WAVs written for STT are removed', async () => {
+  const { writeTempWav, removeTemp } = await import('./wav.js')
+  const { existsSync } = await import('node:fs')
+  const p = await writeTempWav(new Float32Array(1600))
+  assert.equal(existsSync(p), true)
+  removeTemp(p)
+  await tick(50)
+  assert.equal(existsSync(p), false)
+})

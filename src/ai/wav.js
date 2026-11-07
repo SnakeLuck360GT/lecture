@@ -1,5 +1,5 @@
 // Minimal WAV helpers (PCM16 / float32, any channels) — pure JS, no deps.
-import { readFile, writeFile, mkdtemp } from 'node:fs/promises'
+import { readFile, writeFile, mkdtemp, unlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -100,4 +100,9 @@ export async function writeTempWav (samples, sampleRate = 16000) {
   const p = join(await tmpDirP, `a-${process.pid}-${tmpN++}.wav`)
   await writeFile(p, encodeWav(samples, sampleRate))
   return p
+}
+
+/** Best-effort delete of a temp file (never throws). */
+export function removeTemp (p) {
+  if (p) unlink(p).catch(() => {})
 }
