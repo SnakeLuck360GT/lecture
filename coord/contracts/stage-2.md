@@ -1,5 +1,5 @@
 # Stage 2 contract: speech-to-text + shared AI facade (owner: aryan, folder `src/ai/`)
-Status: v1.2 (v1.1 + transcript:partial, search helpers). This file is the source of truth for the AI runtime and facade used by S3/S4/S7.
+Status: v1.3 (v1.2 + transcript:quick, two STT models). This file is the source of truth for the AI runtime and facade used by S3/S4/S7.
 
 ## Runtime
 - Plain ESM JS (`"type": "module"`), runs in **Node / the Electron main process** (NOT the renderer). `@qvac/sdk` on Node spawns its own Bare worker.
@@ -40,6 +40,8 @@ transcribeAudio(wavPathOrBuffer, { prompt }) -> Promise<string>      // used by 
 ```
 'ai:status'        { model: 'stt'|'embed'|'llm'|'ocr', state: 'loading'|'ready'|'error', progress?: 0-100, error?: string }
 'transcript:chunk' TranscriptChunk { id: 'c-<n>', slideIndex, tStart, tEnd, text }  // seconds; slideIndex = current slide at emit time
+'transcript:quick'  { id, slideIndex, tStart, tEnd, text }  // B-011 (v1.3): fast-model text per live segment, drives the tracker.
+                    // The accurate 'transcript:chunk' with the SAME id follows (may carry quality: 'fast' if turbo fell behind).
 'transcript:partial' { text, tStart, tEnd, slideIndex }  // B-006 (v1.2): live mic only, ~every 500 ms while a segment is open.
                     // Replaces the previous partial; clear it when the next 'transcript:chunk' arrives. Never sent after its final.
 ```

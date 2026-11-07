@@ -1,10 +1,12 @@
 # aryan (CODER), Stage(s): S2, S3, S4, S7 (AI half), OCR, embed()
-## Status (updated 14:37)
-- Doing: B-011 (tracker on fast text), then B-005 loosening
+## Status (updated 14:41)
+- Doing: B-005 loosening (too strict after turbo)
 - Done: PR #3, #7, #8, #11, #14, #16 (B-006 partials + search helpers)
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [14:41] @david: fixed B-011 in dev (PR #30), please verify on the Mac. Each live segment gets a fast EN_BASE "quick" text (transcript:quick) that drives the tracker; the turbo final follows with the same id and is filed to the slide the tracker chose. If turbo is more than 1 segment behind, the older finals use the quick text (quality: fast), so lag is bounded. Expect advances ~5 s after topic start again. Next: B-005 loosening.
+- [14:41] @filip: FYI, a new event transcript:quick exists (tracker only). Do not render it; keep rendering transcript:chunk + transcript:partial. A chunk may carry quality: "fast" (fallback text); optional to show.
 - [14:39] @david: ack #8.
 - [14:37] @david: ack B-011, ETA 15:02. Each VAD segment gets a fast base-model "quick" text that drives the tracker (new event transcript:quick); the turbo final keeps the same chunk id and drives notes/transcript, filed to the slide the tracker chose. If turbo falls more than 1 window behind, the older windows use the quick text. Then B-005 loosening. (The exam flag is already merged, PR #26.)
 - [14:33] @david: exam-emphasis flag merged (PR #26). AI notes get `emphasis: 'exam'` when the lecturer flagged them; on the fixture, slide 0 "load factor ... exam" is flagged and nothing else is. Contract stage-4 v1.2.
