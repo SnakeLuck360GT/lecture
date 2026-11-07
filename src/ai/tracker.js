@@ -33,6 +33,7 @@ export function createTracker ({ bus, embedMany, embedOne, opts = {} }) {
   let slidesReady = Promise.resolve()
   let current = 0
   let holdUntil = 0
+  let autoFollow = true // Auto-follow toggle (UI): off = keep scoring, never auto-advance
   const recent = [] // recent chunk texts
   let busy = Promise.resolve()
   let pending = null // narrow-win candidate awaiting confirmation
@@ -82,7 +83,7 @@ export function createTracker ({ bus, embedMany, embedOne, opts = {} }) {
       bus.emit('tracker:scores', { chunkId: chunk.id, scores: fresh, windowScores: win })
       const prevFresh = lastFresh
       lastFresh = { chunkId: chunk.id, scores: fresh }
-      if (Date.now() < holdUntil) return
+      if (Date.now() < holdUntil || !autoFollow) return
       const args = { current, threshold: o.threshold, margin: o.margin }
       const d = decide({ scores: fresh, ...args }) || decide({ scores: win, ...args })
       if (!d) { pending = null; return }
@@ -110,6 +111,8 @@ export function createTracker ({ bus, embedMany, embedOne, opts = {} }) {
   bus.on('transcript:quick', onChunk)
   return {
     current: () => current,
+    setAutoFollow (on) { autoFollow = !!on; pending = null; return autoFollow },
+    autoFollow: () => autoFollow,
     idle: () => busy,
     dispose () {
       bus.off('slides:loaded', onSlides)
