@@ -4,6 +4,7 @@ import { loadPdf } from '../../src/core/pdf.js'
 import { startMic } from '../../src/ai/browser/mic-capture.js'
 import { $, el, iconSvg, toast, debounce } from './dom.js'
 import { mountComponent, fallbackRoomPanel, fallbackLostButton } from './components.js'
+import { mountSlideZoom } from '../components/slide-zoom.js' // H-1 (aaron)
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('../../node_modules/pdfjs-dist/build/pdf.worker.mjs', import.meta.url).href
 
@@ -17,6 +18,7 @@ export function createLectureView (app) {
   let syncAutoFollow = () => {}
   let micPicker = null
   let pendingChunks = []
+  var slideZoom = null // eslint-disable-line no-var -- H-1; renderSlide may run before the mount below
   let replayCache = () => {}
 
   // ---------- open / close ----------
@@ -252,6 +254,7 @@ export function createLectureView (app) {
     const img = $('slide-img')
     const txt = $('slide-text')
     if (!s) return
+    slideZoom?.reset() // H-1: every page starts fitted (whole page visible, no crop)
     if (s.image) {
       if (img.src !== s.image) img.src = s.image
       img.alt = s.text || `Slide ${s.index + 1}`
@@ -889,6 +892,8 @@ export function createLectureView (app) {
   syncAutoFollow = () => lec.ai('getAutoFollow').then((v) => { af.checked = v !== false }).catch(() => {})
   $('btn-explain').addEventListener('click', () => (explain.recording ? stopExplain(true) : startExplain()))
   $('btn-explain-this').addEventListener('click', requestExplainThis) // H-6
+  // H-1: zoom + pan on the slide card (scale 1 = fit; reset on every slide change)
+  slideZoom = mountSlideZoom($('slide-wrap'), { getTarget: () => (!$('slide-img').hidden ? $('slide-img') : !$('slide-text').hidden ? $('slide-text') : null) })
   // aaron PR #33: show reconnecting while the swarm restarts after a network change
   lec.on('p2p:status', (s) => {
     if (s?.role !== 'host') return
