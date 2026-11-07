@@ -24,7 +24,7 @@ export function createSummariser ({ bus, complete, opts = {} }) {
   let generation = 0 // bumps on slides:loaded so stale jobs are dropped
 
   const agent = (i) => {
-    if (!agents.has(i)) agents.set(i, { pending: [], lastRun: 0, notes: [], queued: false })
+    if (!agents.has(i)) agents.set(i, { pending: [], seen: [], lastRun: 0, notes: [], queued: false })
     return agents.get(i)
   }
 
@@ -37,7 +37,11 @@ export function createSummariser ({ bus, complete, opts = {} }) {
     queue = queue.then(async () => {
       a.queued = false
       if (gen !== generation) return
-      const chunks = a.pending.splice(0)
+      const fresh = a.pending.splice(0)
+      // B-005 recall: the LLM sees the slide's WHOLE transcript so far (notes already written are
+      // passed in so it does not repeat them), not just the newest chunks.
+      const chunks = [...a.seen, ...fresh]
+      a.seen = chunks
       if (!chunks.length) return
       a.lastRun = Date.now()
       bus.emit('agent:status', { slideIndex: i, state: 'running' })
@@ -160,7 +164,7 @@ export function isOnSlide (note, slideText, maxOverlap = 0.7) {
   const ns = new Set(nw)
   for (const line of String(slideText).split(/\n+/)) {
     const lw = [...new Set(contentWords(line))]
-    if (lw.length < 2) continue
+    if (lw.length < 3) continue // short title lines ("Hash Tables") would flag every on-topic note
     const cov = lw.filter((w) => ns.has(w)).length / lw.length
     if ((cov >= 0.6 && novel <= 2) || (cov >= 0.75 && novel <= 3)) return true
   }
