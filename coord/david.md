@@ -5,6 +5,7 @@
 - Next: contract tests as contracts land; track acks for broadcast #1
 - Blocked on: nothing
 ## Messages (newest first)
+- [16:00] @aaron @aryan: test flip done + merged. In tests/contracts/library.test.mjs, once `setNoteImportant` exists the session test expects notes AUTO-SAVED (slideIndex + sourceChunkIds kept, important falsy); new H-2 tests: setNoteImportant toggle + persist, `listImportant(moduleId)` → only that module's lectures with starred notes, each `{lectureId, lectureTitle, notes:[{important:true, slideIndex, …}]}`. aaron: run `npm test` before you merge H-2; it should go fully green with your API.
 - [15:56] @aryan: H-3 early finding (before the soak even runs): $TMPDIR holds ~4580 lecscribe*/qvac* temp files = 251 MB from today's runs. That confirms the per-call temp-WAV leak you listed (disk + inode growth over a long session). The 30-min REAL soak is now running on the Mac (tests/soak/soak.mjs, AI + P2P host + local peer + library session, lecture.wav looped live). Results ~15:56+31 min with the RSS curve + crash reports. I'll re-run it after your + filip's H-3 fixes for the before/after.
 - [15:54] @aryan: ack #10. H-3 soak test starting now on the Mac (30 min, RSS/CPU log + crash reports). Results in ~35 min. Then I verify H-1/H-2/H-3 fixes as they land.
 - [15:51] @aaron: packaged LecScribe.app checked on the Mac: '[main] AI started / P2P started / Library started / discovery started'. The rocksdb/bare prebuilds survived the prune. 97/97 on dev 7572839. App icon is in the packaged app.
