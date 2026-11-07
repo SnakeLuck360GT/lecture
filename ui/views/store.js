@@ -54,7 +54,9 @@ function realStore (lec) {
     saveNote: (id, n) => call('saveNote', id, n),
     unsaveNote: (id, nid) => call('unsaveNote', id, nid),
     appendTranscript: (id, c) => call('appendTranscript', id, c),
+    setSummary: (id, text) => call('setSummary', id, text),
     search: (id, q, k) => call('search', id, q, k),
+    searchAll: (q, k) => call('searchAll', q, k),
     startSession: (id) => call('startSession', id),
     endSession: () => call('endSession')
   }
@@ -69,7 +71,7 @@ function memoryStore () {
     id: 'l-demo', moduleId: 'm-demo', title: 'Week 3 · Hash Tables', date: new Date().toISOString().slice(0, 10),
     state: 'attended', createdAt: now, updatedAt: now, slides: [], notes: [], transcript: [], summary: ''
   }]
-  const summary = (l) => ({ ...l, slideCount: l.slides.length, noteCount: l.notes.length, slides: undefined, notes: undefined, transcript: undefined })
+  const summary = (l) => ({ ...l, slideCount: l.slides.length, noteCount: l.notes.length, hasSummary: !!l.summary, slides: undefined, notes: undefined, transcript: undefined })
   const find = (lid) => {
     const l = lectures.find((x) => x.id === lid)
     if (!l) throw new Error(`no lecture ${lid}`)
@@ -91,6 +93,7 @@ function memoryStore () {
     async saveNote (lid, note) { const l = find(lid); if (!l.notes.some((x) => x.id === note.id)) l.notes.push({ ...note, savedAt: Date.now() }); return summary(l) },
     async unsaveNote (lid, nid) { const l = find(lid); l.notes = l.notes.filter((x) => x.id !== nid); return summary(l) },
     async appendTranscript (lid, chunks) { const l = find(lid); for (const c of chunks) if (!l.transcript.some((x) => x.id === c.id)) l.transcript.push(c); return summary(l) },
+    async setSummary (lid, text) { find(lid).summary = String(text || ''); return summary(find(lid)) },
     async search (lid, q, k = 5) {
       const l = find(lid)
       const words = String(q).toLowerCase().split(/\s+/).filter(Boolean)

@@ -284,7 +284,19 @@ async function runSmoke (pngPath) {
   await new Promise((r) => setTimeout(r, 800))
   await writeFile(out.replace(/.png$/i, '') + '-explain.png', (await wc.capturePage()).toPNG())
   const explain = explainNote ? { slideIndex: explainNote.slideIndex, text: String(explainNote.text).slice(0, 60) } : null
-  const result = { ok: slides.length > 0 && ui.current === 1 && ui.img, explain, slides: slides.length, texts: slides.map((s) => s.text.slice(0, 40)), ui, events: [...new Set(seen)] }
+  // Lecture summary: feed one transcript chunk, click "Write summary", wait for the card text.
+  bus.emit('transcript:chunk', { id: 'c-900', slideIndex: 1, tStart: 0, tEnd: 5, text: 'Hash functions map keys to buckets; a good one spreads keys uniformly.' })
+  await new Promise((r) => setTimeout(r, 300))
+  await wc.executeJavaScript("document.getElementById('btn-summarise')?.click()")
+  let summaryText = ''
+  for (let i = 0; i < 60 && !summaryText; i++) {
+    await new Promise((r) => setTimeout(r, 500))
+    summaryText = await wc.executeJavaScript("document.getElementById('summary-text')?.textContent || ''")
+  }
+  const saved = await wc.executeJavaScript('(async () => { const L = window.__lecscribe; return !!(await L.app.store.getLecture(L.state.lectureId))?.summary })()')
+  await writeFile(out.replace(/.png$/i, '') + '-summary.png', (await wc.capturePage()).toPNG())
+  const summary = { chars: summaryText.length, saved }
+  const result = { ok: slides.length > 0 && ui.current === 1 && ui.img, explain, summary, slides: slides.length, texts: slides.map((s) => s.text.slice(0, 40)), ui, events: [...new Set(seen)] }
   console.log('[smoke] ' + JSON.stringify(result))
   app.exit(result.ok ? 0 : 1)
 }
