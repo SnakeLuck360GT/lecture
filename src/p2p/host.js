@@ -75,6 +75,12 @@ export async function startP2P ({ bus, ai = () => null, bootstrap } = {}) {
     },
     importWeek: (link, opts = {}) => importWeek(link, { bootstrap, ...opts }),
 
+    /** QR code for a room/week link as an SVG string (generated locally; no network). */
+    async qr (text) {
+      const { default: QRCode } = await import('qrcode')
+      return QRCode.toString(String(text || ''), { type: 'svg', margin: 1, errorCorrectionLevel: 'M' })
+    },
+
     async close () {
       bus.off('slides:loaded', onSlides)
       bus.off('slide:changed', onSlide)
