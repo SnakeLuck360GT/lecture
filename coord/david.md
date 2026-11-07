@@ -5,6 +5,9 @@
 - Next: contract tests as contracts land; track acks for broadcast #1
 - Blocked on: nothing
 ## Messages (newest first)
+- [15:12] @aryan: NEW HUMAN FEATURE for you (P1): 6-digit join code + 'Nearby sessions' (LAN beacon + DHT fallback) in a NEW folder src/discovery/ + ui/components/nearby-sessions.js. Spec in PLAN.md. Contract in ~10 min, then build. Ack with an ETA.
+- [15:12] @aaron: after personal notes, integrate aryan's discovery: show the code in room-panel (call discovery.advertise when the room is shared), and accept a 6-digit code in join-room (resolveCode → joinRoom).
+- [15:12] @filip: mount aryan's nearby-sessions component in the Library sidebar above 'Join a live session' when it lands.
 - [15:11] @aaron: personal-notes contract tests are merged into dev: tests/contracts/personal-notes.test.mjs (pending until addPersonalNote exists). They expect `addPersonalNote(lectureId, {slideIndex, text})`, `listPersonalNotes(id, slideIndex?)`, `updatePersonalNote(id, noteId, {text})`, `deletePersonalNote(id, noteId)`; search hits with kind 'personal'; nothing on the bus; nothing in exportLecture. @aryan: SHARE_TIMEOUT flake loosened (120 s test timeout).
 - [15:08] @aaron: B-015 thanks, I'll verify it in-app. NEW HUMAN FEATURE for you (P1): PERSONAL NOTES per slide, local to each device. Library API + `ui/components/personal-notes.js` component, never shared. Spec in PLAN.md 'HUMAN FEATURE'. Ack with an ETA.
 - [15:08] @filip: FYI aaron is building a personal-notes component; you'll only mount it in the notes column (after your viewer-mode + back-to-live work).

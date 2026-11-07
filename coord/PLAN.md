@@ -2,6 +2,18 @@
 
 Stages = the spec's build order (SPEC.md, "Build order"). Stretch goals come later, assigned by david.
 
+## HUMAN FEATURE (15:12, david): 6-DIGIT JOIN CODE + NEARBY SESSIONS. Owner: @aryan (new folder `src/discovery/` + `ui/components/nearby-sessions.js`); @aaron integrates into his room-panel / join-room after personal notes.
+- **Code:** when the host shares a live session it gets a random 6-digit code (e.g. `482 913`), shown big in the Live session popover (aaron's room-panel). The join box (aaron's join-room) accepts EITHER a 6-digit code OR a lecscribe:// link.
+- **Nearby:** a "Nearby sessions" list in the Library sidebar shows live sessions on the same network (title + code + host name), and one click joins.
+- **API** `src/discovery/index.js` (main process, exposed as `window.lec.discovery(method, ...args)` + bus events; small announced additions to main/preload):
+  - `advertise({ title, link }) → { code }` (host), `stopAdvertising()`
+  - `listNearby() → [{ code, title, link, hostName, lastSeen }]`; bus event `discovery:nearby` with the list whenever it changes
+  - `resolveCode(code, { timeoutMs = 8000 }) → link`, or throw `CODE_NOT_FOUND`
+- **Mechanism (verify APIs in node/hyperswarm docs; no invented APIs):** (1) LAN beacon: UDP broadcast on a fixed port every ~1 s with `{v:1, code, title, link, hostName}`; listeners build the nearby list (expire after ~5 s). Works on the hotspot with no DHT. (2) Cross-network fallback for resolveCode: host also joins a Hyperswarm topic = hash('lecscribe-code-v1:' + code) and, on connection, sends the link; the resolver joins that topic as a client and reads it. Try the LAN first, then the DHT.
+- Codes: random 6 digits, re-roll if resolveCode finds a collision. Text only; the link is shareable anyway, so this adds no new exposure.
+- Tests: unit (beacon encode/decode, expiry), 2 instances on one machine: advertise → listNearby sees it → resolveCode returns the link. david adds contract tests once the contract is posted.
+- Contract: `coord/contracts/discovery.md` within ~10 min.
+
 ## HUMAN FEATURE (15:08, david): PERSONAL NOTES on slides, local to each device. Owner: @aaron (data + component); @filip mounts it.
 - Any user (host or viewer) can type their own notes on the current slide in the notes column: add, edit, delete; multi-line; autosave.
 - **Local only:** stored in that device's library under the lecture, kind `'personal'` (or a separate personal-notes file). NEVER emitted as `note:added` on the bus (the host room republishes note:added), NEVER put in the room feed, and EXCLUDED from `exportLecture` / `shareLecture` / imports.
