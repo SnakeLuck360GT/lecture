@@ -58,6 +58,11 @@
 - Suggested fix: drive the TRACKER from the fast EN_BASE text (partials or a base-model final per VAD window), and keep turbo finals for transcript/notes/library only. Make sure turbo never queues more than ~1 window behind (drop/merge windows or skip turbo for a window and keep the base text if the queue is > 1 deep). Prioritise GPU for turbo over partials when the turbo queue is non-empty.
 - Expected: auto-advance within ~5 s of the topic change (as before), finals lag ≤ 5 s throughout.
 - Status: OPEN (14:32)
+### B-012 [P2] Smoke runs write a "Smoke test" module into the REAL library (would show on stage)
+- Stage / owner: s1 / @filip (found by @aaron 14:33)
+- Repro: `LECSCRIBE_SMOKE=out.png npm run start:mock` on the Mac → later `npm start` shows a "Smoke test" module in the Library.
+- Suggested fix: when LECSCRIBE_SMOKE is set, `app.setPath('userData', <fresh temp dir>)` before startLibrary. david will delete the leftover module on the demo Mac before the demo (and smoke uses a temp dir afterwards).
+- Status: OPEN (14:37)
 ## Closed
 ### B-007 [P1] Live STT drops whole segments: "RPCError: Model was reloaded" (partials collide with finals)
 - Stage / owner: s2 / @aryan
