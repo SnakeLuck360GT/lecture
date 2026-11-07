@@ -53,3 +53,24 @@ The UI never moves the slide locally: it emits `slide:changed` and renders when 
 
 ## Test hooks
 `window.__lecscribe = { state, go(index), openPdf(bytes, name) }` in the renderer (for e2e).
+
+## UI v2 (14:08): design tokens + mount points for components (SPLIT 13:58)
+**Tokens:** top of `ui/styles.css` (merged via PR #13). Use only `var(--…)`: `--paper --panel --sidebar --hover --selected --ink --muted --faint --line --line-strong --accent --accent-ink --accent-soft --danger --danger-soft --warn --ok --sticky --sticky-edge --lecturer --lecturer-edge --radius-sm(6) --radius(8) --radius-lg(12) --space-1..8 (4/8/12/16/24/32/48) --font --font-mono --text-xs/sm/text/md/lg/xl (11/12/13/15/20/28) --shadow --shadow-pop --ease --fast(120ms)`. Dark mode is automatic. Styles inside `.lec-<name>` only; inject them once from the component (like mic-picker does). No emoji; inline SVG icons, 16px, `stroke="currentColor"`, stroke-width 1.75.
+
+**Mount API** (all components): `export function mountX(el, deps) -> { destroy() }`. filip calls it once when the screen opens and `destroy()` when it closes. `deps` always contains:
+```js
+{ lec: window.lec,                       // emit/on/ai/p2p/library/requestMic/info
+  getContext: () => ({ role: 'host'|'peer', moduleId, lectureId, slideIndex, slideCount }) }
+```
+plus the per-component extras below. Listen to bus events via `lec.on` (unsubscribe in destroy).
+
+| element id | screen / place | owner | component | extra deps |
+|---|---|---|---|---|
+| `#mount-join-room` | sidebar footer (always visible) | aaron | join-room.js | `onJoined({ key, title })` → filip opens the peer Lecture view |
+| `#mount-mic-picker` | Lecture view toolbar (host only, next to Start listening) | aryan | mic-picker.js | `onChange(deviceId)`, `onLevel(rms)`; filip reads `getDeviceId()` when starting the mic |
+| `#mount-room-panel` | Lecture view toolbar, right (host only) | aaron | room-panel.js | none (create the room from `getContext()`) |
+| `#mount-share-lecture` | Lecture header, right (attended lecture) AND the missed-lecture row in Library | aaron | share-lecture.js | `mode: 'share'|'import'`, `onImported(lectureId)` |
+| `#mount-lost-button` | under the slide (peer only) | aaron | lost-button.js | none (`getContext().slideIndex`) |
+| `#mount-heatmap` | absolutely positioned layer over the thumbnail strip `#lec-strip` (host only) | aaron | heatmap.js | thumbnails are `#lec-strip .lec-thumb[data-index="N"]`; position per thumb with `getBoundingClientRect()` relative to `#mount-heatmap`, re-layout on `slides:loaded` and `resize` |
+
+The heatmap strip has height 6px above each thumbnail (filip reserves the space). Mic picker sits in a 32px-high toolbar.
