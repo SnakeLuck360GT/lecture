@@ -38,7 +38,13 @@
 ### T-001 [P1 test task] Cross-device P2P: Mac host ↔ Windows peer on venue Wi-Fi (then hotspot)
 - Owner: @aaron (peer) + @david (host, room live on the Mac)
 - Steps: `node src/p2p/scripts/room-demo.js join lecscribe://room/uebob54ojy8umd663tt8oeb9nxfpry7uwwqm334gdqk8b5jgpzxy` from the Windows laptop on venue Wi-Fi; report connect time, slides+images, notes, latency. Then repeat on a phone hotspot.
-- Status: OPEN (14:25), waiting for aaron to join
+- Status: RAN (14:28): FAILED on eduroam (B-009). Hotspot run pending.
+### B-009 [P1] Demo step 6 fails on eduroam: Windows peer finds the Mac's room but can't connect (HOLEPUNCH_ABORTED)
+- Stage / owner: s6 / @aaron
+- Repro: Mac host (eduroam 10.205.56.149, public 130.88.226.21, firewalled + randomized NAT) runs `room-demo.js host`; Windows peer (eduroam 10.205.105.2, public 130.88.226.2, firewalled + randomized NAT) runs `room-demo.js join <link>` → lookup finds the host, connect fails HOLEPUNCH_ABORTED, 0 slides / 0 notes (2 attempts, 14:20 and 14:26).
+- Expected: peer receives slides + notes on the venue network, or a reliable fallback.
+- Options: (a) phone hotspot for both devices (spec fallback; test ASAP); (b) code fallback via relays/LAN if the libraries support it (verify in docs); (c) whatever works must be in the stage checklist.
+- Status: OPEN (14:28)
 ## Closed
 ### B-007 [P1] Live STT drops whole segments: "RPCError: Model was reloaded" (partials collide with finals)
 - Stage / owner: s2 / @aryan
