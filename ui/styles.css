@@ -240,7 +240,20 @@ label.btn { cursor: pointer; }
 .nav:disabled { display: none; }
 .nav.prev { left: var(--space-3); } .nav.next { right: var(--space-3); }
 /* B-010: sits BELOW the slide card (never covers the slide's own footer) */
-.slide-meta { align-self: flex-end; display: flex; align-items: center; gap: var(--space-2); margin-top: calc(-1 * var(--space-2)); font-size: var(--text-sm); color: var(--muted); font-variant-numeric: tabular-nums; }
+.slide-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 28px; margin-top: calc(-1 * var(--space-1)); }
+.slide-meta { margin-left: auto; display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* Explain slide (stage 7): lecturer records a fresh explanation for the current slide */
+.explain { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+.explain[hidden] { display: none; }
+#btn-explain .rec-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+#btn-explain.hot { border-color: var(--danger); color: var(--danger); background: var(--danger-soft); }
+#btn-explain.hot .rec-dot { background: var(--danger); }
+#btn-explain.recording { background: var(--danger); border-color: var(--danger); color: #fff; }
+#btn-explain.recording .rec-dot { background: #fff; animation: pulse 1.2s infinite; }
+.explain-status { font-size: var(--text-sm); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.explain-status.busy::before { content: ''; display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; border: 2px solid var(--line-strong); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 .slide-meta:has(#slide-count:empty) { display: none; }
 .track-badge { font-weight: 600; font-size: var(--text-xs); }
 .track-badge.auto { color: var(--accent); }
@@ -307,6 +320,8 @@ label.btn { cursor: pointer; }
 @keyframes pop { from { opacity: 0; transform: translateY(-4px); } }
 .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
 .live-dot.on { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+#btn-room-pop.reconnecting { color: var(--warn); }
+#btn-room-pop.reconnecting .live-dot { background: var(--warn); animation: pulse 1s infinite; }
 .header-right .search { width: 220px; }
 .strip { display: flex; gap: var(--space-2); padding: 14px var(--space-4) var(--space-3); overflow-x: auto; min-height: 104px; }
 .strip:empty::after { content: 'Slides appear here'; color: var(--faint); font-size: var(--text-sm); align-self: center; }
