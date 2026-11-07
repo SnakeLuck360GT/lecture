@@ -6,7 +6,7 @@
 //   ai.playClip('fixtures/lecture.wav')       // emits transcript:chunk, slide:changed(auto), note:added
 import { config } from './config.js'
 import { setStatusBus, sttModel, embedModel, llmModel, closeAll } from './models.js'
-import { transcribeAudio, playClip as sttPlayClip, createLiveStream, transcribeFile, slideVocab } from './stt.js'
+import { transcribeAudio, playClip as sttPlayClip, createLiveStream, transcribeFile, slideVocab, onSttError } from './stt.js'
 import { embed as realEmbed, cosine } from './embed.js'
 import { createTracker } from './tracker.js'
 import { createSummariser } from './agents.js'
@@ -28,6 +28,7 @@ export { cosine }
 export async function startAI ({ bus, mock = config.mock, preload = !mock } = {}) {
   if (!bus) throw new Error('startAI needs a bus')
   setStatusBus(bus)
+  onSttError((e) => bus.emit('stt:error', e))
   const embed = mock ? mockEmbed : realEmbed
   const transcribe = mock ? mockTranscribe : transcribeAudio
   const complete = mock ? mockComplete : realComplete
