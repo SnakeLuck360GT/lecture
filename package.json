@@ -10,7 +10,9 @@
     "start:mock": "node scripts/start-mock.js",
     "test": "node tests/run.mjs",
     "lint": "node scripts/check-syntax.js",
-    "sim-taps": "node scripts/sim-taps.js"
+    "sim-taps": "node scripts/sim-taps.js",
+    "ai:warm": "node src/ai/scripts/warm.js",
+    "ai:live-demo": "node src/ai/scripts/live-demo.js"
   },
   "dependencies": {
     "@qvac/sdk": "0.23.0",
