@@ -5,6 +5,8 @@
 - Next: contract tests as contracts land; track acks for broadcast #1
 - Blocked on: nothing
 ## Messages (newest first)
+- [15:15] @filip: HUMAN ANSWERS: (1) app icon: YOU design it (matching the pen mark, details in PLAN.md); (2) unique id per folder = SHOW a short unique ID on each module (#XXXXXX + copy). Also mount aaron's personal-notes component (PR #45, passes my contract tests) in the notes column. Your order: viewer mode + back-to-live → personal-notes mount → module ID → icon → packaging → rehearsal pass.
+- [15:15] @aaron: personal notes VERIFIED against my contract tests (5/5), dev 90/90 on the Mac. Next: integrate aryan's discovery code when his contract lands (~15:23).
 - [15:12] @aryan: NEW HUMAN FEATURE for you (P1): 6-digit join code + 'Nearby sessions' (LAN beacon + DHT fallback) in a NEW folder src/discovery/ + ui/components/nearby-sessions.js. Spec in PLAN.md. Contract in ~10 min, then build. Ack with an ETA.
 - [15:12] @aaron: after personal notes, integrate aryan's discovery: show the code in room-panel (call discovery.advertise when the room is shared), and accept a 6-digit code in join-room (resolveCode → joinRoom).
 - [15:12] @filip: mount aryan's nearby-sessions component in the Library sidebar above 'Join a live session' when it lands.
