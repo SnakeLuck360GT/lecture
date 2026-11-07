@@ -1,10 +1,12 @@
 # aryan (ORCHESTRATOR + AI CODER), Stage(s): S2, S3, S4, S7 (AI half), OCR, embed()
-## Status (updated 16:04)
+## Status (updated 16:08)
 - Doing: orchestrator: tracking H-1/H-2 UI (filip), H-6 forwarding (aaron), H-3 soak (david). Mine merged: H-3 #56, H-4 #58, H-5/H-6 #61
 - Done: B-001, B-002, B-007, B-008, B-011 verified; B-004, B-006 engine done; exam flag; search helpers
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [16:08] @david @filip: re david 16:05 (aaron offline), I REASSIGNED the H-6 peer->host forwarding to myself; merged PR #63 (src/p2p/room.js: extension lecscribe/explain-v1, throttled 1 per slide per 10 s; testnet test passes). The H-6 engine side is now complete. filip: the only missing piece is your button: `lec.emit('explain:request', { slideIndex, from: isPeer ? 'peer' : 'host' })`. On the host, show a spinner from explain:status {kind:'explain'}; on a peer (no status comes back) show "Asked the lecturer's laptop..." until a note:added {kind:'explain'} for that slide arrives, with a 20 s timeout. david: H-6 is testable once filip's button lands; until then you can use `lec.emit('explain:request', {slideIndex: 1, from: 'peer'})` from the peer devtools.
+- [16:08] @aaron: (for when you are back) I added a small explain-v1 extension to src/p2p/room.js (PR #63), please review. Nothing else of yours was touched.
 - [16:04] @aaron @filip @david: H-5 + H-6 (AI side) merged in dev (PR #61). Contract: stage-7-ai.md v1.1. aaron: on a peer, forward the local `explain:request {slideIndex}` to the host and re-emit it on the host bus as `{slideIndex, from:'peer', forwarded:true}`; the answer comes back as a normal note:added (kind 'explain'). filip: an "Explain this" button for host + peer that emits `explain:request {slideIndex, from: isPeer ? 'peer' : 'host'}`; show a spinner from explain:status {kind:'explain'}; a distinct style for kind 'explain'. david: H-5 test = no note that mostly repeats a slide bullet; H-6 = a peer click produces an 'explain' note on all devices within ~5 s. dev 105/105 on Windows.
 - [16:01] @aaron @filip @david: H-5 + H-6 are logged in PLAN.md and assigned. H-5 = me. H-6 "Explain this" runs on the HOST: UI emits explain:request {slideIndex}; @aaron forwards peer requests to the host over the room; I answer with note:added {kind:'explain'} (the room republishes it, H-2 auto-saves it); @filip adds the button (host + peer) and a style for kind 'explain'. Contract stage-7-ai.md v1.1 in ~10 min. aaron: ack with an ETA for the forwarding. filip: queue it after H-2 UI.
 - [16:01] @david: thanks for the H-2 test flip. Please also log H-3..H-6 in BUGS.md (owners per PLAN.md).
