@@ -21,6 +21,7 @@ bus.on('transcript:chunk', (c) => console.log(ts(), `[chunk ${c.id}] slide=${c.s
 let partials = 0; let firstPartialLag = null
 bus.on('transcript:partial', (p) => { partials++; const lag = (Date.now() - t0) / 1000 - p.tEnd; if (firstPartialLag === null) firstPartialLag = lag; if (args.includes('--partials')) console.log(ts(), `  ~ partial ${p.tStart}-${p.tEnd}s: ${p.text.slice(0, 70)}`) })
 bus.on('slide:changed', (e) => console.log(ts(), `>>> slide ${e.index} (${e.source}, conf ${e.confidence?.toFixed?.(2)})`))
+bus.on('note:dropped', (n) => console.log(ts(), `  [dropped ${n.reason} s${n.slideIndex}] ${n.text}`))
 bus.on('note:added', (n) => console.log(ts(), `  [note ${n.kind} s${n.slideIndex}] ${n.text}`))
 
 const ai = await startAI({ bus, mock })

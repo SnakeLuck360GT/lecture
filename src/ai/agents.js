@@ -53,9 +53,10 @@ export function createSummariser ({ bus, complete, opts = {} }) {
           const text = tidyNote(raw)
           if (!text) continue
           // B-005: drop paraphrases of the slide and anything not grounded in what was said.
-          if (isOnSlide(text, slides[i]?.text, o.onSlideOverlap)) continue
-          if (grounding(text, said, slides[i]?.text) < o.minGrounding) continue
-          if (a.notes.some((n) => similar(n, text))) continue
+          const drop = (reason) => bus.emit('note:dropped', { slideIndex: i, text, reason })
+          if (isOnSlide(text, slides[i]?.text, o.onSlideOverlap)) { drop('on-slide'); continue }
+          if (grounding(text, said, slides[i]?.text) < o.minGrounding) { drop('ungrounded'); continue }
+          if (a.notes.some((n) => similar(n, text))) { drop('duplicate'); continue }
           a.notes.push(text)
           bus.emit('note:added', {
             id: newNoteId(),

@@ -19,6 +19,7 @@ bus.on('ai:status', (s) => { if (s.state !== 'loading' || s.progress % 25 === 0)
 bus.on('transcript:chunk', (c) => console.log(ts(), `[chunk ${c.id}] slide=${c.slideIndex} ${c.tStart}-${c.tEnd}s: ${c.text.slice(0, 90)}`))
 bus.on('tracker:scores', (s) => console.log(ts(), '   scores', Object.entries(s.scores).map(([k, v]) => `${k}:${v.toFixed(2)}`).join(' ')))
 bus.on('slide:changed', (e) => console.log(ts(), `>>> slide ${e.index} (${e.source}, conf ${e.confidence?.toFixed?.(2)})`))
+bus.on('note:dropped', (n) => console.log(ts(), `  [dropped ${n.reason} s${n.slideIndex}] ${n.text}`))
 bus.on('note:added', (n) => console.log(ts(), `  [note ${n.kind} s${n.slideIndex}] ${n.text}`))
 
 const ai = await startAI({ bus, mock })
