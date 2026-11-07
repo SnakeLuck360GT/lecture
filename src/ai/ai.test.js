@@ -12,6 +12,7 @@ import { parseNotes, stripThinking } from './llm.js'
 import { isOnSlide, createSummariser } from './agents.js'
 import { createExplainer } from './explain.js'
 import { mockEmbed, mockComplete } from './mock.js'
+import { cosine } from './embed.js'
 import { blocksToText } from './ocr.js'
 import { startAI } from './index.js'
 
@@ -217,3 +218,102 @@ test('B-005: filters keep every notOnSlide fact and drop slide paraphrases (fixt
   for (const [i, c] of copies) assert.equal(isOnSlide(c, slides[i].text), true, `dropped: ${c}`)
   assert.equal(tidyNote('The lecturer explained that linear probing is cache friendly'), 'Linear probing is cache friendly')
 })
+
+test('search: passages merge chunks per slide; hybrid ranks the right passage first (mock embed)', async () => {
+  const { transcriptPassages, hybridScore, searchEmbedder } = await import('./search.js')
+  const { readFile } = await import('node:fs/promises')
+  const script = JSON.parse(await readFile(new URL('../../fixtures/lecture.script.json', import.meta.url), 'utf8'))
+  // simulate ~5 s live chunks from the script
+  const chunks = []
+  let n = 0
+  for (const seg of script.segments) {
+    const w = seg.text.split(' ')
+    for (let i = 0; i < w.length; i += 12) chunks.push({ id: `c${++n}`, slideIndex: seg.slideIndex, tStart: seg.tStart + i / 3, tEnd: seg.tStart + (i + 12) / 3, text: w.slice(i, i + 12).join(' ') })
+  }
+  const ps = transcriptPassages(chunks)
+  assert.ok(ps.length >= 5 && ps.length < chunks.length)
+  assert.ok(ps.every((p) => p.chunkIds.length >= 1 && p.tEnd - p.tStart <= 30.5))
+  const se = searchEmbedder(mockEmbed)
+  const vecs = await se.docs(ps.map((p) => p.text))
+  const ask = async (q) => {
+    const qv = await se.query(q)
+    return ps.map((p, i) => ({ p, s: hybridScore({ cosine: cosine(qv, vecs[i]), query: q, text: p.text, kind: 'transcript' }) }))
+      .sort((a, b) => b.s - a.s)[0].p.slideIndex
+  }
+  assert.equal(await ask('at what load factor alpha does the HashMap resize'), 3)
+  assert.equal(await ask('why choose a prime table size'), 1)
+  assert.equal(await ask('what is primary clustering'), 2)
+  assert.equal(await ask('what is in Thursday lab'), 4)
+})
+
+test('B-006: live partials stream while speaking, stop after the final, never queue up', async () => {
+  const { createLiveStream } = await import('./stt.js')
+  const SR = 16000
+  let clock = 0
+  const events = []
+  let busy = 0; let maxBusy = 0
+  const transcribe = async (a, o) => {
+    busy++; maxBusy = Math.max(maxBusy, busy)
+    await tick(1)
+    busy--
+    return `${o.partial ? 'partial' : 'final'} ${(a.length / SR).toFixed(1)}`
+  }
+  const live = createLiveStream({
+    transcribe, getSlideIndex: () => 0, now: () => clock, partialMs: 500,
+    onChunk: (c) => events.push({ type: 'final', ...c }),
+    onPartial: (p) => events.push({ type: 'partial', ...p })
+  })
+  const tone = Float32Array.from({ length: 3 * SR }, (_, i) => Math.sin(i / 5) * 0.2)
+  const sil = new Float32Array(SR)
+  for (const part of [tone, sil]) {
+    for (let i = 0; i < part.length; i += 1600) { live.push(part.subarray(i, i + 1600)); clock += 100; await tick(2) }
+  }
+  await live.flush()
+  await tick(5)
+  const partials = events.filter((e) => e.type === 'partial')
+  const finalIdx = events.findIndex((e) => e.type === 'final')
+  assert.ok(partials.length >= 3, `got ${partials.length} partials`)
+  assert.ok(finalIdx > 0 && events.slice(0, finalIdx).every((e) => e.type === 'partial'), 'partials come before the final')
+  assert.ok(events.slice(finalIdx + 1).every((e) => e.type !== 'partial'), 'no stale partial after the final')
+  assert.ok(partials[0].tEnd - partials[0].tStart <= 1.2, 'first partial within ~1 s of speech')
+  assert.ok(maxBusy <= 2, 'at most one partial + one final in flight')
+})
+
+test('B-005: auto-advance re-files the chunk BEFORE the trigger when it already matched the new slide', async () => {
+  const bus = new EventEmitter()
+  const tr = createTracker({ bus, embedMany: mockEmbed, embedOne: mockEmbed, opts: { threshold: 0.6, margin: 0.05 } })
+  const changes = []
+  bus.on('slide:changed', (e) => changes.push(e))
+  bus.emit('slides:loaded', SLIDES)
+  bus.emit('transcript:chunk', { id: 'a', slideIndex: 0, text: 'introduction to sorting algorithms today' })
+  bus.emit('transcript:chunk', { id: 'b', slideIndex: 0, text: 'now bubble' })
+  bus.emit('transcript:chunk', { id: 'c', slideIndex: 0, text: 'bubble sort swap adjacent elements repeatedly' })
+  await tr.idle()
+  assert.equal(changes.at(-1)?.index, 1)
+  assert.equal(changes.at(-1)?.chunkId, 'b', 'topic changed at chunk b')
+  tr.dispose()
+})
+
+test('B-007: serialSTT never runs two STT calls at once and survives a failing call', async () => {
+  const { serialSTT, sttBusy, promptOpts } = await import('./stt.js')
+  let inFlight = 0; let max = 0
+  const job = (ms, fail) => serialSTT(async () => {
+    inFlight++; max = Math.max(max, inFlight)
+    await tick(ms)
+    inFlight--
+    if (fail) throw new Error('Model was reloaded')
+    return ms
+  })
+  const res = await Promise.allSettled([job(5), job(1, true), job(3), job(2)])
+  assert.equal(max, 1)
+  assert.deepEqual(res.map((r) => r.status), ['fulfilled', 'rejected', 'fulfilled', 'fulfilled'])
+  assert.equal(sttBusy(), false)
+  assert.deepEqual(promptOpts('Hash, Tables', 'previous tail text'), { prompt: 'Hash, Tables' }, 'prompt is vocabulary only (stable)')
+})
+
+test('B-005: synonym paraphrase of a slide bullet is dropped (Mac run 14:07)', () => {
+  assert.equal(isOnSlide('Allocate array twice the size when load factor is too high', SLIDE4), true)
+  assert.equal(isOnSlide('Every key must be reinserted because its index depends on m', SLIDE4), false)
+  assert.equal(isOnSlide("Thursday's lab implements resizing", SLIDE4), false)
+})
+const SLIDE4 = 'Resizing\nDouble the array when the load factor is too high\nRehash every key\nInsert is amortised O(1)'

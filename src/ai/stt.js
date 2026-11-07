@@ -7,12 +7,35 @@ import { loadWav16k, writeTempWav } from './wav.js'
 
 const SR = 16000
 
+// B-007: the whisper worker RELOADS the model when the prompt changes, which aborts any request in
+// flight ("RPCError: Model was reloaded"). So every STT call goes through ONE serial lock, and a
+// failed call is retried once.
+let sttTail = Promise.resolve()
+let sttPending = 0
+export const sttBusy = () => sttPending > 0
+export function serialSTT (fn) {
+  sttPending++
+  const run = sttTail.then(fn, fn)
+  sttTail = run.catch(() => {}).finally(() => { sttPending-- })
+  return run
+}
+let errorSink = null
+export function onSttError (fn) { errorSink = fn }
+
 /** Transcribe one audio source (path to a WAV, or Float32Array 16 kHz mono) → plain text. */
-export async function transcribeAudio (audio, { prompt } = {}) {
+export async function transcribeAudio (audio, { prompt, partial } = {}) {
   const q = await sdk()
   const modelId = await sttModel()
   const audioChunk = typeof audio === 'string' ? audio : await writeTempWav(audio, SR)
-  const text = await q.transcribe({ modelId, audioChunk, ...(prompt ? { prompt } : {}) })
+  const once = () => serialSTT(() => q.transcribe({ modelId, audioChunk, ...(prompt ? { prompt } : {}) }))
+  let text
+  try {
+    text = await once()
+  } catch (e) {
+    errorSink?.({ error: String(e?.message || e), partial: !!partial, retried: !partial })
+    if (partial) throw e // partials are disposable
+    text = await once() // finals: retry once
+  }
   return cleanText(typeof text === 'string' ? text : (text || []).map((s) => s.text).join(' '))
 }
 
@@ -37,10 +60,12 @@ export function windows (samples, chunkSec = config.stt.chunkSec) {
 
 /**
  * B-005: whisper's prompt biases decoding towards its words, so we feed the vocabulary of the
- * current + next slide (e.g. "HashMap", "modulus") plus the tail of the previous chunk.
+ * current + next slide (e.g. "HashMap", "modulus").
+ * B-007: the prompt is the slide vocabulary ONLY (no previous-chunk tail), so it changes only on a
+ * slide change and the worker rarely has to reload. `prev` is accepted but ignored.
  */
-export function promptOpts (vocab, prev) {
-  const p = [String(vocab || '').slice(0, 220), String(prev || '').slice(-120)].filter(Boolean).join(' ').trim()
+export function promptOpts (vocab, prev) { // eslint-disable-line no-unused-vars
+  const p = String(vocab || '').slice(0, 240).trim()
   return p ? { prompt: p } : {}
 }
 
@@ -115,12 +140,17 @@ export function playClip ({ wavPath, onChunk, getSlideIndex, realtime = true, tr
  * Cuts a segment at a pause (>= silenceMs) once it is >= minSec long, or hard-cuts at maxSec.
  * Silent segments are dropped. Transcription runs in one serial queue; if it falls behind,
  * queued segments are merged so latency stays bounded.
+ * B-006: while a segment is still open, the growing audio is re-transcribed every partialMs and
+ * reported through onPartial({ text, tStart, tEnd }) so words show up < 1 s after being spoken.
+ * A partial is skipped while a final or another partial is running (finals have priority, no
+ * queue build-up), and a partial that resolves after its segment's final is dropped.
  */
 export function createLiveStream ({
   onChunk, getSlideIndex, transcribe = transcribeAudio,
   getVocab = () => '',
   minSec = config.stt.liveMinSec, maxSec = config.stt.liveMaxSec, silenceMs = config.stt.liveSilenceMs,
-  maxMergeSec = 10
+  maxMergeSec = 10,
+  onPartial = null, partialMs = config.stt.livePartialMs, now = () => Date.now()
 }) {
   const FRAME = 480 // 30 ms
   const frames = [] // current segment's frames (Float32Array each)
@@ -133,6 +163,10 @@ export function createLiveStream ({
   const backlog = [] // segments waiting for transcription
   let running = null
   let prev = ''
+  let segN = 0 // id of the currently open segment
+  let lastFinalSeg = -1 // highest segment id whose final chunk has been emitted
+  let partialRunning = false
+  let lastPartialAt = 0
 
   const isSpeech = (rms) => rms > Math.max(0.008, noise * 3)
 
@@ -141,9 +175,9 @@ export function createLiveStream ({
     const n = frames.length * FRAME
     const audio = new Float32Array(n)
     frames.forEach((f, i) => audio.set(f, i * FRAME))
-    const seg = { tStart: segStart, tEnd: segStart + n / SR, audio, speech: speechFrames }
+    const seg = { id: segN++, tStart: segStart, tEnd: segStart + n / SR, audio, speech: speechFrames }
     frames.length = 0; speechFrames = 0; silentRun = 0; segStart = t
-    if (seg.speech * FRAME / SR < 0.4) return // basically silence
+    if (seg.speech * FRAME / SR < 0.4) { lastFinalSeg = Math.max(lastFinalSeg, seg.id); return } // basically silence
     backlog.push(seg)
     pump()
   }
@@ -159,15 +193,36 @@ export function createLiveStream ({
       let off = 0
       for (const s of segs) { audio.set(s.audio, off); off += s.audio.length }
     }
-    const tStart = segs[0].tStart; const tEnd = segs.at(-1).tEnd
+    const tStart = segs[0].tStart; const tEnd = segs.at(-1).tEnd; const lastId = segs.at(-1).id
     running = (async () => {
       try {
         const text = await transcribe(audio, { ...promptOpts(getVocab(), prev), tStart, tEnd })
+        lastFinalSeg = Math.max(lastFinalSeg, lastId)
         if (text) { prev = text; onChunk(makeChunk({ tStart, tEnd, text, slideIndex: getSlideIndex() })) }
-      } catch (e) { console.error('[ai/stt] live segment failed', e) }
+      } catch (e) { lastFinalSeg = Math.max(lastFinalSeg, lastId); console.error('[ai/stt] live segment failed', e) }
       running = null
       pump()
     })()
+  }
+
+  const maybePartial = () => {
+    if (!onPartial || partialRunning || running || backlog.length || sttBusy()) return
+    if (speechFrames * FRAME / SR < 0.5) return // wait for ~0.5 s of speech
+    const at = now()
+    if (at - lastPartialAt < partialMs) return
+    lastPartialAt = at
+    const id = segN
+    const n = frames.length * FRAME
+    const audio = new Float32Array(n)
+    frames.forEach((f, i) => audio.set(f, i * FRAME))
+    const tStart = segStart; const tEnd = segStart + n / SR
+    partialRunning = true
+    transcribe(audio, { ...promptOpts(getVocab(), prev), tStart, tEnd, partial: true })
+      .then((text) => {
+        if (text && lastFinalSeg < id) onPartial({ text, tStart: round2(tStart), tEnd: round2(tEnd), slideIndex: getSlideIndex() })
+      })
+      .catch((e) => console.error('[ai/stt] partial failed', e?.message || e))
+      .finally(() => { partialRunning = false })
   }
 
   return {
@@ -191,6 +246,7 @@ export function createLiveStream ({
         if ((len >= minSec && silentRun * 30 >= silenceMs) || len >= maxSec) cut()
       }
       frameBuf = merged.slice(off)
+      if (frames.length) maybePartial()
     },
     /** Transcribe whatever is buffered now (call on "Stop listening"). */
     async flush () { cut(); while (running || backlog.length) { pump(); await running } },

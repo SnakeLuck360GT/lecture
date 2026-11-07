@@ -21,16 +21,20 @@ export function keywordScore (query, text) {
 }
 
 /**
- * items: [{ id, kind, refId, slideIndex, text, vector|null }]
- * -> top-k hits by cosine (or keyword fallback when the query vector or an item vector is missing)
+ * items: [{ id, kind, refId, slideIndex, text, vector|null, chunkIds? }]
+ * -> top-k hits by cosine (or keyword fallback when vectors are missing); `score` (aryan's hybridScore) overrides.
  */
-export function rank (items, { query, queryVector, k = 5 }) {
+export function rank (items, { query, queryVector, k = 5, score: scorer }) {
   const scored = []
   for (const it of items) {
-    const score = queryVector && Array.isArray(it.vector) && it.vector.length
-      ? cosine(queryVector, it.vector)
-      : keywordScore(query, it.text)
-    if (score > 0) scored.push({ score, kind: it.kind, text: it.text, slideIndex: it.slideIndex ?? null, refId: it.refId })
+    const hasVec = queryVector && Array.isArray(it.vector) && it.vector.length
+    let score
+    if (scorer) {
+      try { score = scorer({ cosine: hasVec ? cosine(queryVector, it.vector) : 0, query, text: it.text, kind: it.kind }) } catch { score = 0 }
+    } else {
+      score = hasVec ? cosine(queryVector, it.vector) : keywordScore(query, it.text)
+    }
+    if (score > 0) scored.push({ score, kind: it.kind, text: it.text, slideIndex: it.slideIndex ?? null, refId: it.refId, ...(it.chunkIds ? { chunkIds: it.chunkIds } : {}) })
   }
   scored.sort((a, b) => b.score - a.score)
   return scored.slice(0, k)

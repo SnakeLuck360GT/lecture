@@ -18,7 +18,11 @@ const t0 = Date.now()
 const ts = () => ((Date.now() - t0) / 1000).toFixed(1).padStart(6) + 's'
 bus.on('ai:status', (s) => { if (s.state !== 'loading' || s.progress % 25 === 0) console.log(ts(), '[status]', s.model, s.state, s.progress ?? '', s.error ?? '') })
 bus.on('transcript:chunk', (c) => console.log(ts(), `[chunk ${c.id}] slide=${c.slideIndex} ${c.tStart}-${c.tEnd}s (lag ${((Date.now() - t0) / 1000 - c.tEnd).toFixed(1)}s): ${c.text.slice(0, 80)}`))
+let partials = 0; let firstPartialLag = null; let sttErrors = 0
+bus.on('stt:error', (e) => { sttErrors++; console.log(ts(), `  !! stt:error (${e.partial ? 'partial' : 'final, retrying'}): ${e.error}`) })
+bus.on('transcript:partial', (p) => { partials++; const lag = (Date.now() - t0) / 1000 - p.tEnd; if (firstPartialLag === null) firstPartialLag = lag; if (args.includes('--partials')) console.log(ts(), `  ~ partial ${p.tStart}-${p.tEnd}s: ${p.text.slice(0, 70)}`) })
 bus.on('slide:changed', (e) => console.log(ts(), `>>> slide ${e.index} (${e.source}, conf ${e.confidence?.toFixed?.(2)})`))
+bus.on('note:dropped', (n) => console.log(ts(), `  [dropped ${n.reason} s${n.slideIndex}] ${n.text}`))
 bus.on('note:added', (n) => console.log(ts(), `  [note ${n.kind} s${n.slideIndex}] ${n.text}`))
 
 const ai = await startAI({ bus, mock })
@@ -35,4 +39,4 @@ for (let off = 0; off < samples.length; off += FRAME) {
 await ai.flushAudio()
 await ai.idle()
 await ai.close()
-console.log(ts(), 'done')
+console.log(ts(), `done. stt errors: ${sttErrors}, partials: ${partials}${firstPartialLag !== null ? `, first partial lag ${firstPartialLag.toFixed(2)}s` : ''}`)

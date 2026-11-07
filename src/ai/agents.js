@@ -53,9 +53,10 @@ export function createSummariser ({ bus, complete, opts = {} }) {
           const text = tidyNote(raw)
           if (!text) continue
           // B-005: drop paraphrases of the slide and anything not grounded in what was said.
-          if (isOnSlide(text, slides[i]?.text, o.onSlideOverlap)) continue
-          if (grounding(text, said, slides[i]?.text) < o.minGrounding) continue
-          if (a.notes.some((n) => similar(n, text))) continue
+          const drop = (reason) => bus.emit('note:dropped', { slideIndex: i, text, reason })
+          if (isOnSlide(text, slides[i]?.text, o.onSlideOverlap)) { drop('on-slide'); continue }
+          if (grounding(text, said, slides[i]?.text) < o.minGrounding) { drop('ungrounded'); continue }
+          if (a.notes.some((n) => similar(n, text))) { drop('duplicate'); continue }
           a.notes.push(text)
           bus.emit('note:added', {
             id: newNoteId(),
@@ -125,7 +126,8 @@ export function contentWords (s) {
     .filter((w) => (w.length > 2 || /\d/.test(w)) && !STOP.has(w))
     .map(stem)
 }
-const stem = (w) => (/^\d+$/.test(w) ? w : w.replace(/(ing|ed|es|s|e)$/, '')).slice(0, 5)
+const SYN = { twice: 'double', doubling: 'double', doubled: 'double', grows: 'double', enlarge: 'resize', expand: 'resize', rehashing: 'rehash', rehashed: 'rehash', reinsert: 'rehash', collide: 'collision', collides: 'collision' }
+const stem = (w) => { w = SYN[w] || w; return (/^\d+$/.test(w) ? w : w.replace(/(ing|ed|es|s|e)$/, '')).slice(0, 5) }
 const isNum = (w) => /^\d+$/.test(w)
 
 /** Share of the note's content words that are already on the slide. */
@@ -154,7 +156,7 @@ export function isOnSlide (note, slideText, maxOverlap = 0.7) {
     const lw = [...new Set(contentWords(line))]
     if (lw.length < 2) continue
     const cov = lw.filter((w) => ns.has(w)).length / lw.length
-    if (cov >= 0.6 && novel <= 2) return true
+    if ((cov >= 0.6 && novel <= 2) || (cov >= 0.75 && novel <= 3)) return true
   }
   return false
 }

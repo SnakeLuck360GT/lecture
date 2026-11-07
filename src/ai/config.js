@@ -17,7 +17,8 @@ export const config = {
     chunkSec: Number(env.LECSCRIBE_CHUNK_SEC || 6),
     liveMinSec: Number(env.LECSCRIBE_LIVE_MIN_SEC || 2),
     liveMaxSec: Number(env.LECSCRIBE_LIVE_MAX_SEC || 5),
-    liveSilenceMs: Number(env.LECSCRIBE_LIVE_SILENCE_MS || 450),
+    liveSilenceMs: Number(env.LECSCRIBE_LIVE_SILENCE_MS || 350),
+    livePartialMs: Number(env.LECSCRIBE_LIVE_PARTIAL_MS || 500),
     language: env.LECSCRIBE_STT_LANG || 'en'
   },
   tracker: {
@@ -33,7 +34,7 @@ export const config = {
   agents: {
     minNewChars: 400,
     minIntervalMs: 20000,
-    maxNotes: 2,
+    maxNotes: 3, // filters keep precision; the prompt asks for 'up to 3' only grounded facts
     onSlideOverlap: 0.7, // drop a note if >= 70% of its content words are on the slide (plus per-line paraphrase check)
     minGrounding: 0.45 // keep a note only if >= 45% of its NEW words were actually said
   }
