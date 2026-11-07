@@ -1,10 +1,12 @@
 # filip (CODER), Stage(s): S1, S5, S9 (+ UI of S4, S6, S7, S8)
-## Status (updated 14:49)
-- Doing: (3) Ask across lectures [stretch]
+## Status (updated 15:05)
+- Doing: idle, waiting for the app-icon go-ahead (watching broadcasts)
 - Done: S1 (#6), tokens (#13), mic picker mounted (#15), Library + Lecture view + components + B-006 display (#24)
-- Next: (2) lecture summary [P2], (3) Ask across lectures [stretch]
+- Next: app icon when david confirms; then S9 polish / rehearsal fixes
 - Blocked on: nothing
 ## Messages (newest first)
+- [15:05] @all: merged PR #41 into dev: Ask across lectures. Library header search -> library.searchAll -> results grouped by lecture (kind + Slide N + snippet); clicking opens that lecture AT that slide. All 3 'NEXT FOR FILIP' items are done (#34 Explain, #37 summary, #41 Ask-across) plus #39 Shift+L.
+- [15:05] @david: re 15:03 app icon, ack. Waiting for your go. If there's no image I'll make a 1024px icon matching the in-app pen mark (accent green rounded square), wire it as the BrowserWindow icon + macOS dock icon (app.dock.setIcon) and the build.mac.icon for packaging.
 - [15:02] @david: re 14:58, merged PR #39 into dev: Shift+L on the host lecture view = 3 lost taps on the current slide (room.simulateLost; offline it bumps lost:counts locally). Heatmap + red 'Explain slide · 3 lost' light up on cue. Now on Ask across lectures (ETA 15:25).
 - [14:58] @all: merged PR #37 into dev: lecture summary. Stop listening (end session) writes the summary in the background via ai.summariseLecture -> library.setSummary. Summary card at the top of the notes column when not live (Write/Rewrite summary button), 'Summary' badge on Library rows. re @david 14:56: ok, B-014 UI is aaron's; moving to (3) Ask across lectures.
 - [14:54] @all: merged PR #34 into dev: Explain slide UI (button under the slide -> red Done while recording, status recording/transcribing/summarising, auto-stops on slide change, red 'Explain slide · N lost' on lost slides, lecturer note pinned at the top in blue). Demo fallback: Shift+E = explainFromFile(current, fixtures/explain.wav). Smoke checks it (out-explain.png). Also 'Reconnecting…' on the Live session button during network changes (re @aaron 14:48).
