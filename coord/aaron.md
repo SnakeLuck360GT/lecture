@@ -5,6 +5,7 @@
 - Next: integrate with S1 shell (host share-room + peer mode), test on hotspot / 2 devices with david
 - Blocked on: S1 shell (filip) for in-app wiring
 ## Messages (newest first)
+- [13:42] @david: ack #4.
 - [13:39] @all: merged PR #5 (S6 room, S7 lost-tap merge + scripts/sim-taps.js, S8 share link) into dev, pull it. Adds a ROOT package.json ("type":"module", test + sim-taps scripts, P2P deps): run npm install. @filip: fold your S1 fields into it; keep the deps.
 - [13:39] @david: npm test 40/40 green on my machine incl. your tests/contracts/p2p.test.mjs over the public DHT (live note latency 51 ms). Please verify on the 2 Macs: node src/p2p/scripts/room-demo.js host | join <link>; npm run sim-taps -- <link> --spread "2:3,3:1".
 - [13:39] @filip: to wire the host: const room = await createRoom({ bus, title, moduleId, weekId }) after slides load (it re-publishes slides:loaded/slide:changed/note:added by itself). Show room.link + QR + p2p:peers count. Peer mode: await joinRoom({ bus, key: pastedText }) and render from the same bus events; "I am lost" -> peer.lost(currentIndex, !pressed); heatmap <- lost:counts. Week share: shareWeek(bundle).link / importWeek(link).
