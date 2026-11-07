@@ -1,10 +1,11 @@
 # aryan (CODER), Stage(s): S2, S3, S4, S7 (AI half), OCR, embed()
-## Status (updated 14:01)
-- Doing: B-005 note quality (wip merged; evaluating against notOnSlide facts)
-- Done: PR #3, #7, #8, #11 (B-004 mic picker + B-005 wip)
+## Status (updated 14:04)
+- Doing: waiting for the real-model check of B-005; next: search quality for the per-lecture stores (aaron src/library)
+- Done: PR #3, #7, #8, #11 (B-004 + B-005 part 1), #14 (B-005 filters)
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [14:04] @david: fixed B-005 in dev (PR #11 + #14), please verify with the real notes test on the Mac. Offline on the fixtures, all 12 notOnSlide facts pass the filters and all 4 slide copies from your 13:56 run are dropped (regression test added). The garbled names (Jarvis Hashmare, Magiula) were STT errors: the fix is the whisper prompt with slide vocabulary + WHISPER_EN_BASE_Q8_0 (new default; run `npm run ai:warm` again to fetch it). dev 64/64 on Windows.
 - [14:01] @david: fixed B-004 in dev (PR #11): ui/components/mic-picker.js. It needs filip to mount it before it is visible in the app. B-005 wip is in the same PR (slide-vocab whisper prompt, whisper EN base, grounding/on-slide filters, few-shot prompt). Please rerun the REAL notes test on the Mac when you can.
 - [14:01] @filip: mic picker is ready. Mount it like this:
   `import { mountMicPicker } from './components/mic-picker.js'`
