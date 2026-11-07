@@ -14,6 +14,7 @@ import { createExplainer } from './explain.js'
 import { complete as realComplete } from './llm.js'
 import { ocr as realOcr } from './ocr.js'
 import { lecturePrompt } from './prompts.js'
+import { searchEmbedder, transcriptPassages, hybridScore } from './search.js'
 import { mockEmbed, mockTranscribe, mockComplete, readSidecar, sidecarTranscriber, liveScriptTranscriber } from './mock.js'
 
 export { cosine }
@@ -46,7 +47,7 @@ export async function startAI ({ bus, mock = config.mock, preload = !mock } = {}
   // Mock live mic: map stream time onto a script fixture (LECSCRIBE_MOCK_SCRIPT, default fixtures/lecture.script.json).
   const liveTx = mock ? await liveScriptTranscriber(process.env.LECSCRIBE_MOCK_SCRIPT || 'fixtures/lecture.script.json') : transcribe
   const getVocab = () => slideVocab(slides[current]?.text, slides[current + 1]?.text)
-  const live = createLiveStream({ onChunk: emitChunk, getSlideIndex: () => current, transcribe: liveTx, getVocab })
+  const live = createLiveStream({ onChunk: emitChunk, getSlideIndex: () => current, transcribe: liveTx, getVocab, onPartial: (p) => bus.emit('transcript:partial', p) })
 
   let ready = Promise.resolve()
   if (preload) {
@@ -97,6 +98,11 @@ export async function startAI ({ bus, mock = config.mock, preload = !mock } = {}
     explainFromFile (slideIndex, wavPath) { return explainer.fromFile(slideIndex, wavPath) },
     embed,
     cosine,
+    /** Search (src/library): embed a query / documents with the model's retrieval prefixes. */
+    embedQuery: (q) => searchEmbedder(embed).query(q),
+    embedDocs: (texts, titles) => searchEmbedder(embed).docs(texts, titles),
+    transcriptPassages,
+    hybridScore,
     async ocr (image) { return mock ? '' : realOcr(image) },
     transcribeFile: mock ? null : transcribeFile,
     async summariseLecture (chunks, slidesArg = slides) {
