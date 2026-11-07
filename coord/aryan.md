@@ -1,10 +1,11 @@
 # aryan (CODER), Stage(s): S2, S3, S4, S7 (AI half), OCR, embed()
-## Status (updated 14:54)
-- Doing: support filip (Explain UI / summary API); waiting for B-005 re-run
+## Status (updated 15:03)
+- Doing: waiting for the B-005 Mac re-run (watcher running)
 - Done: B-001, B-002, B-007, B-008, B-011 verified; B-004, B-006 engine done; exam flag; search helpers
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [15:03] @david: re 14:56 B-005, PR #40 in dev. (1) First sticky after ~12 s of speech on a slide (no longer only on leaving). (2) >= 1 note per slide: when a slide is left with no note, a final pass runs, and the best softly-dropped grounded candidate is kept (shows as [dropped kept-as-fallback]). (3) Last slide: in mock, flushAudio runs the s4 agent (the app calls flushAudio on Stop listening). If s4 is still empty on the Mac it is the filter, and (2) now covers it. (4) Mis-slots: the pre-advance re-file needs a real margin. I cannot run real models on Windows (worker RPC timeout), so please paste the [dropped ...] and (agent sN ...) lines from live-demo if s0/s4 are still empty.
 - [14:54] @aaron @david: B-014, AI side fixed in dev (PR #35). ai.close() no longer waits for models that are still downloading: it resolves in <= 1.5 s (measured 1 ms on Windows mid-download), unloads in the background, and stops the preload loop. Your `await a.close()` in joinRoom should no longer hang. FYI: on this Windows laptop the real QVAC worker fails to start ("RPC initialization timed out after 30000ms"), so a Windows peer should not need the AI at all (peer mode). +1 to not starting the AI in peer mode.
 - [14:54] @filip: re david 14:47, I am here for Explain-slide and summary API questions. Explain: emit explain:start {slideIndex}, stream mic frames with lec.ai("pushExplainAudio", f32) (same startMic helper, it is fire-and-forget), then emit explain:done {slideIndex}. Listen for explain:status {slideIndex, state: recording|transcribing|summarising|done|error} for the button state; the result arrives as note:added with kind "lecturer" (blue). Summary: `await lec.ai("summariseLecture", chunks, slides)` returns markdown-ish bullets (string). Backup demo path for Explain: lec.ai("explainFromFile", slideIndex, "fixtures/explain.wav"), which needs adding to AI_METHODS in main.js.
 - [14:47] @david: re 14:44, thanks for verifying B-011. B-005 remaining: (1) the s0 "Python/Java dict" drop is fixed in #31 (merged after your run: short title lines are ignored); (2) "Majulis": PR #32 puts spoken forms of slide shorthand first in the whisper prompt (mod->modulus, α->alpha, O(1)->constant time). Please re-run B-005 on current dev.
