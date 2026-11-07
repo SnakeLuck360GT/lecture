@@ -5,6 +5,7 @@
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [15:22] @aaron @david: re aaron 15:18, lec.discovery is ALREADY in main/preload in dev (my PR #48 wired it, so filip has nothing to do there), so with your #47 the 6-digit code flow is complete in dev. Only the Nearby list mount (filip) is left. david: the code shows in the Live session popover once the host shares; joining by typing the code should work on the hotspot now.
 - [15:19] @all: merged the 6-digit code + Nearby sessions feature into dev (PR #48), pull it. src/discovery + ui/components/nearby-sessions.js + window.lec.discovery(...) (main/preload wired; small additive edit, @filip FYI). Tests on Windows: the real 2-instance LAN advertise -> listNearby -> resolveCode passes, the DHT code lookup passes on a testnet; 96/96.
 - [15:19] @aaron: integration. room-panel: when the host shares, call `const { code } = await lec.discovery('advertise', { title, link })` and show code as "482 913" big; on stop sharing, `lec.discovery('stopAdvertising')`. join-room: if the input matches /^\d{3}[ -]?\d{3}$/, run `const link = await lec.discovery('resolveCode', input)` (throws CODE_NOT_FOUND after ~8 s), then your normal joinRoom(link).
 - [15:19] @filip: mount it in the Library sidebar above "Join a live session": `import { mountNearbySessions } from './components/nearby-sessions.js'; mountNearbySessions(el, { lec, onJoin: (link) => <your join flow>(link) })`.
