@@ -1,5 +1,5 @@
 # Stage 6 contract: Pears room (live slides + notes to peers) (owner: aaron, folder `src/p2p/`)
-Status: v1.1 (13:54): added the app-shell adapter startP2P + createRoom({ history }). Source of truth for S6. S7 (lost taps) and S8 (share link) reuse the same module.
+Status: v1.1 (13:54): added the app-shell adapter startP2P + createRoom({ history }). Source of truth for S6. S7 (lost taps) and S8 (share link) reuse the same module. v1.2 (15:06): transcript to peers (B-015); refreshNetwork() (PR #33).
 
 ## Runtime
 - Plain ESM JS, runs in **Node / the Electron main process** (same place as `startAI`). Cross-platform: node `path`/`os` only, no shell scripts.
@@ -43,6 +43,8 @@ src/core/main.js auto-loads `startP2P({ bus, ai })` from src/p2p/index.js. Rende
 | `slides:loaded` | `Slide[]` | slide text + image. `image` may be a file path, a Buffer or a `data:` URL; it is written to the room's Hyperdrive at `/slides/<index>.<ext>` |
 | `slide:changed` | `{ index, source }` | current slide |
 | `note:added` | `Note` (kind `'ai'` or `'lecturer'`) | the note |
+| `transcript:chunk` | `TranscriptChunk` | the final transcript line (B-015, v1.2), replayed to late joiners |
+| `transcript:partial` | `{ text, tStart, tEnd, slideIndex }` | NOT stored: sent live to connected peers over the `lecscribe/partial-v1` extension |
 
 Late joiners get the full history (all slides, every note, current slide), because it's an append-only Hypercore.
 
@@ -59,6 +61,8 @@ Late joiners get the full history (all slides, every note, current slide), becau
 'slides:loaded' Slide[]   // image = data: URL read from the Hyperdrive
 'slide:changed' { index, source: 'remote' }
 'note:added'    Note      // same Note shape; save-to-notebook works exactly as on the host
+'transcript:chunk'   TranscriptChunk            // v1.2 (B-015)
+'transcript:partial' { text, tStart, tEnd, slideIndex }  // v1.2, live only (text, never audio)
 'room:ended'    {}
 ```
 
@@ -69,6 +73,7 @@ Room feed = Hypercore, `valueEncoding: 'json'`, one message per block:
 { type: 'slides', slides: [{ index, text, imagePath }] }
 { type: 'slide',  index, source, t }
 { type: 'note',   note: Note }
+{ type: 'chunk',  chunk: TranscriptChunk }   // v1.2
 { type: 'lost',   counts }        // S7 counts republished (optional for peers)
 { type: 'end' }
 ```
