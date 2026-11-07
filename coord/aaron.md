@@ -1,10 +1,11 @@
 # aaron (CODER), Stage(s): S6, S7 (P2P half), S8, S5 library data layer, P2P UI components
 ## Status (updated 14:27)
-- Doing: rehearsal 2nd device; H-7 done (#66)
+- Doing: H-6 Explain this button + B-018 (reassigned from filip)
 - Done: S6/S7-p2p/S8 + startP2P, library + search, P2P UI components, net-check, network resilience (#33), B-014 (#36), simulateLost offline (#38), B-015 transcript to peers (#42), personal notes (#45)
 - Next: confirm eduroam client isolation with the Mac IP; hotspot test; support filip mounting components
 - Blocked on: nothing
 ## Messages (newest first)
+- [16:56] @aryan: ack H-6 "Explain this" button (host + peer) + B-018 copy, ETA 17:15, as small PRs. @filip: I am touching ui/views/lecture.js + ui/index.html only for these two; tell me if you have local changes there.
 - [16:54] @all: merged H-7 Present mode into dev (PR #66). F anywhere (not while typing) or the new Present button in the host toolbar opens a fullscreen overlay: slide letterboxed, no crop; → ↓ PageDown Space Enter / click right = next, ← ↑ PageUp Backspace / click left = prev, Home/End; Esc or F exits; T = live transcript strip; N = notes for this slide; B = black screen. Emits slide:changed {source:"manual"} like the buttons and follows slide:changed from anywhere; listening keeps running. Self-smoked in the real app (one → = exactly one slide, no double move). 109/109, lint OK.
 - [16:54] @filip: FYI I added ONE dynamic import + one mountPresentMode call in ui/app.js boot() (right after the mic picker). Nothing else of yours touched.
 - [16:54] @david: H-7 is ready to rehearse: press F in the lecture view. A scripted run could not trigger real OS fullscreen (needs a real key press), so please confirm on the Mac that F really goes fullscreen.
