@@ -28,7 +28,8 @@ const step = async (name, fn) => {
   try { const r = await fn(); console.log(`✔ ${name} (${Date.now() - t} ms)`, r ?? '') } catch (e) { ok = false; console.error(`✖ ${name}:`, e?.message || e) }
 }
 
-await step('load stt', sttModel)
+await step(`load stt partial (${config.models.sttPartial})`, () => sttModel('partial'))
+await step(`load stt final (${config.models.stt})`, () => sttModel('final'))
 await step('load embed', embedModel)
 await step('load llm', llmModel)
 await step('load ocr', ocrModel)

@@ -45,9 +45,13 @@ async function load (kind, makeOpts) {
   return loading.get(kind)
 }
 
-export function sttModel () {
-  return load('stt', async (q) => ({
-    modelSrc: resolveConst(q, config.models.stt),
+/** STT model. kind 'final' (accurate, drives tracking/notes) or 'partial' (fast live preview).
+ *  If both env choices name the same model it is loaded once. */
+export function sttModel (kind = 'final') {
+  const name = kind === 'partial' ? config.models.sttPartial : config.models.stt
+  const key = kind === 'partial' && name !== config.models.stt ? 'stt-partial' : 'stt'
+  return load(key, async (q) => ({
+    modelSrc: resolveConst(q, name),
     modelConfig: {
       language: config.stt.language,
       strategy: 'greedy',
