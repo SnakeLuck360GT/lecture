@@ -86,7 +86,7 @@ export function createSummariser ({ bus, complete, opts = {} }) {
           if (grounding(text, said, slideText) < o.minGrounding) { drop('ungrounded'); continue }
           if (a.notes.some((n) => similar(n, text))) { drop('duplicate'); continue }
           if (isOnSlide(text, slideText, o.onSlideOverlap)) {
-            if (slideOverlap(text, slideText) < 0.6) soft.push(text)
+            // H-5: a repeat of the slide is never kept, not even as the >= 1-note fallback
             drop('on-slide'); continue
           }
           if (isGeneric(text, slides.map((x) => x.text || '').join(' '))) { soft.push(text); drop('generic'); continue }

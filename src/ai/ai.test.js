@@ -511,3 +511,38 @@ test('H-4: summariseLecture refuses to summarise a near-empty lecture', async ()
   assert.match(await ai.summariseLecture([{ text: 'hello everyone' }], []), /Not enough/)
   await ai.close()
 })
+
+test('H-6: explain:request -> kind "explain" note on that slide; un-forwarded peer requests ignored; one at a time', async () => {
+  const bus = new EventEmitter()
+  const ai = await startAI({ bus, mock: true })
+  const notes = []
+  bus.on('note:added', (n) => { if (n.kind === 'explain') notes.push(n) })
+  bus.emit('slides:loaded', SLIDES)
+  bus.emit('transcript:chunk', { id: 't1', slideIndex: 1, tStart: 0, tEnd: 5, text: 'Bubble sort keeps swapping neighbours until nothing moves. It is quadratic in the worst case.' })
+  bus.emit('explain:request', { slideIndex: 1, from: 'peer' }) // local peer UI: ignored (aaron forwards it)
+  await tick(20)
+  assert.equal(notes.length, 0)
+  bus.emit('explain:request', { slideIndex: 1, from: 'peer', forwarded: true })
+  bus.emit('explain:request', { slideIndex: 1, from: 'host' }) // duplicate while running: ignored
+  await tick(30)
+  assert.equal(notes.length, 1)
+  assert.equal(notes[0].slideIndex, 1)
+  assert.ok(notes[0].text.length > 0)
+  const direct = await ai.explainThis(2)
+  assert.equal(direct.kind, 'explain')
+  await ai.close()
+})
+
+test('H-5: the >= 1-note fallback never keeps a repeat of the slide', async () => {
+  const bus = new EventEmitter()
+  const deck = [{ index: 0, text: 'Separate chaining\nEach bucket holds a linked list of entries' }, { index: 1, text: 'x' }]
+  const sum = createSummariser({ bus, complete: async () => '["Each bucket holds a linked list of the entries"]', opts: { minWords: 0 } })
+  const notes = []
+  bus.on('note:added', (n) => notes.push(n))
+  bus.emit('slides:loaded', deck)
+  bus.emit('transcript:chunk', { id: 'c1', slideIndex: 0, text: 'so each bucket holds a linked list of the entries' })
+  bus.emit('slide:changed', { index: 1, source: 'auto' })
+  await sum.idle()
+  assert.equal(notes.length, 0)
+  sum.dispose()
+})

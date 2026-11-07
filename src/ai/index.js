@@ -13,7 +13,8 @@ import { createSummariser } from './agents.js'
 import { createExplainer } from './explain.js'
 import { complete as realComplete } from './llm.js'
 import { ocr as realOcr } from './ocr.js'
-import { lecturePrompt } from './prompts.js'
+import { lecturePrompt, explainThisPrompt } from './prompts.js'
+import { newNoteId } from './agents.js'
 import { searchEmbedder, transcriptPassages, hybridScore } from './search.js'
 import { mockEmbed, mockTranscribe, mockComplete, readSidecar, sidecarTranscriber, liveScriptTranscriber } from './mock.js'
 
@@ -45,7 +46,47 @@ export async function startAI ({ bus, mock = config.mock, preload = !mock, agent
   const tracker = createTracker({ bus, embedMany: (t) => embed(t), embedOne: (t) => embed(t), opts: trackOpts })
   const agents = createSummariser({ bus, complete, opts: agentOpts })
   const explainer = createExplainer({ bus, getSlides: () => slides, transcribe, complete })
+  // H-6: keep the transcript so far (bounded) for "Explain this"
+  const said = [] // TranscriptChunk[]
+  const onFinal = (c) => { said.push(c); if (said.length > 600) said.splice(0, said.length - 600) }
+  bus.on('transcript:chunk', onFinal)
   const emitChunk = (c) => bus.emit('transcript:chunk', c)
+  const explaining = new Set()
+  async function explainThis (slideIndex) {
+    const i = Number(slideIndex)
+    if (!Number.isInteger(i) || i < 0 || (slides.length && i >= slides.length)) throw new Error('bad slideIndex')
+    if (explaining.has(i)) return null // one at a time per slide
+    explaining.add(i)
+    const st = (state, extra = {}) => bus.emit('explain:status', { slideIndex: i, state, kind: 'explain', ...extra })
+    try {
+      st('summarising')
+      const outline = slides.map((s, k) => `${k + 1}. ${String(s.text || '').replace(/\s+/g, ' ').slice(0, 160)}`).join('\n')
+      const onSlide = said.filter((c) => c.slideIndex === i)
+      const text = String(await complete(explainThisPrompt({
+        slideIndex: i,
+        slideText: slides[i]?.text || '',
+        outline,
+        said: onSlide.map((c) => c.text).join(' '),
+        recent: said.slice(-8).map((c) => c.text).join(' ')
+      }))).trim()
+      if (!text) { st('error', { error: 'empty explanation' }); return null }
+      const note = { id: newNoteId(), slideIndex: i, kind: 'explain', text, sourceChunkIds: onSlide.slice(-20).map((c) => c.id), createdAt: Date.now() }
+      bus.emit('note:added', note)
+      st('done', { noteId: note.id })
+      return note
+    } catch (e) {
+      st('error', { error: String(e?.message || e) })
+      throw e
+    } finally { explaining.delete(i) }
+  }
+  // Host answers requests from its own UI and forwarded peer requests (aaron re-emits them with
+  // forwarded: true). A peer's un-forwarded request is ignored here so it is never answered twice.
+  const onExplainRequest = (ev) => {
+    if (!ev || typeof ev.slideIndex !== 'number') return
+    if (ev.from === 'peer' && !ev.forwarded) return
+    explainThis(ev.slideIndex).catch((e) => console.error('[ai] explainThis failed', e?.message || e))
+  }
+  bus.on('explain:request', onExplainRequest)
   // Mock live mic: map stream time onto a script fixture (LECSCRIBE_MOCK_SCRIPT, default fixtures/lecture.script.json).
   const liveTx = mock ? await liveScriptTranscriber(process.env.LECSCRIBE_MOCK_SCRIPT || 'fixtures/lecture.script.json') : transcribe
   const getVocab = () => slideVocab(slides[current]?.text, slides[current + 1]?.text)
@@ -123,6 +164,8 @@ export async function startAI ({ bus, mock = config.mock, preload = !mock, agent
     pushExplainAudio (f32) { explainer.push(toF32(f32)) },
     /** S7 demo path: pre-recorded explanation clip. */
     explainFromFile (slideIndex, wavPath) { return explainer.fromFile(slideIndex, wavPath) },
+    /** H-6: "Explain this" -> Promise<Note|null> (kind 'explain'), also emitted as note:added. */
+    explainThis,
     embed,
     cosine,
     /** Search (src/library): embed a query / documents with the model's retrieval prefixes. */
@@ -145,6 +188,8 @@ export async function startAI ({ bus, mock = config.mock, preload = !mock, agent
     async close () {
       clip?.stop()
       bus.off('slides:loaded', onSlides)
+      bus.off('transcript:chunk', onFinal)
+      bus.off('explain:request', onExplainRequest)
       bus.off('slide:changed', onChanged)
       tracker.dispose(); agents.dispose(); explainer.dispose()
       if (!mock) await closeAll()
