@@ -33,6 +33,7 @@ const app = {
   lec,
   state,
   store: null,
+  hostAllowed: true, // false on Windows (viewer-only), set in boot()
   mountMicPicker: null,
   deps: () => ({ lec, getContext: app.context, toast: (m) => toast(m) }),
   context: () => ({ role: state.role, moduleId: state.moduleId || library?.moduleId, lectureId: state.lectureId, slideIndex: state.current, slideCount: state.slides.length }),
@@ -123,6 +124,9 @@ async function boot () {
   try {
     const info = await lec.info()
     document.documentElement.classList.add(`platform-${info.platform}`)
+    // HUMAN DECISION 15:26: no hosting on Windows. Viewer-only devices hide every host control.
+    app.hostAllowed = info.hostAllowed !== false
+    document.documentElement.classList.toggle('no-host', !app.hostAllowed)
   } catch {}
   try {
     const mod = await import('./components/mic-picker.js')

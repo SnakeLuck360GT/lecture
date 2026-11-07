@@ -232,6 +232,9 @@ function wireIpc () {
 
   ipcMain.handle('app:info', () => ({
     platform: process.platform,
+    // HUMAN DECISION 15:26: only macOS hosts (Windows = viewer). Mock/smoke/LECSCRIBE_ALLOW_HOST keep host
+    // controls for Windows development and tests.
+    hostAllowed: process.platform === 'darwin' || MOCK || !!process.env.LECSCRIBE_SMOKE || process.env.LECSCRIBE_ALLOW_HOST === '1',
     mock: MOCK,
     aiLoaded: !!ai,
     p2pLoaded: !!p2p,
@@ -365,6 +368,13 @@ async function runSmoke (pngPath) {
     askOpened.wanted = want
   }
   const ask = { hits: hitCount, opened: askOpened }
+  // Auto-follow switch -> ai.setAutoFollow(false), read back from the AI; then on again.
+  await wc.executeJavaScript("document.getElementById('auto-follow').click()")
+  await new Promise((r) => setTimeout(r, 600))
+  const autoFollow = { box: await wc.executeJavaScript("document.getElementById('auto-follow').checked"), ai: ai?.getAutoFollow ? ai.getAutoFollow() : null }
+  await wc.executeJavaScript("document.getElementById('auto-follow').click()")
+  // HUMAN DECISION 15:26 (no Windows hosting): with .no-host every host control disappears.
+  const noHost = await wc.executeJavaScript(`(() => { const h = document.documentElement; h.classList.add('no-host'); const v = (s) => !!document.querySelector(s)?.offsetParent; const r = { toolbar: v('#toolbar'), explain: v('#btn-explain'), live: v('#btn-room-pop'), autoFollow: v('.auto-follow') }; h.classList.remove('no-host'); return r })()`)
   // HUMAN UI REQUEST 2: a live session survives going Home; the Library shows "Back to lecture".
   await wc.executeJavaScript("document.getElementById('btn-clip').click()")
   await new Promise((r) => setTimeout(r, 1200))
@@ -382,7 +392,7 @@ async function runSmoke (pngPath) {
   const vis = (sel) => `!!(document.querySelector('${sel}') && document.querySelector('${sel}').offsetParent)`
   const peer = await wc.executeJavaScript(`({ toolbar: ${vis('#toolbar')}, listen: ${vis('#btn-listen')}, explain: ${vis('#btn-explain')}, live: ${vis('#btn-room-pop')}, leave: ${vis('#btn-leave')}, search: ${vis('#search-input')} })`)
   await writeFile(out.replace(/.png$/i, '') + '-peer.png', (await wc.capturePage()).toPNG())
-  const result = { ok: slides.length > 0 && ui.current === 1 && ui.img, lost: lostLabel, explain, summary, savedView, ask, liveHome, peer, slides: slides.length, texts: slides.map((s) => s.text.slice(0, 40)), ui, events: [...new Set(seen)] }
+  const result = { ok: slides.length > 0 && ui.current === 1 && ui.img, lost: lostLabel, explain, summary, savedView, ask, autoFollow, noHost, liveHome, peer, slides: slides.length, texts: slides.map((s) => s.text.slice(0, 40)), ui, events: [...new Set(seen)] }
   console.log('[smoke] ' + JSON.stringify(result))
   app.exit(result.ok ? 0 : 1)
 }
