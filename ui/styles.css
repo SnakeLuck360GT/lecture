@@ -133,6 +133,14 @@ label.btn { cursor: pointer; }
 .module-item .ico { color: var(--muted); }
 .module-item:hover { background: var(--hover); }
 .module-item.active { background: var(--selected); font-weight: 600; }
+/* short unique module ID (#A3F9C2), click to copy */
+.module-sid { margin-left: auto; font-family: var(--font-mono); font-size: 10px; font-weight: 500; color: var(--faint); letter-spacing: .02em; padding: 1px 4px; border-radius: 4px; }
+.module-sid:hover { color: var(--accent); background: var(--accent-soft); }
+.module-sid + .module-count { margin-left: var(--space-1); }
+.lib-title-row { display: flex; align-items: baseline; gap: var(--space-2); min-width: 0; }
+.module-id { flex: none; padding: 1px 6px; border: 1px solid var(--line); border-radius: 999px; background: transparent; font-family: var(--font-mono); font-size: var(--text-xs); color: var(--muted); cursor: copy; }
+.module-id:hover { color: var(--accent); border-color: var(--accent); }
+.module-id[hidden] { display: none; }
 .module-item.active .ico { color: var(--accent); }
 .module-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .module-count { font-size: var(--text-xs); color: var(--muted); font-variant-numeric: tabular-nums; }
