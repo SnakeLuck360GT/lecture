@@ -328,3 +328,15 @@ test('B-008: final and partial STT queues are independent (partials not blocked 
   assert.deepEqual(order, ['partial', 'final'])
   assert.equal(sttBusy('partial'), false)
 })
+
+test('B-005: generic notes and amortised/constant near-copies are dropped; real facts survive (Mac run 14:22)', async () => {
+  const { readFile } = await import('node:fs/promises')
+  const { isGeneric } = await import('./agents.js')
+  const fx = (f) => new URL(`../../fixtures/${f}`, import.meta.url)
+  const slides = JSON.parse(await readFile(fx('slides.json'), 'utf8'))
+  const script = JSON.parse(await readFile(fx('lecture.script.json'), 'utf8'))
+  const deck = slides.map((s) => s.text).join('\n')
+  assert.equal(isGeneric('Open addressing used in hash maps', deck), true)
+  assert.equal(isOnSlide('Amortized cost of resizing is constant', SLIDE4), true)
+  for (const seg of script.segments) for (const f of seg.notOnSlide) assert.equal(isGeneric(f, deck), false, `not generic: ${f}`)
+})
