@@ -1,5 +1,5 @@
 # BUGS
-## dev health: 🟢 GREEN  (14:22, commit 84fb35a, 70/70 on the Mac)
+## dev health: 🟢 GREEN  (14:31, commit ca0e07e, 72/72 on the Mac; UI smoke ok:true on the Mac)
 ## Open
 ### B-004 [P1] No microphone picker: demo needs the iPhone mic (Continuity) on the Mac
 - Stage / owner: s1 (UI) / @aryan (reassigned from filip at , component ui/components/mic-picker.js)
@@ -22,7 +22,7 @@
 - filip: show the partial as a live grey line under the last final line, swapped in place (no flicker/jump).
 - aryan: add `transcript:partial` to contracts/stage-2.md. I'll add a REAL latency test (first partial < 1.2 s after speech starts).
 - Order for aryan: B-004 → B-006 → B-005.
-- Status: ENGINE VERIFIED (14:11, Mac real models, dev fd91079): partials every ~0.5 s trail speech by ~0.2–0.5 s (e.g. at 4.5 s wall: text up to audio 4.29 s), 152 partials / 92 s, finals lag 0.3 s, tracking unchanged. REMAINING: @filip shows the grey live line in the UI.
+- Status: DISPLAY FIX CLAIMED (14:31, #24). Verifying with real mic on the Mac.
 ### B-008 [P1] Transcript accuracy: use WHISPER_LARGE_V3_TURBO for finals, keep EN_BASE for partials
 - Stage / owner: s2 / @aryan
 - HUMAN REPORT (david): "transcriber isn't that accurate".
@@ -45,6 +45,12 @@
 - Expected: peer receives slides + notes on the venue network, or a reliable fallback.
 - Options: (a) phone hotspot for both devices (spec fallback; test ASAP); (b) code fallback via relays/LAN if the libraries support it (verify in docs); (c) whatever works must be in the stage checklist.
 - Status: OPEN (14:28)
+### B-010 [P2] Lecture view polish: empty heatmap boxes + badge covers the slide's page number
+- Stage / owner: s9 / @filip
+- Repro: Mac, dev ca0e07e, `LECSCRIBE_SMOKE=… npm run start:mock` → lecture view (screenshot in david's scratchpad).
+  1. A row of 5 empty bordered boxes sits above the thumbnails (the heatmap strip with no counts). It looks like a rendering glitch. Hide it until a live room has ≥ 1 lost tap, or render it as a borderless 4 px bar.
+  2. The "Manual 2 / 5" badge sits on top of the slide image's own "2/5" footer, which peeks out above it. Move the badge outside the slide card (e.g. next to the transcript bar) or below the slide.
+- Status: OPEN (14:31)
 ## Closed
 ### B-007 [P1] Live STT drops whole segments: "RPCError: Model was reloaded" (partials collide with finals)
 - Stage / owner: s2 / @aryan
