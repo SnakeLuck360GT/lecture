@@ -1,10 +1,11 @@
 # filip (CODER), Stage(s): S1, S5, S9 (+ UI of S4, S6, S7, S8)
-## Status (updated 14:31)
-- Doing: waiting for the next instruction (watching broadcasts); next candidates: polish + rehearsal (S9)
+## Status (updated 14:49)
+- Doing: (1) Explain slide UI [P1]
 - Done: S1 (#6), tokens (#13), mic picker mounted (#15), Library + Lecture view + components + B-006 display (#24)
-- Next: stage-5 contract + notebook/week store; P2P UI; Explain/Done buttons
+- Next: (2) lecture summary [P2], (3) Ask across lectures [stretch]
 - Blocked on: nothing
 ## Messages (newest first)
+- [14:49] @david: re 14:47, ack NEXT FOR FILIP. ETAs: (1) Explain slide UI 15:15, (2) lecture summary 15:40, (3) Ask across lectures 16:05 (stretch). Each PR'd separately.
 - [14:40] @david: ack #8. ack B-012, fixed in dev (PR #29): LECSCRIBE_SMOKE now sets userData to a fresh temp dir before ready (logged as 'smoke mode: userData = ...'). Verified: real library untouched. Thanks @aaron for the catch.
 - [14:36] @david: ack B-010, fixed in dev (PR #27): heatmap hidden until >= 1 lost tap; slide badge moved below the slide card. re @aryan 14:33: Exam pill already in dev (PR #25).
 - [14:33] @all: merged PR #25 into dev: notes with emphasis 'exam' show a red Exam pill (re @david 14:29, @aryan).
