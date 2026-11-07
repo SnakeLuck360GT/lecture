@@ -1,12 +1,12 @@
 # BUGS
-## dev health: 🟢 GREEN  (15:36, commit d9fb89f, 97/97 on the Mac; UI smoke ok: lost/explain/summary/saved)
+## dev health: 🟢 GREEN  (15:38, commit 53b9f2b, 97/97 on the Mac)
 ## Open
 ### B-004 [P1] No microphone picker: demo needs the iPhone mic (Continuity) on the Mac
 - Stage / owner: s1 (UI) / @aryan (reassigned from filip at , component ui/components/mic-picker.js)
 - HUMAN REQUEST (david): the presenter will speak into an iPhone used as the Mac's microphone (macOS Continuity "iPhone Microphone"). The app must let us choose the input device.
 - Repro: start the app, Start listening → always uses the default input; there's no way to pick another mic.
 - Expected: a mic dropdown next to "Start listening" (aryan's `src/ai/browser/mic-capture.js` already has `listMics()` and `startMic(onChunk, { deviceId, onLevel })`). Remember the choice (localStorage). Show a small live input-level meter (onLevel) so we can see the mic is hot. Re-list on `navigator.mediaDevices.ondevicechange` (the iPhone appears/disappears). If the chosen device vanishes mid-session, fall back to default and show a toast.
-- Status: FIX CLAIMED (14:01, component ui/components/mic-picker.js merged). Waiting for filip to mount it; I'll verify with the iPhone mic.
+- Status: FIX CLAIMED: picker mounted (PR #15). Needs the human's iPhone test.
 ### B-005 [P2] Sticky notes often copy the slide or invent facts (hurts the "only what's NOT on the slide" pitch)
 - Stage / owner: s4 / @aryan
 - Repro: Mac, real models (QWEN3_1_7B), `node src/ai/scripts/live-demo.js fixtures/slides.json fixtures/lecture.wav`. Examples from the run at 13:56:
@@ -35,30 +35,30 @@
 - Expected: finals (`transcript:chunk`, which drive tracking + notes + the library) come from LARGE_V3_TURBO (~2.5 s per 5 s window on the M5); partials (`transcript:partial`) stay on EN_BASE so text still appears in < 1 s. Keep B-007's guarantee (no aborted segments): give each model its own serial queue, so partials aren't blocked behind a 2.5 s final. Env overrides: `LECSCRIBE_STT_MODEL` (finals), `LECSCRIBE_STT_PARTIAL_MODEL` (partials). `ai:warm` must download both. Turbo is 1.6 GB and already cached on the Mac.
 - Watch: memory (turbo 1.6 GB + LLM 1 GB + embed 0.3 GB, fine on 24 GB), and that finals don't fall behind real time (RTF 0.48 < 1).
 - Status: ACCURACY VERIFIED (14:32): turbo text clearly better, 0 errors. Latency side effect is tracked in B-011.
-### B-010 [P2] Lecture view polish: empty heatmap boxes + badge covers the slide's page number
-- Stage / owner: s9 / @filip
-- Repro: Mac, dev ca0e07e, `LECSCRIBE_SMOKE=… npm run start:mock` → lecture view (screenshot in david's scratchpad).
-  1. A row of 5 empty bordered boxes sits above the thumbnails (the heatmap strip with no counts). It looks like a rendering glitch. Hide it until a live room has ≥ 1 lost tap, or render it as a borderless 4 px bar.
-  2. The "Manual 2 / 5" badge sits on top of the slide image's own "2/5" footer, which peeks out above it. Move the badge outside the slide card (e.g. next to the transcript bar) or below the slide.
-- Status: OPEN (14:31)
-### B-012 [P2] Smoke runs write a "Smoke test" module into the REAL library (would show on stage)
-- Stage / owner: s1 / @filip (found by @aaron 14:33)
-- Repro: `LECSCRIBE_SMOKE=out.png npm run start:mock` on the Mac → later `npm start` shows a "Smoke test" module in the Library.
-- Suggested fix: when LECSCRIBE_SMOKE is set, `app.setPath('userData', <fresh temp dir>)` before startLibrary. david will delete the leftover module on the demo Mac before the demo (and smoke uses a temp dir afterwards).
-- Status: OPEN (14:37)
-### B-014 [P1] In-app "Join a live session" hangs on "Joining…" (demo step 6 in the real UI)
-- Stage / owner: s6 / @aaron (src/p2p/host.js), with @filip for the UI side
-- Repro (human report, 14:50): Windows laptop on the hotspot, `npm start` → sidebar "Join a live session" → paste lecscribe://room/hhwarg… → button stays "Joining…". On the Mac host the peer shows up only at 14:48:45 and leaves 18 s later.
-- Suspected cause (code reading, unverified on Windows): `startP2P().joinRoom()` does `await a.close()` on the local AI BEFORE joining. On a laptop that is still loading/downloading models (turbo is 1.6 GB, and startAI preloads in the background) that close can block for a long time, and the UI awaits it.
-- Suggested fix: don't block the join on the AI shutdown: `Promise.race([a.close(), sleep(1500)])` or fire-and-forget. Better: in peer mode, don't start/preload the AI at all (a peer never needs models). Also add a 20 s UI timeout with a clear error ("Can't reach the lecturer's laptop. Are you on the same hotspot?") and a Cancel button.
-- Status: FIX CLAIMED (#35 aryan, #36 aaron). Verify in-app on the hotspot with the human.
+## Closed
 ### B-015 [P1] Live transcript doesn't reach peers (human request)
 - Stage / owner: s6 / @aaron (room protocol); @filip only if the peer view needs a tweak
 - HUMAN REQUEST (david): aaron's laptop (peer) shows slides + notes but no live transcript.
 - Cause: by contract (stage-6) the room only carries slides, slide changes and notes.
 - Expected: peers see the same transcript as the host. Final `transcript:chunk` → append to the room feed (`{type:'chunk', chunk}`, replayed to late joiners). `transcript:partial` → DON'T append (every 500 ms would bloat the core); send it as an ephemeral Hypercore extension / protomux message to connected peers, which re-emit `transcript:partial` on their bus. Peer bus re-emits both, so the Lecture view works unchanged. Text only, never audio (privacy pitch intact). Update contract stage-6 + tests.
-- Status: FIX CLAIMED (PR #42). Verify in the in-app 2-device test.
-## Closed
+- Status: VERIFIED (15:38): same run, 76 finals replayed + ~2 partials/s live on the Windows peer.
+### B-014 [P1] In-app "Join a live session" hangs on "Joining…" (demo step 6 in the real UI)
+- Stage / owner: s6 / @aaron (src/p2p/host.js), with @filip for the UI side
+- Repro (human report, 14:50): Windows laptop on the hotspot, `npm start` → sidebar "Join a live session" → paste lecscribe://room/hhwarg… → button stays "Joining…". On the Mac host the peer shows up only at 14:48:45 and leaves 18 s later.
+- Suspected cause (code reading, unverified on Windows): `startP2P().joinRoom()` does `await a.close()` on the local AI BEFORE joining. On a laptop that is still loading/downloading models (turbo is 1.6 GB, and startAI preloads in the background) that close can block for a long time, and the UI awaits it.
+- Suggested fix: don't block the join on the AI shutdown: `Promise.race([a.close(), sleep(1500)])` or fire-and-forget. Better: in peer mode, don't start/preload the AI at all (a peer never needs models). Also add a 20 s UI timeout with a clear error ("Can't reach the lecturer's laptop. Are you on the same hotspot?") and a Cancel button.
+- Status: VERIFIED (15:38): aaron's 15:21 in-app run on the hotspot, Join returned at once.
+### B-012 [P2] Smoke runs write a "Smoke test" module into the REAL library (would show on stage)
+- Stage / owner: s1 / @filip (found by @aaron 14:33)
+- Repro: `LECSCRIBE_SMOKE=out.png npm run start:mock` on the Mac → later `npm start` shows a "Smoke test" module in the Library.
+- Suggested fix: when LECSCRIBE_SMOKE is set, `app.setPath('userData', <fresh temp dir>)` before startLibrary. david will delete the leftover module on the demo Mac before the demo (and smoke uses a temp dir afterwards).
+- Status: VERIFIED (15:38): smoke uses a temp userData.
+### B-010 [P2] Lecture view polish: empty heatmap boxes + badge covers the slide's page number
+- Stage / owner: s9 / @filip
+- Repro: Mac, dev ca0e07e, `LECSCRIBE_SMOKE=… npm run start:mock` → lecture view (screenshot in david's scratchpad).
+  1. A row of 5 empty bordered boxes sits above the thumbnails (the heatmap strip with no counts). It looks like a rendering glitch. Hide it until a live room has ≥ 1 lost tap, or render it as a borderless 4 px bar.
+  2. The "Manual 2 / 5" badge sits on top of the slide image's own "2/5" footer, which peeks out above it. Move the badge outside the slide card (e.g. next to the transcript bar) or below the slide.
+- Status: VERIFIED (15:38, Mac smoke screenshot): heatmap hidden with no taps, badge below the slide.
 ### B-013 [P1] Host room must survive a network change (demo turns Wi-Fi off, then joins the hotspot)
 - Stage / owner: s6 / @aaron
 - Repro: start a host room on network A (eduroam), switch the Mac to network B (hotspot) → the host keeps announcing its stale network-A identity; peers on B find it but can't connect (david 14:35–14:42). Restarting the host on B fixes it.
