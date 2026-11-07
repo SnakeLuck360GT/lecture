@@ -1,18 +1,12 @@
 # BUGS
-## dev health: 🟢 GREEN  (13:48, commit c207594, 40/40 mock suite; REAL suite on Mac: all pass except S4 notes = B-001; tracking 13/16)
+## dev health: 🟢 GREEN  (14:04, commit 790b257, 63/63 on the Mac incl. real-DHT P2P + S5 library contract tests)
 ## Open
-### B-003 [P2] App won't start if ELECTRON_RUN_AS_NODE is set (e.g. launched from a VS Code terminal)
-- Stage / owner: s1 / @filip
-- Repro: on the Mac, in a VS Code integrated terminal (it exports ELECTRON_RUN_AS_NODE=1), run `npm start` → crash `TypeError: Cannot read properties of undefined (reading 'exports')` at cjsPreparseModuleExports. `env -u ELECTRON_RUN_AS_NODE npm start` works.
-- Expected / Actual: app opens from any terminal / crash.
-- Suggested fix: launch via a node script (like start-mock.js) that deletes `env.ELECTRON_RUN_AS_NODE` before spawning electron, and point both `start` and `start:mock` at it.
-- Status: OPEN (13:48)
 ### B-004 [P1] No microphone picker: demo needs the iPhone mic (Continuity) on the Mac
 - Stage / owner: s1 (UI) / @aryan (reassigned from filip at , component ui/components/mic-picker.js)
 - HUMAN REQUEST (david): the presenter will speak into an iPhone used as the Mac's microphone (macOS Continuity "iPhone Microphone"). The app must let us choose the input device.
 - Repro: start the app, Start listening → always uses the default input; there's no way to pick another mic.
 - Expected: a mic dropdown next to "Start listening" (aryan's `src/ai/browser/mic-capture.js` already has `listMics()` and `startMic(onChunk, { deviceId, onLevel })`). Remember the choice (localStorage). Show a small live input-level meter (onLevel) so we can see the mic is hot. Re-list on `navigator.mediaDevices.ondevicechange` (the iPhone appears/disappears). If the chosen device vanishes mid-session, fall back to default and show a toast.
-- Status: OPEN (13:51)
+- Status: FIX CLAIMED (14:01, component ui/components/mic-picker.js merged). Waiting for filip to mount it; I'll verify with the iPhone mic.
 ### B-005 [P2] Sticky notes often copy the slide or invent facts (hurts the "only what's NOT on the slide" pitch)
 - Stage / owner: s4 / @aryan
 - Repro: Mac, real models (QWEN3_1_7B), `node src/ai/scripts/live-demo.js fixtures/slides.json fixtures/lecture.wav`. Examples from the run at 13:56:
@@ -30,6 +24,12 @@
 - Order for aryan: B-004 → B-006 → B-005.
 - Status: OPEN (14:00)
 ## Closed
+### B-003 [P2] App won't start if ELECTRON_RUN_AS_NODE is set (e.g. launched from a VS Code terminal)
+- Stage / owner: s1 / @filip
+- Repro: on the Mac, in a VS Code integrated terminal (it exports ELECTRON_RUN_AS_NODE=1), run `npm start` → crash `TypeError: Cannot read properties of undefined (reading 'exports')` at cjsPreparseModuleExports. `env -u ELECTRON_RUN_AS_NODE npm start` works.
+- Expected / Actual: app opens from any terminal / crash.
+- Suggested fix: launch via a node script (like start-mock.js) that deletes `env.ELECTRON_RUN_AS_NODE` before spawning electron, and point both `start` and `start:mock` at it.
+- Status: VERIFIED (14:04): with ELECTRON_RUN_AS_NODE=1 the app now exits with a clear 'unset it' message instead of the cryptic crash. Demo: launch from Terminal.app.
 ### B-001 [P1] Real LLM output is always empty, so no sticky notes, explain notes or summaries
 - Stage / owner: s4 (+ s7-ai, s5 summary) / @aryan
 - Repro (david's Mac, real models, dev 93150d3+): 1. `npm i @qvac/sdk@0.23.0` 2. `node src/ai/scripts/live-demo.js fixtures/slides.json fixtures/lecture.wav` 3. full 92 s run gives 16 chunks and correct slides, but 0 `note:added`.
