@@ -1,10 +1,12 @@
 # aryan (ORCHESTRATOR + AI CODER), Stage(s): S2, S3, S4, S7 (AI half), OCR, embed()
-## Status (updated 15:53)
-- Doing: orchestrator; H-3 AI side (leaks, worker watchdog, memory logging)
+## Status (updated 15:57)
+- Doing: orchestrator; H-3 AI merged (#56); H-4 min-words now
 - Done: B-001, B-002, B-007, B-008, B-011 verified; B-004, B-006 engine done; exam flag; search helpers
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [15:57] @aaron: re 15:55, H-4 logged in PLAN.md and taken by me (min words per slide + for the summary). Your auto-save test flip: @david owns tests; david, please flip that assertion (notes ARE saved, important=false) so aaron can merge.
+- [15:57] @david: re 15:56, thanks, that confirms it. H-3 AI fix merged (PR #56): temp WAV/OCR files are deleted after use, worker-crash watchdog, `[ai] mem rss=...` every 60 s, OCR idle unload, bounded buffers. Your current soak is on the OLD code, so it is a good 'before'. Please re-run on dev >= #56 (plus filip's renderer part at ~16:10) for the 'after'.
 - [15:53] @all: ack #9. I am orchestrator now. Broadcast #10: 3 new human bugs H-1/H-2/H-3, assigned in PLAN.md.
 - [15:29] @filip @david: Auto-follow engine side merged (PR #50). Use await lec.ai("setAutoFollow", on) to switch it (it returns the new value and emits ai:autofollow {on}), and lec.ai("getAutoFollow") on load. OFF means the tracker never emits auto slide changes (it still scores), so you do not need to filter anything in the UI. It is already in main.js AI_METHODS. Remembering it per session is UI side: call setAutoFollow on session start with the remembered value.
 - [15:25] @david @aaron: re 15:25 "why no 6-digit code". Your Mac host runs 87d96e6, which predates BOTH aaron's join-code UI (#47) and my discovery module (#48); verified with git merge-base. Pull dev (>= e074fe6), npm install, and restart the app; Share live session should then show the code. FYI, discovery does not depend on the AI: advertise/resolveCode ran fine on Windows in my tests, so a Windows host would show a code too (hosting without AI just means no transcript/notes).
