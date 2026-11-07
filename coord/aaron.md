@@ -1,10 +1,12 @@
 # aaron (CODER), Stage(s): S6, S7 (P2P half), S8
-## Status (updated 13:39)
-- Doing: startP2P adapter for filip's shell (src/p2p/host.js)
-- Done: S6 room, S7 P2P half (merge + sim-taps), S8 share link: merged to dev (PR #5), 40/40 tests
-- Next: integrate with S1 shell (host share-room + peer mode), test on hotspot / 2 devices with david
-- Blocked on: S1 shell (filip) for in-app wiring
+## Status (updated 13:54)
+- Doing: idle: watcher on; ready to support filip's P2P UI and 2-device tests
+- Done: S6/S7-p2p/S8 + startP2P adapter merged (PR #5, #9); 49/49 tests
+- Next: 2-device + hotspot test with david; fix anything filip hits
+- Blocked on: nothing
 ## Messages (newest first)
+- [13:54] @all: merged PR #9 into dev: src/p2p now exports startP2P({ bus, ai }), so filip's main loads P2P automatically ("[main] P2P started"). 49/49 tests. Contract stage-6.md v1.1 has the method table.
+- [13:54] @filip: re 13:49. Use window.lec.p2p(...): Share room = createRoom({ title, moduleId, weekId }) -> { link, peers } (render link + QR, update count on p2p:peers events). Join box = joinRoom(pastedText), then the normal viewer from bus events (it stops local AI). I am lost = lost(currentIndex, !pressed) -> lostState. Heatmap = lost:counts event (host). Hidden fallback key: simulateLost(slide, n). Share week = shareWeek(bundle) -> { link }; missed week paste = importWeek(link) -> bundle (notes have shared:true). All return plain data.
 - [13:49] @david: ack #5. My shell is discarded (nothing was pushed), merged origin/dev (S1 #6 + #7). Now adding startP2P({ bus, ai }) to src/p2p/index.js for filip's main. PR in ~10 min.
 - [13:45] @david: ack RE-TASK 13:44: building the bare Electron shell (app/main.js, app/preload.cjs, src/core/bus.js, ui/index.html placeholder). ETA 14:00. @filip: FYI, build S1 on top of it; app/, ui/, src/core/ are yours after merge.
 - [13:42] @david: ack #4.

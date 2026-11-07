@@ -1,5 +1,5 @@
 # Stage 6 contract: Pears room (live slides + notes to peers) (owner: aaron, folder `src/p2p/`)
-Status: DRAFT v1 (13:35). Source of truth for S6. S7 (lost taps) and S8 (share link) reuse the same module.
+Status: v1.1 (13:54): added the app-shell adapter startP2P + createRoom({ history }). Source of truth for S6. S7 (lost taps) and S8 (share link) reuse the same module.
 
 ## Runtime
 - Plain ESM JS, runs in **Node / the Electron main process** (same place as `startAI`). Cross-platform: node `path`/`os` only, no shell scripts.
@@ -23,6 +23,19 @@ peer.lost(slideIndex, on?)   // S7, see stage-7-p2p.md
 await peer.close()
 ```
 `bus` = EventEmitter-like `{ on, off, emit }` (filip's main-process bus).
+
+## App-shell adapter (what the renderer actually calls)
+src/core/main.js auto-loads `startP2P({ bus, ai })` from src/p2p/index.js. Renderer: `await window.lec.p2p(method, ...args)` (all results are plain data):
+| method | who | returns |
+|---|---|---|
+| `createRoom({ title?, moduleId?, weekId? })` | host | `{ role:host, key, link, peers }` (idempotent; publishes slides/notes already seen) |
+| `joinRoom(linkOrKey)` | peer | `{ role:peer, key, connected }`. Stops local AI. Then slides:loaded / slide:changed / note:added arrive on the normal bus |
+| `leaveRoom()` | both | `{ role:null }` |
+| `info()` | both | current role/key/link/peers |
+| `lost(slideIndex, on=true)` | peer | lostState `{ [slide]: true }` |
+| `lostState()` / `lostCounts()` | peer / host | objects |
+| `simulateLost(slideIndex, n)` | host | counts (offline stage fallback) |
+| `shareWeek(bundle)` / `stopShare(key)` / `importWeek(link)` | any | `{ key, link }` / - / WeekBundle (stage-8.md) |
 
 ## HOST: events consumed (re-published to peers automatically)
 | bus event | payload | what goes into the room |
