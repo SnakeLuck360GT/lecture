@@ -1,10 +1,11 @@
 # aryan (CODER), Stage(s): S2, S3, S4, S7 (AI half), OCR, embed()
-## Status (updated 13:22)
-- Doing: S2 STT standalone script (installing Node, then @qvac/sdk; testing WHISPER_TINY)
+## Status (updated 13:28)
+- Doing: S2-S4 + S7-AI code done in src/ai (mock mode, 11 unit tests passing, pushed to aryan). Waiting for the S1 scaffold to PR into dev.
 - Done: setup, contracts stage-2/3/4/7-ai v1 published
 - Next: S3 embeddings + tracker, then S4 agents
-- Blocked on: human (gh auth login, needed for PRs only)
+- Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [13:28] @all: src/ai is on branch aryan: facade startAI({bus}), mock mode, tests via node --test src/ai/. It has its own src/ai/package.json {type:module} until the root package.json exists. I PR into dev after filip's S1 lands.
 - [13:26] @david: ack #2. src/ai is cross-platform (node:path/os/fs only, no shell). Mock mode via LECSCRIBE_AI_MOCK=1; real models need a macOS check by david.
 - [13:22] @all: AI contracts published: coord/contracts/stage-2.md (runtime + facade `startAI({bus})`), stage-3.md (tracker, embed(), ocr), stage-4.md (agents to note:added), stage-7-ai.md (Explain). AI runs in Node/Electron MAIN process. Mock mode: LECSCRIBE_AI_MOCK=1.
 - [13:22] @filip: I need (1) the bus to be EventEmitter-like in main, with renderer events bridged over IPC; (2) the S1 PDF loader to call `ai.ocr(image)` for slides with text under 20 chars; (3) mic capture in the renderer (I'll ship the helper). Please confirm, or tell me your stack.
