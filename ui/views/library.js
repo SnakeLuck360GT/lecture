@@ -162,6 +162,81 @@ export function createLibraryView (app) {
     } catch (e) { toast(`Could not create lecture: ${e.message || e}`, { error: true }) }
   }
 
+  // ---------- Ask across lectures (stretch #1): library.searchAll -> grouped results -> jump to slide ----------
+  const KIND = { note: 'Saved note', transcript: 'Transcript', summary: 'Summary', slide: 'Slide' }
+  let askSeq = 0
+
+  /** lectureId -> { title, moduleName } for every lecture (lists are cheap; no slide images). */
+  async function lectureIndex () {
+    const idx = new Map()
+    for (const m of v.modules) {
+      try {
+        for (const l of await app.store.listLectures(m.id)) idx.set(l.id, { title: l.title || 'Untitled lecture', moduleName: m.name })
+      } catch {}
+    }
+    return idx
+  }
+
+  async function runAsk () {
+    const q = $('ask-input').value.trim()
+    const box = $('ask-results')
+    const seq = ++askSeq
+    if (!q) { box.hidden = true; box.replaceChildren(); $('lecture-list').hidden = false; return }
+    box.hidden = false
+    $('lecture-list').hidden = true
+    $('lib-empty').hidden = true
+    box.replaceChildren(el('div', 'ask-status', 'Searching every lecture on this laptop…'))
+    let hits = []
+    try {
+      hits = await app.store.searchAll(q, 12)
+    } catch (e) {
+      if (seq !== askSeq) return
+      box.replaceChildren(el('div', 'ask-status', `Search failed: ${e.message || e}`))
+      return
+    }
+    const idx = await lectureIndex()
+    if (seq !== askSeq) return // a newer query is running
+    box.replaceChildren()
+    const head = el('div', 'ask-head')
+    head.append(el('h2', null, `Results for “${q}”`), el('span', 'ask-count', `${hits.length} match${hits.length === 1 ? '' : 'es'} across lectures`))
+    box.append(head)
+    if (!hits.length) {
+      box.append(el('div', 'ask-status', 'Nothing found. Try other words: search understands meaning, not just exact text.'))
+      return
+    }
+    // group by lecture, keep the best-scoring lecture first
+    const groups = new Map()
+    for (const h of hits) {
+      if (!groups.has(h.lectureId)) groups.set(h.lectureId, [])
+      groups.get(h.lectureId).push(h)
+    }
+    for (const [lectureId, items] of groups) {
+      const info = idx.get(lectureId) || { title: 'Lecture', moduleName: '' }
+      const g = el('div', 'ask-group')
+      const gh = el('div', 'ask-group-head')
+      gh.append(el('span', 'ask-module', info.moduleName), el('span', 'ask-lecture', info.title))
+      g.append(gh)
+      for (const h of items) {
+        const b = el('button', 'ask-hit')
+        b.type = 'button'
+        const meta = el('span', 'ask-meta')
+        if (h.kind !== 'slide') meta.append(el('span', 'ask-kind', KIND[h.kind] || h.kind))
+        if (Number.isInteger(h.slideIndex)) meta.append(el('span', 'ask-slide', `Slide ${h.slideIndex + 1}`))
+        b.append(meta, el('span', 'ask-snippet', String(h.text || '').slice(0, 220)))
+        b.addEventListener('click', () => app.openLecture(lectureId, { role: 'host', jumpTo: Number.isInteger(h.slideIndex) ? h.slideIndex : null }))
+        g.append(b)
+      }
+      box.append(g)
+    }
+  }
+
+  let askTimer = null
+  $('ask-input').addEventListener('input', () => { clearTimeout(askTimer); askTimer = setTimeout(runAsk, 300) })
+  $('ask-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { clearTimeout(askTimer); runAsk() }
+    if (e.key === 'Escape') { e.target.value = ''; runAsk() }
+  })
+
   // ---------- wiring ----------
   $('btn-new-module').addEventListener('click', () => showNewModule(true))
   $('new-module-form').addEventListener('submit', (e) => { e.preventDefault(); createModule($('new-module-name').value) })

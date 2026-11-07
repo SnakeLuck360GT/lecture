@@ -18,8 +18,9 @@ export function createLectureView (app) {
   let replayCache = () => {}
 
   // ---------- open / close ----------
-  async function open (lectureId, { role = 'host', fresh = false, title } = {}) {
+  async function open (lectureId, { role = 'host', fresh = false, title, jumpTo = null } = {}) {
     state.active = true
+    state.pendingJump = Number.isInteger(jumpTo) ? jumpTo : null // Ask-across result: open at that slide
     state.role = role
     state.lectureId = lectureId || null
     state.lecture = null
@@ -192,6 +193,11 @@ export function createLectureView (app) {
     renderSlide()
     renderNotes()
     refreshExplain()
+    if (state.pendingJump != null) {
+      const j = state.pendingJump
+      state.pendingJump = null
+      if (j > 0 && j < slides.length) go(j, 'manual')
+    }
     if (state.persistSlides && state.lectureId) {
       state.persistSlides = false
       app.store.saveSlides(state.lectureId, slides).then(() => app.libraryChanged()).catch((e) => console.warn('saveSlides failed', e))

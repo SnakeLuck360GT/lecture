@@ -301,7 +301,26 @@ async function runSmoke (pngPath) {
   const saved = await wc.executeJavaScript('(async () => { const L = window.__lecscribe; return !!(await L.app.store.getLecture(L.state.lectureId))?.summary })()')
   await writeFile(out.replace(/.png$/i, '') + '-summary.png', (await wc.capturePage()).toPNG())
   const summary = { chars: summaryText.length, saved }
-  const result = { ok: slides.length > 0 && ui.current === 1 && ui.img, lost: lostLabel, explain, summary, slides: slides.length, texts: slides.map((s) => s.text.slice(0, 40)), ui, events: [...new Set(seen)] }
+  // Ask across lectures: back to the Library, search, click the first hit -> lecture opens at that slide.
+  await wc.executeJavaScript('window.__lecscribe.openLibrary()')
+  await new Promise((r) => setTimeout(r, 800))
+  await wc.executeJavaScript("(() => { const i = document.getElementById('ask-input'); i.value = 'collisions separate chaining'; i.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })) })()")
+  let hitCount = 0
+  for (let i = 0; i < 40 && !hitCount; i++) {
+    await new Promise((r) => setTimeout(r, 500))
+    hitCount = await wc.executeJavaScript("document.querySelectorAll('#ask-results .ask-hit').length")
+  }
+  await writeFile(out.replace(/.png$/i, '') + '-ask.png', (await wc.capturePage()).toPNG())
+  let askOpened = null
+  if (hitCount) {
+    const want = await wc.executeJavaScript("document.querySelector('#ask-results .ask-hit .ask-slide')?.textContent || ''")
+    await wc.executeJavaScript("document.querySelector('#ask-results .ask-hit').click()")
+    await new Promise((r) => setTimeout(r, 2500))
+    askOpened = await wc.executeJavaScript('({ screen: window.__lecscribe.state.screen, slide: window.__lecscribe.state.current + 1 })')
+    askOpened.wanted = want
+  }
+  const ask = { hits: hitCount, opened: askOpened }
+  const result = { ok: slides.length > 0 && ui.current === 1 && ui.img, lost: lostLabel, explain, summary, ask, slides: slides.length, texts: slides.map((s) => s.text.slice(0, 40)), ui, events: [...new Set(seen)] }
   console.log('[smoke] ' + JSON.stringify(result))
   app.exit(result.ok ? 0 : 1)
 }
