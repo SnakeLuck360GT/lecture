@@ -4,6 +4,13 @@ import { mountComponent } from './components.js'
 
 const STATE_LABEL = { live: 'Live', attended: 'Attended', missed: 'Missed', imported: 'Shared' }
 
+/** HUMAN ANSWER 15:15: a short unique ID per module, e.g. #A3F9C2 (the random-hex tail of module.id). */
+export const shortId = (id) => '#' + String(id || '').replace(/[^a-z0-9]/gi, '').slice(-6).toUpperCase()
+
+async function copyText (text) {
+  try { await navigator.clipboard.writeText(text); toast(`Copied ${text}`) } catch { toast(text) }
+}
+
 export function createLibraryView (app) {
   const v = { modules: [], lectures: [], moduleId: null, rowHandles: [] }
 
@@ -28,6 +35,10 @@ export function createLibraryView (app) {
       const b = el('button', `module-item${m.id === v.moduleId ? ' active' : ''}`)
       b.type = 'button'
       b.append(icon('folder'), el('span', 'module-name', m.name))
+      const sid = el('span', 'module-sid', shortId(m.id))
+      sid.title = 'Module ID (click to copy)'
+      sid.addEventListener('click', (e) => { e.stopPropagation(); copyText(shortId(m.id)) })
+      b.append(sid)
       if (m.lectureCount != null) b.append(el('span', 'module-count', String(m.lectureCount)))
       b.addEventListener('click', () => { v.moduleId = m.id; renderModules(); loadLectures() })
       nav.append(b)
@@ -57,6 +68,8 @@ export function createLibraryView (app) {
     const mod = v.modules.find((m) => m.id === v.moduleId)
     $('btn-new-lecture').hidden = !mod
     $('lib-module-name').textContent = mod ? mod.name : 'Library'
+    $('lib-module-id').hidden = !mod
+    $('lib-module-id').textContent = mod ? shortId(mod.id) : ''
     if (!mod) { v.lectures = []; renderLectures(); return }
     try {
       v.lectures = await app.store.listLectures(mod.id)
@@ -246,6 +259,7 @@ export function createLibraryView (app) {
   })
 
   // ---------- wiring ----------
+  $('lib-module-id').addEventListener('click', () => copyText($('lib-module-id').textContent))
   $('btn-new-module').addEventListener('click', () => showNewModule(true))
   $('new-module-form').addEventListener('submit', (e) => { e.preventDefault(); createModule($('new-module-name').value) })
   $('new-module-name').addEventListener('keydown', (e) => { if (e.key === 'Escape') showNewModule(false) })
