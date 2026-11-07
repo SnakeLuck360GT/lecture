@@ -8,63 +8,143 @@
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand"><span class="logo">✎</span> LecScribe</div>
-    <div class="context" id="context" title="Module and week">
-      <span id="ctx-module">COMP26120</span><span class="sep">›</span><span id="ctx-week">Week 3</span>
-    </div>
-    <div class="actions">
-      <label class="btn" title="Open a PDF slide deck">
-        <input type="file" id="file-input" accept="application/pdf" hidden>Open PDF…
-      </label>
-      <button class="btn" id="btn-demo-deck" title="Load fixtures/deck.pdf">Demo deck</button>
-      <span id="mount-mic-picker"></span>
-      <button class="btn primary" id="btn-listen" disabled title="Load slides first">
-        <span class="dot"></span><span class="label">Start listening</span>
-        <span class="meter"><span id="meter-fill"></span></span>
-      </button>
-      <button class="btn ghost" id="btn-clip" title="Backup: play fixtures/lecture.wav through the AI">▶ Clip</button>
-    </div>
-    <div class="status" id="ai-status" title="On-device AI status"></div>
-  </header>
+  <div class="app" id="app">
 
-  <main class="layout">
-    <section class="stage">
-      <div class="slide-wrap" id="slide-wrap">
-        <div class="empty" id="empty">
-          <h1>Load a slide deck to begin</h1>
-          <p>Open a PDF, or use the demo deck. Everything runs on this laptop.</p>
-        </div>
-        <img id="slide-img" alt="" hidden>
-        <div class="slide-text" id="slide-text" hidden></div>
-        <button class="nav prev" id="btn-prev" title="Previous slide (←)" disabled>‹</button>
-        <button class="nav next" id="btn-next" title="Next slide (→)" disabled>›</button>
-        <div class="slide-meta">
-          <span id="slide-count">–</span>
-          <span class="badge" id="track-badge" hidden></span>
-        </div>
+    <!-- ============ SIDEBAR (Library) ============ -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-top drag">
+        <div class="brand"><span class="brand-mark" data-icon="pen"></span><span>LecScribe</span></div>
       </div>
-      <div class="transcript" id="transcript">
-        <span class="t-label">Transcript</span>
-        <span class="t-text" id="t-text">Not listening.</span>
+      <div class="sidebar-section">
+        <div class="section-label">Modules</div>
+        <nav class="module-list" id="module-list" aria-label="Modules"></nav>
+        <form class="inline-new" id="new-module-form" hidden>
+          <input id="new-module-name" type="text" placeholder="Module name, e.g. COMP26120 Algorithms" autocomplete="off" maxlength="80">
+        </form>
+        <button class="side-add" id="btn-new-module" type="button"><span data-icon="plus"></span>New module</button>
       </div>
-    </section>
-
-    <aside class="margin">
-      <div class="margin-head">
-        <h2>Margin notes</h2>
-        <span class="sub" id="margin-sub">for this slide</span>
-      </div>
-      <div class="notes" id="notes">
-        <p class="hint">Sticky notes appear here for things the lecturer says that are not on the slide. Click one to save it.</p>
+      <div class="sidebar-footer">
+        <div class="section-label">Live session</div>
+        <div id="mount-join-room"></div>
       </div>
     </aside>
-  </main>
 
-  <footer class="strip" id="strip"></footer>
-  <div class="toast" id="toast" hidden></div>
+    <!-- ============ LIBRARY SCREEN ============ -->
+    <main class="screen library" id="screen-library">
+      <header class="lib-header drag">
+        <div class="lib-title">
+          <h1 id="lib-module-name">Library</h1>
+          <span class="lib-sub" id="lib-module-sub"></span>
+        </div>
+        <button class="btn primary nodrag" id="btn-new-lecture" type="button" hidden><span data-icon="plus"></span>New lecture</button>
+      </header>
+      <div class="lib-body">
+        <form class="new-lecture" id="new-lecture-form" hidden>
+          <input id="new-lecture-title" type="text" placeholder="Lecture title, e.g. Week 3 · Hash Tables" autocomplete="off" maxlength="100">
+          <label class="check"><input type="checkbox" id="new-lecture-missed"> I missed this lecture</label>
+          <button class="btn primary" type="submit">Create</button>
+          <button class="btn ghost" type="button" id="btn-cancel-lecture">Cancel</button>
+        </form>
+        <div class="lecture-list" id="lecture-list"></div>
+        <div class="empty-state" id="lib-empty" hidden></div>
+      </div>
+    </main>
+
+    <!-- ============ LECTURE VIEW ============ -->
+    <main class="screen lecture" id="screen-lecture" hidden>
+      <header class="lec-header drag">
+        <button class="icon-btn nodrag" id="btn-back" type="button" title="Back to library" aria-label="Back to library"><span data-icon="chevron-left"></span></button>
+        <div class="crumbs">
+          <span class="crumb-module" id="crumb-module"></span>
+          <span class="crumb-sep" data-icon="chevron-right"></span>
+          <span class="crumb-lecture" id="crumb-lecture"></span>
+          <span class="role-badge" id="role-badge" hidden>Viewing a live room</span>
+        </div>
+        <div class="header-right nodrag">
+          <div class="search" id="search-box">
+            <span class="search-icon" data-icon="search"></span>
+            <input id="search-input" type="search" placeholder="Search this lecture" autocomplete="off">
+            <div class="search-results" id="search-results" hidden></div>
+          </div>
+          <div class="pop-anchor">
+            <button class="btn small" id="btn-share-pop" type="button" aria-expanded="false" aria-controls="pop-share"><span data-icon="link"></span>Share notes</button>
+            <div class="popover" id="pop-share" hidden><div id="mount-share-lecture"></div></div>
+          </div>
+          <div class="pop-anchor host-only">
+            <button class="btn small" id="btn-room-pop" type="button" aria-expanded="false" aria-controls="pop-room"><span class="live-dot" id="room-live-dot"></span>Live session</button>
+            <div class="popover" id="pop-room" hidden><div id="mount-room-panel"></div></div>
+          </div>
+        </div>
+      </header>
+
+      <div class="toolbar host-only" id="toolbar">
+        <div class="tool-group">
+          <span id="mount-mic-picker"></span>
+          <button class="btn record" id="btn-listen" type="button" disabled title="Load slides first">
+            <span class="rec-dot"></span><span class="label">Start listening</span>
+          </button>
+          <button class="btn ghost" id="btn-clip" type="button" title="Backup: stream fixtures/lecture.wav through the AI"><span data-icon="play"></span><span class="label">Play clip</span></button>
+        </div>
+        <div class="tool-group">
+          <label class="btn ghost" title="Open a PDF slide deck"><input type="file" id="file-input" accept="application/pdf" hidden><span data-icon="file"></span>Open PDF</label>
+          <button class="btn ghost" id="btn-demo-deck" type="button" title="Load fixtures/deck.pdf"><span data-icon="slides"></span>Demo deck</button>
+          <div class="status" id="ai-status" aria-label="On-device AI status"></div>
+        </div>
+      </div>
+
+      <div class="lec-body">
+        <section class="stage">
+          <div class="slide-card" id="slide-wrap">
+            <div class="slide-empty" id="empty">
+              <span class="empty-icon" data-icon="slides"></span>
+              <h2 id="empty-title">Load the slides for this lecture</h2>
+              <p id="empty-text">Open a PDF or use the demo deck. Everything runs on this laptop.</p>
+              <div class="empty-actions host-only">
+                <label class="btn primary"><input type="file" id="file-input-2" accept="application/pdf" hidden>Open PDF</label>
+                <button class="btn" id="btn-demo-deck-2" type="button">Use demo deck</button>
+              </div>
+            </div>
+            <img id="slide-img" alt="" hidden>
+            <div class="slide-text" id="slide-text" hidden></div>
+            <button class="nav prev" id="btn-prev" type="button" title="Previous slide (Left arrow)" aria-label="Previous slide" disabled><span data-icon="chevron-left"></span></button>
+            <button class="nav next" id="btn-next" type="button" title="Next slide (Right arrow)" aria-label="Next slide" disabled><span data-icon="chevron-right"></span></button>
+            <div class="slide-meta">
+              <span class="track-badge" id="track-badge" hidden></span>
+              <span id="slide-count"></span>
+            </div>
+          </div>
+          <div id="mount-lost-button" class="peer-only"></div>
+          <div class="transcript" id="transcript">
+            <button class="transcript-head" id="transcript-toggle" type="button" aria-expanded="false">
+              <span class="t-label">Transcript</span>
+              <span class="t-last" id="t-last">Not listening</span>
+              <span class="t-chev" data-icon="chevron-up"></span>
+            </button>
+            <div class="transcript-body" id="transcript-body">
+              <div class="t-lines" id="t-lines"></div>
+              <div class="t-partial" id="t-partial"></div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="notes-col">
+          <div class="notes-head">
+            <h2>Notes</h2>
+            <span class="notes-sub" id="notes-sub">for this slide</span>
+          </div>
+          <div class="notes" id="notes"></div>
+        </aside>
+      </div>
+
+      <footer class="strip-wrap">
+        <div id="mount-heatmap" class="host-only"></div>
+        <div class="strip" id="lec-strip"></div>
+      </footer>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" hidden></div>
   <audio id="clip-audio" preload="auto" hidden></audio>
-
   <script type="module" src="./app.js"></script>
 </body>
 </html>
