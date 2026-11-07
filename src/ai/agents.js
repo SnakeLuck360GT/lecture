@@ -56,6 +56,7 @@ export function createSummariser ({ bus, complete, opts = {} }) {
           const drop = (reason) => bus.emit('note:dropped', { slideIndex: i, text, reason })
           if (isOnSlide(text, slides[i]?.text, o.onSlideOverlap)) { drop('on-slide'); continue }
           if (grounding(text, said, slides[i]?.text) < o.minGrounding) { drop('ungrounded'); continue }
+          if (isGeneric(text, slides.map((x) => x.text || '').join(' '))) { drop('generic'); continue }
           if (a.notes.some((n) => similar(n, text))) { drop('duplicate'); continue }
           a.notes.push(text)
           bus.emit('note:added', {
@@ -126,7 +127,7 @@ export function contentWords (s) {
     .filter((w) => (w.length > 2 || /\d/.test(w)) && !STOP.has(w))
     .map(stem)
 }
-const SYN = { twice: 'double', doubling: 'double', doubled: 'double', grows: 'double', enlarge: 'resize', expand: 'resize', rehashing: 'rehash', rehashed: 'rehash', reinsert: 'rehash', collide: 'collision', collides: 'collision' }
+const SYN = { twice: 'double', doubling: 'double', doubled: 'double', grows: 'double', enlarge: 'resize', expand: 'resize', rehashing: 'rehash', rehashed: 'rehash', reinsert: 'rehash', collide: 'collision', collides: 'collision', amortized: 'amortised', amortise: 'amortised', amortize: 'amortised', constant: 'bigo1' }
 const stem = (w) => { w = SYN[w] || w; return (/^\d+$/.test(w) ? w : w.replace(/(ing|ed|es|s|e)$/, '')).slice(0, 5) }
 const isNum = (w) => /^\d+$/.test(w)
 
@@ -159,6 +160,16 @@ export function isOnSlide (note, slideText, maxOverlap = 0.7) {
     if ((cov >= 0.6 && novel <= 2) || (cov >= 0.75 && novel <= 3)) return true
   }
   return false
+}
+
+/**
+ * Generic note (Mac run 14:22: "Open addressing used in hash maps"): every word it uses already
+ * appears somewhere in the deck, so it tells the student nothing new.
+ */
+export function isGeneric (note, deckText) {
+  if (!deckText) return false
+  const dw = new Set(contentWords(deckText))
+  return contentWords(note).filter((w) => !dw.has(w) && !isNum(w)).length < 1
 }
 
 /**
