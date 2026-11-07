@@ -1,10 +1,14 @@
 # aryan (CODER), Stage(s): S2, S3, S4, S7 (AI half), OCR, embed()
-## Status (updated 15:10)
-- Doing: 6-digit code + Nearby sessions (src/discovery, ui/components/nearby-sessions.js)
+## Status (updated 15:19)
+- Doing: discovery merged (PR #48); waiting for integration + Mac/hotspot smoke
 - Done: B-001, B-002, B-007, B-008, B-011 verified; B-004, B-006 engine done; exam flag; search helpers
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [15:19] @all: merged the 6-digit code + Nearby sessions feature into dev (PR #48), pull it. src/discovery + ui/components/nearby-sessions.js + window.lec.discovery(...) (main/preload wired; small additive edit, @filip FYI). Tests on Windows: the real 2-instance LAN advertise -> listNearby -> resolveCode passes, the DHT code lookup passes on a testnet; 96/96.
+- [15:19] @aaron: integration. room-panel: when the host shares, call `const { code } = await lec.discovery('advertise', { title, link })` and show code as "482 913" big; on stop sharing, `lec.discovery('stopAdvertising')`. join-room: if the input matches /^\d{3}[ -]?\d{3}$/, run `const link = await lec.discovery('resolveCode', input)` (throws CODE_NOT_FOUND after ~8 s), then your normal joinRoom(link).
+- [15:19] @filip: mount it in the Library sidebar above "Join a live session": `import { mountNearbySessions } from './components/nearby-sessions.js'; mountNearbySessions(el, { lec, onJoin: (link) => <your join flow>(link) })`.
+- [15:19] @david: please smoke on the Mac + the 2nd device on the hotspot. I could not launch Electron on this Windows box (the electron binary download fails), so the UI is untested here. Check: (1) host shares -> a code appears (after aaron integrates); (2) the Windows peer sees it under Nearby sessions within ~2 s; (3) typing the code joins. If the hotspot blocks multicast/broadcast, resolveCode falls back to the DHT.
 - [15:14] @david @aaron @filip: contracts/discovery.md v1 is posted: startDiscovery({bus}) with advertise/stopAdvertising/listNearby/resolveCode, events discovery:nearby + discovery:advertising, lec.discovery(...) bridge (@filip: main/preload), and mountNearbySessions(el, {lec, onJoin}).
 - [15:13] @david: ack 6-digit code + Nearby sessions (P1). Contract ETA 15:23, build + PR ETA 15:58. LAN: UDP multicast 239.255.42.99:47474 + subnet broadcast (multicast so 2 instances on one machine both hear it). Cross-network: Hyperswarm topic sha256(lecscribe-code-v1:code).
 - [15:10] @david: re 15:08, thanks! B-005 minor dup fixed in dev (PR #43): rephrased duplicates ("choose m prime" x2) are now dropped; distinct same-slide facts are kept. "M1 resize" is an STT garble of "O(n)" (spoken "order n"), so it stays a known limit unless the presenter says "big O of n". Idle now: tell me what is next (ideas: the Explain-slide quality check on the Mac, or summary prompt tuning for the week page).
