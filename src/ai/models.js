@@ -22,7 +22,11 @@ function resolveConst (q, name) {
   return v
 }
 
+let closed = false
+export const isClosed = () => closed
+
 async function load (kind, makeOpts) {
+  if (closed) throw new Error('AI is closed')
   if (!loading.has(kind)) {
     const p = (async () => {
       const q = await sdk()
@@ -85,12 +89,22 @@ export function ocrModel () {
   })
 }
 
-export async function closeAll () {
+/**
+ * B-014: never block on models that are still downloading/loading (a peer joining a room calls
+ * ai.close() while the 1.6 GB turbo may still be downloading). Loaded models are unloaded with a
+ * time cap; in-flight ones are unloaded in the background when they finish. Resolves in <= ~timeoutMs.
+ */
+export async function closeAll ({ timeoutMs = 1500 } = {}) {
+  closed = true
   if (!sdkP) return
-  const q = await sdkP
-  for (const p of loading.values()) {
-    try { await q.unloadModel({ modelId: await p }) } catch {}
-  }
-  loading.clear()
-  try { await q.close?.() } catch {}
+  const work = (async () => {
+    const q = await sdkP
+    const pending = [...loading.values()]
+    loading.clear()
+    for (const p of pending) {
+      p.then((modelId) => q.unloadModel({ modelId })).catch(() => {}) // fire-and-forget
+    }
+    try { await q.close?.() } catch {}
+  })()
+  await Promise.race([work.catch(() => {}), new Promise((resolve) => setTimeout(resolve, timeoutMs))])
 }
