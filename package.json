@@ -6,8 +6,8 @@
   "type": "module",
   "main": "src/core/main.js",
   "scripts": {
-    "start": "electron .",
-    "start:mock": "node scripts/start-mock.js",
+    "start": "node scripts/start.js",
+    "start:mock": "node scripts/start.js --mock",
     "test": "node tests/run.mjs",
     "lint": "node scripts/check-syntax.js",
     "sim-taps": "node scripts/sim-taps.js",
