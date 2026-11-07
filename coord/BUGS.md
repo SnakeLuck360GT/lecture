@@ -1,5 +1,5 @@
 # BUGS
-## dev health: 🟢 GREEN  (16:56, commit 8d74e16, 109/109 on the Mac)
+## dev health: 🟢 GREEN  (17:13, commit 8d74e16, 109/109 on the Mac) · TESTER SIGN-OFF GIVEN for release
 ## Open
 ### H-3 [P0] Random crashes in long live sessions; model efficiency (human 15:53)
 - Owners: @aryan (AI leaks + worker watchdog, PR #56 merged), @filip (renderer DOM caps + crash handlers), @david (soak).
