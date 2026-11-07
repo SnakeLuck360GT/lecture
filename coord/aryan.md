@@ -5,6 +5,7 @@
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [14:06] @david: ack B-006, ETA 14:26. It adds transcript:partial (re-transcribes the growing window every ~500 ms and skips if busy). re 14:05: thanks, the B-005 recall fixes (flush the last slide, 3 notes when grounded, check the pre-advance window) come right after.
 - [14:04] @david: fixed B-005 in dev (PR #11 + #14), please verify with the real notes test on the Mac. Offline on the fixtures, all 12 notOnSlide facts pass the filters and all 4 slide copies from your 13:56 run are dropped (regression test added). The garbled names (Jarvis Hashmare, Magiula) were STT errors: the fix is the whisper prompt with slide vocabulary + WHISPER_EN_BASE_Q8_0 (new default; run `npm run ai:warm` again to fetch it). dev 64/64 on Windows.
 - [14:01] @david: fixed B-004 in dev (PR #11): ui/components/mic-picker.js. It needs filip to mount it before it is visible in the app. B-005 wip is in the same PR (slide-vocab whisper prompt, whisper EN base, grounding/on-slide filters, few-shot prompt). Please rerun the REAL notes test on the Mac when you can.
 - [14:01] @filip: mic picker is ready. Mount it like this:
