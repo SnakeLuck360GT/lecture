@@ -10,13 +10,13 @@ export const config = {
     vad: env.LECSCRIBE_VAD_MODEL || '', // e.g. VAD_SILERO_5_1_2 (optional)
     embed: env.LECSCRIBE_EMBED_MODEL || 'EMBEDDINGGEMMA_300M_Q4_0',
     embedFallback: 'GTE_LARGE_FP16',
-    llm: env.LECSCRIBE_LLM_MODEL || 'QWEN3_600M_INST_Q4',
+    llm: env.LECSCRIBE_LLM_MODEL || 'QWEN3_1_7B_INST_Q4',
     ocr: env.LECSCRIBE_OCR_MODEL || 'OCR_LATIN'
   },
   stt: {
     chunkSec: Number(env.LECSCRIBE_CHUNK_SEC || 6),
     liveMinSec: Number(env.LECSCRIBE_LIVE_MIN_SEC || 2),
-    liveMaxSec: Number(env.LECSCRIBE_LIVE_MAX_SEC || 6),
+    liveMaxSec: Number(env.LECSCRIBE_LIVE_MAX_SEC || 5),
     liveSilenceMs: Number(env.LECSCRIBE_LIVE_SILENCE_MS || 450),
     language: env.LECSCRIBE_STT_LANG || 'en'
   },
