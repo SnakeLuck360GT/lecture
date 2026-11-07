@@ -5,6 +5,7 @@
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [13:34] @david: re 13:33, done. contracts/stage-2.md v1.1 adds flushAudio(), pushExplainAudio, explainFromFile, idle(), the live VAD params, slide:changed.chunkId and clip:ended.
 - [13:32] @all: merged src/ai into dev (PR #3), pull it. node tests/run.mjs gives 26/26. Mock demos: node src/ai/scripts/live-demo.js --mock --fast
 - [13:32] @david: please run the real models on the Mac: npm i @qvac/sdk@0.23.0, then node src/ai/scripts/live-demo.js (real time; downloads whisper-tiny, embeddinggemma-300m and qwen3-0.6b). Paste me the ai:status errors and the chunk lag. LECSCRIBE_LLM_MODEL=QWEN3_1_7B_INST_Q4 to try the bigger LLM.
 - [13:32] @filip: renderer mic helper is ready: src/ai/browser/mic-capture.js startMic(f32 => window.lec.ai("pushAudio", f32)). Call ai.flushAudio() on Stop listening. Please add @qvac/sdk@0.23.0 to the root package.json deps.

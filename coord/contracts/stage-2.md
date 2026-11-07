@@ -1,5 +1,5 @@
 # Stage 2 contract: speech-to-text + shared AI facade (owner: aryan, folder `src/ai/`)
-Status: DRAFT v1 (13:40). This file is the source of truth for the AI runtime and facade used by S3/S4/S7.
+Status: v1.1 (flushAudio, live VAD, chunkId added). This file is the source of truth for the AI runtime and facade used by S3/S4/S7.
 
 ## Runtime
 - Plain ESM JS (`"type": "module"`), runs in **Node / the Electron main process** (NOT the renderer). `@qvac/sdk` on Node spawns its own Bare worker.
@@ -13,7 +13,11 @@ const ai = await startAI({ bus, mock })   // bus = EventEmitter-like {on, off, e
 // loads models (emits 'ai:status'), wires S2+S3+S4+S7 listeners onto the bus
 ai.playClip(wavPath, { realtime: true })  // S2 demo path: stream a recorded clip as transcript chunks
 ai.stopClip()
-ai.pushAudio(f32Mono16k)                  // S2 live mic (nice-to-have): Float32Array PCM from renderer
+ai.pushAudio(f32Mono16k)                  // S2 live mic (PRIMARY path, broadcast #3): Float32Array 16 kHz mono PCM, any frame size (100-500 ms ideal)
+await ai.flushAudio()                     // S2: on "Stop listening", transcribe the buffered audio, drain the tracker, run the pending agents
+ai.pushExplainAudio(f32Mono16k)           // S7: audio for the active Explain recording
+ai.explainFromFile(slideIndex, wavPath)   // S7: backup/demo path
+await ai.idle()                           // tests: wait for the tracker/agents/explain queues to drain
 ai.embed(textOrTexts)                     // S3/S5/S8: -> number[] | number[][]
 ai.ocr(image)                             // S1: image path | Buffer | data URL -> string
 ai.summariseLecture(chunks, slides)       // S5: -> Promise<string> (week summary)
@@ -34,6 +38,14 @@ transcribeAudio(wavPathOrBuffer, { prompt }) -> Promise<string>      // used by 
 'ai:status'        { model: 'stt'|'embed'|'llm'|'ocr', state: 'loading'|'ready'|'error', progress?: 0-100, error?: string }
 'transcript:chunk' TranscriptChunk { id: 'c-<n>', slideIndex, tStart, tEnd, text }  // seconds; slideIndex = current slide at emit time
 ```
+## Live mic segmentation (v1.1)
+Energy VAD with an adaptive noise floor. A segment is cut at a pause of 450 ms or more once it is at least 2 s long, or hard-cut at 6 s. Near-silent segments are dropped. If STT falls behind, queued segments are merged (at most 10 s). Tuning env vars: `LECSCRIBE_LIVE_MIN_SEC`, `LECSCRIBE_LIVE_MAX_SEC`, `LECSCRIBE_LIVE_SILENCE_MS`. Chunk `tStart`/`tEnd` are stream seconds since the first pushAudio.
+Renderer helper: `src/ai/browser/mic-capture.js` with `startMic(onChunk, { onLevel }) -> { stop() }`.
+
+## Additive extras (v1.1)
+- `slide:changed` from the tracker also carries `chunkId` (the chunk that triggered it). S4 moves that chunk to the new slide.
+- `clip:ended { wavPath }` after playClip finishes.
+
 ## Events consumed
 `slide:changed` (to stamp `slideIndex` on chunks).
 
