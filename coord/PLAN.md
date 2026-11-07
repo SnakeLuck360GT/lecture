@@ -2,6 +2,12 @@
 
 Stages = the spec's build order (SPEC.md, "Build order"). Stretch goals come later, assigned by david.
 
+## SPLIT 13:58 (david, human-approved): filip's UI load split into components
+- **filip** = design system + layout + screens: Library screen, Lecture view, live-session layout. Owns `ui/index.html`, `ui/app.js`, `ui/styles.css`, `src/core/`. **Mounts** the components below into placeholders. Also B-003. Publish the design tokens (CSS variables: colours, radius, spacing, font) at the top of `ui/styles.css` ASAP, and the mount points (element ids) in contracts/stage-1.md, so components match the look.
+- **aryan** = `ui/components/mic-picker.js` (B-004, P1, BEFORE B-005): `export function mountMicPicker(el, { onChange(deviceId), onLevel? }) -> { getDeviceId(), destroy() }`, a select of `listMics()` + a live level meter, remembers the choice in localStorage, re-lists on `devicechange`, falls back to default if the device disappears. Then B-005.
+- **aaron** = `src/library/` (data layer, see above) + `ui/components/room-panel.js` (host Share-room: link text + QR + peer count), `ui/components/join-room.js` (paste box → peer viewer), `ui/components/lost-button.js` + `ui/components/heatmap.js` (counts strip over thumbnails), `ui/components/share-lecture.js` (Share / Paste-link import for a lecture). Each exports `mountX(el, deps) -> { destroy() }`. Vanilla JS + the shared CSS variables only. No global CSS outside a `.lec-<component>` prefix.
+- Components talk only through `window.lec` (emit/on/p2p/library/ai). filip mounts them. Each owner tests their own component in the running app.
+
 ## HUMAN UI DIRECTION 13:57 (david): library + polished, minimalist product UI (supersedes S5 "week" wording)
 **Model:** Module (a folder, e.g. "COMP26120 Algorithms") → Lecture items (e.g. "Week 3 · Hash Tables", date, state: live | attended | missed | imported) → inside a lecture: slides, saved notes (stickies + lecturer explanations), transcript, summary, and **that lecture's own vector store** (embeddings isolated per lecture, never shared across lectures). Sharing = a lecture's notes via aaron's S8 link; importing into a missed lecture re-embeds locally.
 

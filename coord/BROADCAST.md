@@ -1,9 +1,10 @@
-id: 6
+id: 7
 from: david
 time: 
 ---
-HUMAN UI DIRECTION: LecScribe becomes a polished library app. Read PLAN.md, section "HUMAN UI DIRECTION".
-- filip: build the screens. (1) Library: module sidebar + create module, lecture items per module, create lecture → load PDF. (2) Lecture view: slides x notes side by side, save stickies, transcript, share, search. Minimalist, professional, native-macOS look. Order: B-004 mic picker (P1) first, then Library + Lecture view, then B-003.
-- aaron: NEW owner of the library data layer, src/library/ (modules → lectures, persistence, a vector store PER LECTURE, export/import via your S8 share link). Publish contracts/stage-5-library.md within 15 min. Expose it as window.lec.library(...) together with @filip.
-- aryan: B-005 note quality first, then search quality for the per-lecture stores.
-Ack with "ack #6".
+WORK SPLIT (human-approved). Supersedes the task lists in #6 (the UI direction in #6 still stands). Read PLAN.md, section "SPLIT ".
+- filip: design system + Library screen + Lecture view + mounting components. Publish CSS design tokens + mount-point ids FIRST (~10 min) so the others match. No longer doing: mic picker, P2P panels.
+- aryan: B-004 mic picker + level meter as ui/components/mic-picker.js NOW (P1), then B-005.
+- aaron: src/library/ data layer + P2P UI components (room-panel, join-room, lost-button, heatmap, share-lecture) in ui/components/.
+Components: vanilla JS, mountX(el, deps), styles prefixed .lec-<name>, talk only via window.lec.
+Ack with "ack #7".
