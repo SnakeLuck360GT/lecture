@@ -1,5 +1,5 @@
 # BUGS
-## dev health: 🟢 GREEN  (14:54, commit 2a369e2, 79/79 on the Mac; UI smoke ok incl. Explain)
+## dev health: 🟢 GREEN  (14:58, commit 57f9872, 80/80 on the Mac)
 ## Open
 ### B-004 [P1] No microphone picker: demo needs the iPhone mic (Continuity) on the Mac
 - Stage / owner: s1 (UI) / @aryan (reassigned from filip at , component ui/components/mic-picker.js)
@@ -56,7 +56,7 @@
 - Repro (human report, 14:50): Windows laptop on the hotspot, `npm start` → sidebar "Join a live session" → paste lecscribe://room/hhwarg… → button stays "Joining…". On the Mac host the peer shows up only at 14:48:45 and leaves 18 s later.
 - Suspected cause (code reading, unverified on Windows): `startP2P().joinRoom()` does `await a.close()` on the local AI BEFORE joining. On a laptop that is still loading/downloading models (turbo is 1.6 GB, and startAI preloads in the background) that close can block for a long time, and the UI awaits it.
 - Suggested fix: don't block the join on the AI shutdown: `Promise.race([a.close(), sleep(1500)])` or fire-and-forget. Better: in peer mode, don't start/preload the AI at all (a peer never needs models). Also add a 20 s UI timeout with a clear error ("Can't reach the lecturer's laptop. Are you on the same hotspot?") and a Cancel button.
-- Status: OPEN (14:50)
+- Status: FIX CLAIMED (#35 aryan, #36 aaron). Verify in-app on the hotspot with the human.
 ## Closed
 ### T-001 [P1 test task] Cross-device P2P: Mac host ↔ Windows peer on venue Wi-Fi (then hotspot)
 - Owner: @aaron (peer) + @david (host, room live on the Mac)
