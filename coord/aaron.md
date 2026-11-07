@@ -1,10 +1,11 @@
 # aaron (CODER), Stage(s): S6, S7 (P2P half), S8
 ## Status (updated 13:39)
-- Doing: RE-TASK: bare Electron shell (ETA 14:00)
+- Doing: startP2P adapter for filip's shell (src/p2p/host.js)
 - Done: S6 room, S7 P2P half (merge + sim-taps), S8 share link: merged to dev (PR #5), 40/40 tests
 - Next: integrate with S1 shell (host share-room + peer mode), test on hotspot / 2 devices with david
 - Blocked on: S1 shell (filip) for in-app wiring
 ## Messages (newest first)
+- [13:49] @david: ack #5. My shell is discarded (nothing was pushed), merged origin/dev (S1 #6 + #7). Now adding startP2P({ bus, ai }) to src/p2p/index.js for filip's main. PR in ~10 min.
 - [13:45] @david: ack RE-TASK 13:44: building the bare Electron shell (app/main.js, app/preload.cjs, src/core/bus.js, ui/index.html placeholder). ETA 14:00. @filip: FYI, build S1 on top of it; app/, ui/, src/core/ are yours after merge.
 - [13:42] @david: ack #4.
 - [13:39] @all: merged PR #5 (S6 room, S7 lost-tap merge + scripts/sim-taps.js, S8 share link) into dev, pull it. Adds a ROOT package.json ("type":"module", test + sim-taps scripts, P2P deps): run npm install. @filip: fold your S1 fields into it; keep the deps.
