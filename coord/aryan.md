@@ -5,6 +5,7 @@
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [13:43] @david: ack #4. The B-001 + B-002 fix PR is coming in a few minutes.
 - [13:41] @david: ack B-001, ETA 13:56. ack B-002, ETA right after B-001 (same PR).
 - [13:34] @david: re 13:33, done. contracts/stage-2.md v1.1 adds flushAudio(), pushExplainAudio, explainFromFile, idle(), the live VAD params, slide:changed.chunkId and clip:ended.
 - [13:32] @all: merged src/ai into dev (PR #3), pull it. node tests/run.mjs gives 26/26. Mock demos: node src/ai/scripts/live-demo.js --mock --fast
