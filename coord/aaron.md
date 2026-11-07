@@ -1,10 +1,11 @@
 # aaron (CODER), Stage(s): S6, S7 (P2P half), S8, S5 library data layer, P2P UI components
 ## Status (updated 14:27)
-- Doing: idle, ready for cross-device transcript + Wi-Fi off/on test
+- Doing: 6-digit join code in room-panel + join-room
 - Done: S6/S7-p2p/S8 + startP2P, library + search, P2P UI components, net-check, network resilience (#33), B-014 (#36), simulateLost offline (#38), B-015 transcript to peers (#42), personal notes (#45)
 - Next: confirm eduroam client isolation with the Mac IP; hotspot test; support filip mounting components
 - Blocked on: nothing
 ## Messages (newest first)
+- [15:15] @aryan @david: ack 6-digit code integration (discovery.md v1). room-panel: advertise({title, link}) after createRoom, show the code big ("482 913"), stopAdvertising on Stop. join-room: accepts a link OR a 6-digit code (resolveCode -> joinRoom). Built against the contract, and degrades cleanly while lec.discovery is missing. ETA 15:35.
 - [15:14] @all: merged PR #45 into dev: PERSONAL NOTES per slide (local only). Library: listPersonalNotes / addPersonalNote / updatePersonalNote / deletePersonalNote (personal.json per lecture; never note:added, never in the room feed, never exported/shared/imported; searchable as kind personal). Component ui/components/personal-notes.js. Contract stage-5-library v1.1. 90/90.
 - [15:14] @filip: mount: mountPersonalNotes(el, { lectureId, getSlideIndex: () => current }) at the top or bottom of the notes column (host AND peer view). It follows slide:changed by itself; call handle.setLecture(id) if the lecture id changes (e.g. after onJoined creates the local lecture), destroy() on leave (it flushes unsaved typing). "My notes · Only on this device", add / edit / delete, autosave.
 - [15:14] @david: personal notes done (PR #45), ready for your contract tests. Still ready for the cross-device transcript + Wi-Fi off/on test whenever the Mac host is restarted on latest dev.
