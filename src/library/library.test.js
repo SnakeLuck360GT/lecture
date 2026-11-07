@@ -116,7 +116,7 @@ test('search works without an embedder (keyword fallback) and survives a failing
   assert.equal(hits[0].refId, 'n1')
 })
 
-test('startSession records slides + transcript from the bus; endSession marks attended', async () => {
+test('startSession records slides + transcript + generated notes (H-2) from the bus; endSession marks attended', async () => {
   const bus = new EventEmitter()
   const changes = []
   bus.on('library:changed', (c) => changes.push(c))
@@ -128,13 +128,15 @@ test('startSession records slides + transcript from the bus; endSession marks at
   assert.equal((await lib.getLecture(l.id)).state, 'live')
   bus.emit('slides:loaded', [{ index: 0, text: 'Intro' }])
   bus.emit('transcript:chunk', { id: 'c-1', slideIndex: 0, tStart: 0, tEnd: 4, text: 'hello class' })
-  bus.emit('note:added', note('n9', 0, 'not auto-saved'))
+  bus.emit('note:added', { ...note('n9', 0, 'auto-saved now'), sourceChunkIds: ['c-1'] })
   await lib.endSession()
   const full = await lib.getLecture(l.id)
   assert.equal(full.state, 'attended')
   assert.equal(full.slides.length, 1)
   assert.equal(full.transcript.length, 1)
-  assert.equal(full.notes.length, 0)
+  assert.equal(full.notes.length, 1)
+  assert.deepEqual(full.notes[0].sourceChunkIds, ['c-1'])
+  assert.equal(full.notes[0].important, false)
   assert.equal(lib.activeLecture(), null)
   assert.ok(changes.some((c) => c.what === 'lecture' && c.lectureId === l.id))
 })
@@ -247,4 +249,43 @@ test('personal notes: CRUD per slide, persist, searchable as kind personal, neve
   assert.equal(got.personalNotes.length, 0)
   assert.equal(noteAdded.length, 0, 'personal notes must never be emitted as note:added')
   await lib.close(); await other.close()
+})
+
+test('H-2: star notes (setNoteImportant), re-save keeps the star, listImportant groups by lecture in lecture order', async () => {
+  const dir = tmp()
+  const bus = new EventEmitter()
+  const lib = await createLibrary({ dir, embed: fakeEmbed, bus })
+  const m = await lib.createModule({ name: 'COMP26120' })
+  const other = await lib.createModule({ name: 'Other' })
+  const w4 = await lib.createLecture(m.id, { title: 'Week 4', date: '2026-11-10' })
+  const w3 = await lib.createLecture(m.id, { title: 'Week 3', date: '2026-11-03' })
+  const o1 = await lib.createLecture(other.id, { title: 'Elsewhere' })
+
+  await lib.startSession(w3.id)
+  bus.emit('note:added', { ...note('a', 2, 'linear probing is cache friendly'), sourceChunkIds: ['c-7'] })
+  bus.emit('note:added', { ...note('b', 0, 'python dict uses open addressing'), kind: 'lecturer' })
+  await lib.endSession()
+  assert.equal((await lib.getLecture(w3.id)).notes.length, 2)
+
+  const starred = await lib.setNoteImportant(w3.id, 'a', true)
+  assert.equal(starred.important, true)
+  await lib.saveNote(w3.id, note('a', 2, 'linear probing is cache friendly (edited)')) // re-save keeps the star
+  assert.equal((await lib.getLecture(w3.id)).notes.find((n) => n.id === 'a').important, true)
+  // star a note that was never saved (e.g. clicked while not recording): saved + starred in one go
+  await lib.setNoteImportant(w4.id, 'z', true, note('z', 1, 'trees: AVL rotations'))
+  await lib.setNoteImportant(o1.id, 'x', true, note('x', 0, 'other module'))
+  await assert.rejects(lib.setNoteImportant(w4.id, 'missing', true), /not found/)
+
+  const list = await lib.listImportant(m.id)
+  assert.deepEqual(list.map((g) => g.lectureTitle), ['Week 3', 'Week 4']) // lecture order, other module excluded
+  assert.deepEqual(list[0].notes.map((n) => n.id), ['a'])
+  assert.equal(list[0].notes[0].slideIndex, 2)
+  assert.deepEqual(list[0].notes[0].sourceChunkIds, ['c-7'])
+
+  await lib.setNoteImportant(w3.id, 'a', false)
+  assert.deepEqual((await lib.listImportant(m.id)).map((g) => g.lectureTitle), ['Week 4'])
+  // persisted + searchable
+  const lib2 = await createLibrary({ dir, embed: fakeEmbed })
+  assert.equal((await lib2.listImportant(m.id))[0].notes[0].id, 'z')
+  assert.equal((await lib2.search(w4.id, 'AVL rotations', 1))[0].refId, 'z')
 })
