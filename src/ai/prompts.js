@@ -45,6 +45,27 @@ export function explainPrompt ({ slideText, transcript }) {
   ]
 }
 
+/** H-6 "Explain this": explain one slide to a student using the whole deck + what was said. */
+export function explainThisPrompt ({ slideIndex, slideText, outline, said, recent }) {
+  return [
+    {
+      role: 'system',
+      content: 'A student asked for a clear explanation of the current lecture slide, because the lecturer had no time. ' +
+        'Explain it in plain language in 3-5 short sentences: what it means, why it matters, and one small concrete example. ' +
+        'Use the other slides for context and anything the lecturer said; do not invent facts beyond standard textbook knowledge. ' +
+        'Do not just repeat the slide bullets. Reply with the explanation only. /no_think'
+    },
+    {
+      role: 'user',
+      content: `ALL SLIDES (outline):\n${clip(outline, 1800)}\n\n` +
+        `CURRENT SLIDE ${slideIndex + 1}:\n${clip(slideText, 900) || '(no text)'}\n\n` +
+        (said ? `WHAT THE LECTURER SAID ON THIS SLIDE:\n${clip(said, 1500)}\n\n` : '') +
+        (recent ? `RECENT LECTURE CONTEXT:\n${clip(recent, 800)}\n\n` : '') +
+        'Explain the current slide.'
+    }
+  ]
+}
+
 export function lecturePrompt ({ outline, transcript }) {
   return [
     {

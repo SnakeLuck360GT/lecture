@@ -192,7 +192,7 @@ async function startLibrary () {
 }
 
 // Renderer -> AI. pushAudio/pushExplainAudio come in fire-and-forget ('ai:push'), the rest via invoke.
-const AI_METHODS = new Set(['playClip', 'stopClip', 'pushAudio', 'flushAudio', 'pushExplainAudio', 'explainFromFile', 'embed', 'ocr', 'summariseLecture', 'setAutoFollow', 'getAutoFollow'])
+const AI_METHODS = new Set(['playClip', 'stopClip', 'pushAudio', 'flushAudio', 'pushExplainAudio', 'explainFromFile', 'embed', 'ocr', 'summariseLecture', 'setAutoFollow', 'getAutoFollow', 'explainThis'])
 // method -> index of the argument that is a (possibly repo-relative) file path
 const PATH_ARG_METHODS = new Map([['playClip', 0], ['explainFromFile', 1]])
 
