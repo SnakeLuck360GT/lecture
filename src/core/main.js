@@ -147,6 +147,20 @@ async function startP2P () {
   }
 }
 
+// Discovery (aryan, src/discovery, contract discovery.md): 6-digit join codes + nearby sessions on the LAN.
+let discovery = null
+async function startDiscovery () {
+  const entry = join(ROOT, 'src', 'discovery', 'index.js')
+  if (!existsSync(entry)) return
+  try {
+    const mod = await import(pathToFileURL(entry).href)
+    discovery = await mod.startDiscovery({ bus })
+    log('Discovery started')
+  } catch (e) {
+    console.error('[main] discovery failed to start:', e)
+  }
+}
+
 // Library data layer (aaron, src/library): modules -> lectures, per-lecture vector store. Data lives in userData/library.
 async function startLibrary () {
   const entry = join(ROOT, 'src', 'library', 'index.js')
@@ -184,6 +198,14 @@ function wireIpc () {
     if (typeof ai[method] !== 'function') throw new Error(`ai.${method} is not implemented`)
     if (PATH_ARG_METHODS.has(method)) { const i = PATH_ARG_METHODS.get(method); args[i] = resolvePath(args[i]) }
     return ai[method](...args)
+  })
+
+  const DISCOVERY_METHODS = new Set(['advertise', 'stopAdvertising', 'listNearby', 'resolveCode'])
+  ipcMain.handle('discovery:call', async (_e, method, ...args) => {
+    if (!DISCOVERY_METHODS.has(method)) throw new Error(`discovery.${method} is not allowed from the renderer`)
+    if (!discovery) throw new Error('Discovery is not loaded (src/discovery missing or failed to start)')
+    if (typeof discovery[method] !== 'function') throw new Error(`discovery.${method} is not implemented`)
+    return discovery[method](...args)
   })
 
   ipcMain.handle('p2p:call', async (_e, method, ...args) => {
@@ -252,6 +274,8 @@ app.whenReady().then(async () => {
   allowMicrophone()
   wireIpc()
   createWindow()
+  // Discovery is independent of the models: start it first so nearby sessions show up immediately.
+  await startDiscovery()
   // Load models after the window is up, so the UI shows progress instead of a blank screen.
   await startAI()
   await startP2P()
@@ -351,6 +375,7 @@ async function runSmoke (pngPath) {
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })
 app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
 app.on('before-quit', async () => {
+  try { await discovery?.close?.() } catch {}
   try { await p2p?.close?.() } catch {}
   try { await library?.close?.() } catch {}
   try { await ai?.close?.() } catch {}
