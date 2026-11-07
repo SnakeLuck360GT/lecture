@@ -1,5 +1,5 @@
 # Stage 2 contract: speech-to-text + shared AI facade (owner: aryan, folder `src/ai/`)
-Status: v1.1 (flushAudio, live VAD, chunkId added). This file is the source of truth for the AI runtime and facade used by S3/S4/S7.
+Status: v1.2 (v1.1 + transcript:partial, search helpers). This file is the source of truth for the AI runtime and facade used by S3/S4/S7.
 
 ## Runtime
 - Plain ESM JS (`"type": "module"`), runs in **Node / the Electron main process** (NOT the renderer). `@qvac/sdk` on Node spawns its own Bare worker.
@@ -21,6 +21,9 @@ await ai.idle()                           // tests: wait for the tracker/agents/
 ai.embed(textOrTexts)                     // S3/S5/S8: -> number[] | number[][]
 ai.ocr(image)                             // S1: image path | Buffer | data URL -> string
 ai.summariseLecture(chunks, slides)       // S5: -> Promise<string> (week summary)
+ai.embedQuery(q) / ai.embedDocs(texts)    // search: EmbeddingGemma retrieval prefixes (src/ai/search.js)
+ai.transcriptPassages(chunks)             // search: merge chunks into <= 30 s passages per slide -> {id, slideIndex, tStart, tEnd, text, chunkIds}
+ai.hybridScore({ cosine, query, text, kind })  // search: 0.8*cosine + 0.2*keyword (+ small boost for saved notes)
 ai.close()
 ```
 - **Mock mode:** `startAI({ bus, mock: true })` or env `LECSCRIBE_AI_MOCK=1` -> no models, deterministic fake outputs, same events. Use it for UI dev and tests.
@@ -37,6 +40,8 @@ transcribeAudio(wavPathOrBuffer, { prompt }) -> Promise<string>      // used by 
 ```
 'ai:status'        { model: 'stt'|'embed'|'llm'|'ocr', state: 'loading'|'ready'|'error', progress?: 0-100, error?: string }
 'transcript:chunk' TranscriptChunk { id: 'c-<n>', slideIndex, tStart, tEnd, text }  // seconds; slideIndex = current slide at emit time
+'transcript:partial' { text, tStart, tEnd, slideIndex }  // B-006 (v1.2): live mic only, ~every 500 ms while a segment is open.
+                    // Replaces the previous partial; clear it when the next 'transcript:chunk' arrives. Never sent after its final.
 ```
 ## Live mic segmentation (v1.1)
 Energy VAD with an adaptive noise floor. A segment is cut at a pause of 450 ms or more once it is at least 2 s long, or hard-cut at 6 s. Near-silent segments are dropped. If STT falls behind, queued segments are merged (at most 10 s). Tuning env vars: `LECSCRIBE_LIVE_MIN_SEC`, `LECSCRIBE_LIVE_MAX_SEC`, `LECSCRIBE_LIVE_SILENCE_MS`. Chunk `tStart`/`tEnd` are stream seconds since the first pushAudio.
