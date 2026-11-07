@@ -340,3 +340,26 @@ test('B-005: generic notes and amortised/constant near-copies are dropped; real 
   assert.equal(isOnSlide('Amortized cost of resizing is constant', SLIDE4), true)
   for (const seg of script.segments) for (const f of seg.notOnSlide) assert.equal(isGeneric(f, deck), false, `not generic: ${f}`)
 })
+
+test('stretch: exam-emphasis flag on notes the lecturer flagged (fixtures slide 0)', async () => {
+  const { examEmphasis } = await import('./emphasis.js')
+  const { readFile } = await import('node:fs/promises')
+  const script = JSON.parse(await readFile(new URL('../../fixtures/lecture.script.json', import.meta.url), 'utf8'))
+  const s0 = script.segments[0].text
+  assert.equal(examEmphasis('The load factor will come up in the exam', s0), 'exam')
+  assert.equal(examEmphasis('Pay close attention to the load factor part', s0), 'exam')
+  assert.equal(examEmphasis("Hash tables are what Python dictionaries and Java's HashMap use", s0), null)
+  assert.equal(examEmphasis('Linear probing is cache friendly', script.segments[2].text), null)
+  // end-to-end through the summariser
+  const bus = new EventEmitter()
+  const sum = createSummariser({ bus, complete: async () => '["The load factor will come up in the exam", "Python dictionaries use hash tables"]' })
+  const notes = []
+  bus.on('note:added', (n) => notes.push(n))
+  bus.emit('slides:loaded', [{ index: 0, text: 'Hash Tables' }, { index: 1, text: 'x' }])
+  bus.emit('transcript:chunk', { id: 'c1', slideIndex: 0, text: s0 })
+  bus.emit('slide:changed', { index: 1, source: 'auto' })
+  await sum.idle()
+  assert.equal(notes.find((n) => /exam/.test(n.text))?.emphasis, 'exam')
+  assert.equal(notes.find((n) => /Python/.test(n.text))?.emphasis, undefined)
+  sum.dispose()
+})
