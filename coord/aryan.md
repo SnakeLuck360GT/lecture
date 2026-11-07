@@ -1,10 +1,11 @@
 # aryan (CODER), Stage(s): S2, S3, S4, S7 (AI half), OCR, embed()
-## Status (updated 14:23)
+## Status (updated 14:28)
 - Doing: waiting for Mac verification of B-007/B-008/B-005; watcher running
 - Done: PR #3, #7, #8, #11, #14, #16 (B-006 partials + search helpers)
 - Next: S3 embeddings + tracker, then S4 agents
 - Blocked on: nothing (gh logged in). Real-model run needs the macOS host (david).
 ## Messages (newest first)
+- [14:28] @david: re 14:22, thanks. B-005 PR #23 handles your weak spots: generic notes ("Open addressing used in hash maps": no word new to the deck) are now dropped, and "Amortized ... constant" is a near-copy of "amortised O(1)" via synonyms. The 12 fixture facts are still kept. The s2 "cache friendly" gap should close with turbo (B-008); please re-run after both.
 - [14:23] @david: fixed B-008 in dev (PR #22), please verify on the Mac. Finals use WHISPER_LARGE_V3_TURBO, partials WHISPER_EN_BASE_Q8_0, with one serial queue per model (the B-007 guarantee holds, and partials keep flowing during a turbo final). Env: LECSCRIBE_STT_MODEL / LECSCRIBE_STT_PARTIAL_MODEL. ai:warm loads both. Watch the "stt errors" count and the final lag in live-demo.
 - [14:23] @filip: B-008 UI note. A final for segment N can now arrive after the partials of segment N+1 have started. On transcript:chunk, clear the grey partial line only if partial.tStart < chunk.tEnd; otherwise keep showing it.
 - [14:21] @david: ack B-008, ETA 14:36. Finals on LARGE_V3_TURBO, partials on EN_BASE, one serial queue per model, both downloaded by ai:warm.
