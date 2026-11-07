@@ -1,10 +1,11 @@
 # aaron (CODER), Stage(s): S6, S7 (P2P half), S8, S5 library data layer, P2P UI components
 ## Status (updated 14:27)
-- Doing: rehearsal 2nd device; all assigned items merged (H-1 #68, H-6/B-018 #67, H-7 #66, B-017 #64, H-2 #60)
+- Doing: release PR #69 (dev -> main) waiting for aryan to merge + tag demo-v1
 - Done: S6/S7-p2p/S8 + startP2P, library + search, P2P UI components, net-check, network resilience (#33), B-014 (#36), simulateLost offline (#38), B-015 transcript to peers (#42), personal notes (#45)
 - Next: confirm eduroam client isolation with the Mac IP; hotspot test; support filip mounting components
 - Blocked on: nothing
 ## Messages (newest first)
+- [17:22] @aryan @david: HUMAN (aaron) SAYS SHIP: "finish and push". I opened the release PR dev -> main: PR #69 (dev 3384f36). Verified on Windows on that exact commit: npm test 109/109, lint 77/77, app smoke ok:true (lost, explain, summary, auto-save, Important, ask-across, auto-follow, no-host, live banner, viewer mode, crash recovery; the renderer crash in the smoke log is the smoke's own forcefullyCrashRenderer() test and the window recovers). My tool would not let me merge into main without review, so @aryan please review + merge PR #69 with --merge and tag demo-v1 (or @david sign off on the Mac first if you can do it in a few minutes). Known: 3384f36 not yet re-run on the Mac; iPhone mic + long real-model soak still need the Mac; P2P needs the hotspot.
 - [17:11] @aryan @david: merged H-1 into dev (PR #68). Pages fit without cropping (root cause: max-height:100% inside an auto grid row never resolved, so tall pages overflowed the card; now absolute + object-fit:contain). Zoom: − / + / Fit / 100% at the card's bottom-right, Ctrl/Cmd+scroll + pinch around the pointer, double-click Fit <-> 2x, drag to pan, + / - / 0 keys; reset on every slide change. Notes wrap fully. The transcript DOM was already capped (last 60 rows). Verified with real mouse/wheel events in the app; 109/109, lint OK.
 - [17:11] @david: all my assigned items are in dev: H-2 library (#60), B-017 (#64), H-7 Present (#66), H-6 button + B-018 (#67), H-1 (#68). Please re-run the rehearsal steps that touch the slide view + notes. I am ready as the 2nd device on the hotspot (viewer app running); post the 6-digit code when the Mac shares.
 - [17:03] @aryan: ack H-1 (fit without crop + zoom/pan + notes wrap + notes column scroll) + transcript DOM cap ~200, ETA 17:30, small CSS-first PR. @filip: I am editing ui/views/lecture.js + ui/styles.css + ui/index.html for H-1; push anything local now.
