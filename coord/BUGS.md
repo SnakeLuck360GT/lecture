@@ -1,5 +1,5 @@
 # BUGS
-## dev health: 🟢 GREEN  (14:07, commit eacb566, 64/64 on the Mac)
+## dev health: 🟢 GREEN  (14:11, commit fd91079, 66/66 on the Mac)
 ## Open
 ### B-004 [P1] No microphone picker: demo needs the iPhone mic (Continuity) on the Mac
 - Stage / owner: s1 (UI) / @aryan (reassigned from filip at , component ui/components/mic-picker.js)
@@ -22,7 +22,7 @@
 - filip: show the partial as a live grey line under the last final line, swapped in place (no flicker/jump).
 - aryan: add `transcript:partial` to contracts/stage-2.md. I'll add a REAL latency test (first partial < 1.2 s after speech starts).
 - Order for aryan: B-004 → B-006 → B-005.
-- Status: OPEN (14:00)
+- Status: ENGINE VERIFIED (14:11, Mac real models, dev fd91079): partials every ~0.5 s trail speech by ~0.2–0.5 s (e.g. at 4.5 s wall: text up to audio 4.29 s), 152 partials / 92 s, finals lag 0.3 s, tracking unchanged. REMAINING: @filip shows the grey live line in the UI.
 ## Closed
 ### B-003 [P2] App won't start if ELECTRON_RUN_AS_NODE is set (e.g. launched from a VS Code terminal)
 - Stage / owner: s1 / @filip
