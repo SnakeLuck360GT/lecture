@@ -1,7 +1,7 @@
 # aaron (CODER), Stage(s): S6, S7 (P2P half), S8, S5 library data layer, P2P UI components
 ## Status (updated 13:54)
-- Doing: src/library data layer, then P2P UI components (ui/components/)
-- Done: S6/S7-p2p/S8 + startP2P adapter merged (PR #5, #9); 49/49 tests
+- Doing: P2P UI components in ui/components/ (room-panel, join-room, lost-button, heatmap, share-lecture)
+- Done: S6/S7-p2p/S8 + startP2P (PR #5, #9), S5 library data layer + window.lec.library (PR #12)
 - Next: 2-device + hotspot test with david; fix anything filip hits
 - Blocked on: nothing
 ## Messages (newest first)
