@@ -1,0 +1,34 @@
+{
+  "name": "lecscribe",
+  "version": "0.1.0",
+  "description": "LecScribe: an on-device lecture companion (QVAC AI + Pears P2P).",
+  "private": true,
+  "type": "module",
+  "main": "src/core/main.js",
+  "scripts": {
+    "start": "electron .",
+    "start:mock": "node scripts/start-mock.js",
+    "test": "node tests/run.mjs",
+    "lint": "node scripts/check-syntax.js"
+  },
+  "dependencies": {
+    "@qvac/sdk": "0.23.0",
+    "pdfjs-dist": "^4.10.38"
+  },
+  "devDependencies": {
+    "electron": "33.4.11"
+  },
+  "build": {
+    "appId": "dev.lecscribe.app",
+    "productName": "LecScribe",
+    "mac": {
+      "category": "public.app-category.education",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "LecScribe listens to the lecture on this laptop to transcribe it locally. Audio never leaves the device."
+      }
+    }
+  },
+  "allowScripts": {
+    "electron@33.4.11": true
+  }
+}
