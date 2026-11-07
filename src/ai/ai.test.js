@@ -81,7 +81,7 @@ test('isOnSlide filters copies of slide text', () => {
 
 test('summariser emits ai notes when a slide is left', async () => {
   const bus = new EventEmitter()
-  const sum = createSummariser({ bus, complete: async () => '["The lecturer said this comes up in the exam"]' })
+  const sum = createSummariser({ bus, complete: async () => '["The lecturer said this comes up in the exam"]', opts: { minWords: 0 } })
   const notes = []
   bus.on('note:added', (n) => notes.push(n))
   bus.emit('slides:loaded', SLIDES)
@@ -129,7 +129,7 @@ test('startAI mock e2e: clip → chunks → auto slide → notes', async () => {
     { tStart: 12, tEnd: 17, text: 'Merge sort uses divide and conquer and merges halves. Think of splitting a deck of cards.' }
   ]))
   const bus = new EventEmitter()
-  const ai = await startAI({ bus, mock: true })
+  const ai = await startAI({ bus, mock: true, agentOpts: { minWords: 0 } })
   const ev = { chunks: [], changes: [], notes: [] }
   bus.on('transcript:chunk', (c) => ev.chunks.push(c))
   bus.on('slide:changed', (c) => ev.changes.push(c))
@@ -165,7 +165,7 @@ test('live stream: VAD cuts at pauses, drops silence, passes stream times', asyn
 test('agents move the chunk that triggered an auto-advance to the new slide', async () => {
   const bus = new EventEmitter()
   const seen = []
-  const sum = createSummariser({ bus, complete: async (m) => { seen.push(m.at(-1).content); return '[]' } })
+  const sum = createSummariser({ bus, complete: async (m) => { seen.push(m.at(-1).content); return '[]' }, opts: { minWords: 0 } })
   bus.emit('slides:loaded', SLIDES)
   bus.emit('transcript:chunk', { id: 'c1', slideIndex: 0, text: 'intro words about sorting' })
   bus.emit('transcript:chunk', { id: 'c2', slideIndex: 0, text: 'bubble sort swaps neighbours' })
@@ -352,7 +352,7 @@ test('stretch: exam-emphasis flag on notes the lecturer flagged (fixtures slide 
   assert.equal(examEmphasis('Linear probing is cache friendly', script.segments[2].text), null)
   // end-to-end through the summariser
   const bus = new EventEmitter()
-  const sum = createSummariser({ bus, complete: async () => '["The load factor will come up in the exam", "Python dictionaries use hash tables"]' })
+  const sum = createSummariser({ bus, complete: async () => '["The load factor will come up in the exam", "Python dictionaries use hash tables"]', opts: { minWords: 0 } })
   const notes = []
   bus.on('note:added', (n) => notes.push(n))
   bus.emit('slides:loaded', [{ index: 0, text: 'Hash Tables' }, { index: 1, text: 'x' }])
@@ -428,7 +428,7 @@ test('B-005: a slide left with no note keeps its best soft-dropped candidate (>=
   const bus = new EventEmitter()
   const deck = [{ index: 0, text: 'Hash Tables\nHashing, collisions, load factor, resizing' }, { index: 1, text: 'Hash functions\nMap a key to an array index' }]
   // generic: every word is already somewhere in the deck
-  const sum = createSummariser({ bus, complete: async () => '["Hashing maps a key to an index"]' })
+  const sum = createSummariser({ bus, complete: async () => '["Hashing maps a key to an index"]', opts: { minWords: 0 } })
   const notes = []
   bus.on('note:added', (n) => notes.push(n))
   bus.emit('slides:loaded', deck)
@@ -463,5 +463,51 @@ test('auto-follow off: tracker keeps scoring but never auto-advances; on again r
   bus.emit('transcript:chunk', { id: 'x2', slideIndex: 0, text: 'bubble sort swap adjacent elements repeatedly' })
   await ai.idle()
   assert.equal(changes.length, 1)
+  await ai.close()
+})
+
+test('H-3: worker-crash errors are recognised (models reset), other errors are not', async () => {
+  const { noteSdkError } = await import('./models.js')
+  assert.equal(noteSdkError(new Error('Something else went wrong')), false)
+  const crash = Object.assign(new Error('worker process exited unexpectedly'), { name: 'WorkerCrashedError' })
+  assert.equal(noteSdkError(crash), true)
+  assert.equal(noteSdkError(new Error('RPC initialization timed out after 30000ms')), true, 'debounced but still recognised')
+})
+
+test('H-3: temp WAVs written for STT are removed', async () => {
+  const { writeTempWav, removeTemp } = await import('./wav.js')
+  const { existsSync } = await import('node:fs')
+  const p = await writeTempWav(new Float32Array(1600))
+  assert.equal(existsSync(p), true)
+  removeTemp(p)
+  await tick(50)
+  assert.equal(existsSync(p), false)
+})
+
+test('H-4: a slide with too little transcript is not summarised until it has enough words', async () => {
+  const bus = new EventEmitter()
+  let calls = 0
+  const sum = createSummariser({ bus, complete: async () => { calls++; return '["Choose a prime table size to spread keys"]' }, opts: { minWords: 40 } })
+  const states = []
+  bus.on('agent:status', (s) => states.push(s))
+  bus.emit('slides:loaded', [{ index: 0, text: 'Hash functions' }, { index: 1, text: 'Collisions' }, { index: 2, text: 'x' }])
+  bus.emit('transcript:chunk', { id: 'c1', slideIndex: 0, text: 'ok so hash functions next' })
+  bus.emit('slide:changed', { index: 1, source: 'auto' })
+  await sum.idle()
+  assert.equal(calls, 0, 'not summarised on 5 words')
+  assert.ok(states.some((s) => s.state === 'waiting' && s.reason === 'too-short'))
+  // the lecturer comes back to slide 0 and says enough
+  bus.emit('slide:changed', { index: 0, source: 'manual' })
+  bus.emit('transcript:chunk', { id: 'c2', slideIndex: 0, text: 'choose a prime table size because a prime spreads the keys across all buckets evenly and avoids patterns in the keys clustering in a few buckets which would slow every lookup down a lot, so remember to always pick m prime when you build the table' })
+  bus.emit('slide:changed', { index: 1, source: 'manual' })
+  await sum.idle()
+  assert.equal(calls, 1, 'summarised once it had enough words (old + new text)')
+  sum.dispose()
+})
+
+test('H-4: summariseLecture refuses to summarise a near-empty lecture', async () => {
+  const bus = new EventEmitter()
+  const ai = await startAI({ bus, mock: true })
+  assert.match(await ai.summariseLecture([{ text: 'hello everyone' }], []), /Not enough/)
   await ai.close()
 })

@@ -25,6 +25,53 @@ function resolveConst (q, name) {
 let closed = false
 export const isClosed = () => closed
 
+// ---- H-3: QVAC worker crash watchdog ----
+// If the Bare worker dies (WorkerCrashedError / RPC failures), every cached modelId is dead.
+// Forget them, so the next call loads again (the SDK spawns a fresh worker on loadModel).
+const CRASH_RE = /WorkerCrash|WorkerShutdown|worker (process )?(exited|crashed|died)|RPC_INIT|RPC.*(closed|destroyed|timed out)|ECONNRESET|EPIPE|channel closed/i
+let lastReset = 0
+export let resets = 0
+export function noteSdkError (e) {
+  const msg = `${e?.name || ''} ${e?.code || ''} ${e?.message || e}`
+  if (!CRASH_RE.test(msg) || closed) return false
+  if (Date.now() - lastReset < 3000) return true // already resetting
+  lastReset = Date.now()
+  resets++
+  console.error('[ai] QVAC worker failure, re-initialising models:', msg.trim())
+  loading.clear()
+  for (const k of ['stt', 'stt-partial', 'embed', 'llm', 'ocr']) status(k, 'loading', { progress: 0, restarting: true })
+  return true
+}
+
+// ---- H-3: memory log (main process RSS + heap) every 60 s ----
+let memTimer = null
+export function startMemoryLog (bus, everyMs = 60000) {
+  if (memTimer) return
+  const tick = () => {
+    const m = process.memoryUsage()
+    const mb = (n) => Math.round(n / 1048576)
+    const info = { rss: mb(m.rss), heapUsed: mb(m.heapUsed), external: mb(m.external), resets }
+    console.log(`[ai] mem rss=${info.rss}MB heap=${info.heapUsed}MB ext=${info.external}MB worker-resets=${resets}`)
+    bus?.emit('ai:mem', info)
+  }
+  memTimer = setInterval(tick, everyMs)
+  memTimer.unref?.()
+}
+export function stopMemoryLog () { clearInterval(memTimer); memTimer = null }
+
+// ---- H-3: unload OCR after it has been idle (it is only needed while a PDF loads) ----
+let ocrIdle = null
+export function touchOcr (idleMs = 120000) {
+  clearTimeout(ocrIdle)
+  ocrIdle = setTimeout(async () => {
+    const p = loading.get('ocr')
+    if (!p || closed) return
+    loading.delete('ocr')
+    try { const q = await sdk(); await q.unloadModel({ modelId: await p }); status('ocr', 'unloaded') } catch {}
+  }, idleMs)
+  ocrIdle.unref?.()
+}
+
 async function load (kind, makeOpts) {
   if (closed) throw new Error('AI is closed')
   if (!loading.has(kind)) {
@@ -96,6 +143,8 @@ export function ocrModel () {
  */
 export async function closeAll ({ timeoutMs = 1500 } = {}) {
   closed = true
+  stopMemoryLog()
+  clearTimeout(ocrIdle)
   if (!sdkP) return
   const work = (async () => {
     const q = await sdkP

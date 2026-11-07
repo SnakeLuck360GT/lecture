@@ -373,7 +373,10 @@ export function createLectureView (app) {
       return
     }
     mine.sort((a, b) => (a.kind === 'lecturer' ? -1 : 0) - (b.kind === 'lecturer' ? -1 : 0) || (b.createdAt || 0) - (a.createdAt || 0))
-    for (const n of mine) box.append(stickyEl(n))
+    // H-3: cap the DOM per slide (newest first); older notes stay saved and searchable.
+    const MAX = 40
+    for (const n of mine.slice(0, MAX)) box.append(stickyEl(n))
+    if (mine.length > MAX) box.append(el('p', 'muted notes-more', `${mine.length - MAX} older notes on this slide are saved in the library (search to find them).`))
   }
 
   function stickyEl (n) {
@@ -436,6 +439,8 @@ export function createLectureView (app) {
     if (!c || typeof c.text !== 'string' || !c.text.trim()) return
     if (state.chunks.has(c.id)) return
     state.chunks.set(c.id, c)
+    // H-3: bounded memory in long sessions (everything is already persisted in the library).
+    if (state.chunks.size > 1000) state.chunks.delete(state.chunks.keys().next().value)
     state.lines.push(c)
     if (state.lines.length > 200) state.lines.shift()
     if (live) {

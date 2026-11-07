@@ -21,7 +21,12 @@ export function createExplainer ({ bus, getSlides, transcribe, complete }) {
     st(slideIndex, 'recording')
   }
 
-  const push = (f32) => { if (rec) rec.parts.push(f32) }
+  const MAX_SAMPLES = 16000 * 300 // H-3: cap an Explain recording at 5 min
+  const push = (f32) => {
+    if (!rec) return
+    rec.n = (rec.n || 0) + f32.length
+    if (rec.n <= MAX_SAMPLES) rec.parts.push(f32)
+  }
 
   const finish = () => {
     if (!rec) return queue
